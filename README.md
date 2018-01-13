@@ -1,9 +1,7 @@
 # NowSound
 Low latency audio library for Windows 10, targeted at Unity UWP and desktop apps.
 
-# WARNING: THIS LIBRARY IS JUST BEGINNING ITS DEVELOPMENT AND DOES NOT ACTUALLY WORK YET.
-# THIS WARNING WILL BE REMOVED AS SOON AS THIS README BECOMES ACTUALLY TRUE :-)
-# (status as of 13 January 2018)
+# WARNING: THIS LIBRARY IS JUST BEGINNING ITS DEVELOPMENT AND DOES NOT ACTUALLY WORK YET. THIS WARNING WILL BE REMOVED AS SOON AS THIS README BECOMES FACTUALLY CORRECT :-)
 
 NowSound is a wrapper library around the Windows 10 [AudioGraph](https://docs.microsoft.com/en-us/windows/uwp/audio-video-camera/audio-graphs)
 API.  It exposes a P/Invoke C-style API, such that it can be invoked by Unity apps (on either
@@ -14,8 +12,8 @@ NowSound provides the following APIs:
 - Initializing audio subsystem
 - Querying input/output devices
 - Setting up audio graph with given input/output devices
-- Starting and stopping recording of an input to a memory stream
-- Playing back audio from a memory stream (with looping)
+- Starting and stopping recording of an input to an in-memory audio track
+- Playing back in-memory audio tracks (with optional looping)
 
 [VST](https://en.wikipedia.org/wiki/Virtual_Studio_Technology) support is planned, in the desktop
 version of the library.  (UWP security restrictions are not friendly to most current VST plugins.) 
@@ -30,5 +28,13 @@ library, which makes Windows component-based programming more pleasant than I ev
 C++ could be.  I used Kenny Kerr's great [examples](https://github.com/kennykerr/cppwinrt) as a
 starting point.
 
+*Note as of January 2018:* The cppwinrt libraries are present only in Windows Insider preview
+builds of Windows, so if you are not ready to install such a build, you will not be able to build
+this code.  This code currently targets the latest Windows 10 SDK version, namely [17061](https://blogs.windows.com/buildingapps/2017/12/19/windows-10-sdk-preview-build-17061-now-available/#ml17ACbvB2HZPo5J.97).
+
+The next major Windows 10 release in spring 2018 will come with an SDK that will
+support building this project; at that time, I'll remove this warning (and replace it with a
+warning stating that the latest Win10 version is required for building).
+
 If you are interested in NowSound, check out the project which motivated me to write it:
-[my gestural mixed reality live looper, named Holofunk](http://holofunk.com).
+[my gestural mixed reality live looper, Holofunk](http://holofunk.com).
