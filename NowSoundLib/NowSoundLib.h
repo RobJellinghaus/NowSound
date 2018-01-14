@@ -1,150 +1,101 @@
+// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
+// Licensed under the MIT license
+
 #include "pch.h"
 
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation;
 using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 using namespace Windows::System;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
 
-TimeSpan timeSpanFromSeconds(int seconds)
+namespace NowSound
 {
-	// TimeSpan is in 100ns units
-	return TimeSpan(seconds * 10000000);
-}
-
-struct App : implements<App, IFrameworkViewSource, IFrameworkView>
-{
-    IFrameworkView CreateView()
-    {
-        return *this;
-    }
-
-    void Initialize(CoreApplicationView const &)
-    {
-    }
-
-    void Load(hstring const&)
-    {
-    }
-
-    void Uninitialize()
-    {
-    }
-
-    void Run()
-    {
-        CoreWindow window = CoreWindow::GetForCurrentThread();
-        window.Activate();
-
-        CoreDispatcher dispatcher = window.Dispatcher();
-        dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
-    }
-
-    void SetWindow(CoreWindow const & window)
-    {
-        m_activated = window.Activated(auto_revoke, { this, &App::OnActivated });
-    }
-
-    fire_and_forget OnActivated(CoreWindow window, WindowActivatedEventArgs)
-    {
-        m_activated.revoke();
-
-        Compositor compositor;
-        SpriteVisual visual = compositor.CreateSpriteVisual();
-        Rect bounds = window.Bounds();
-        visual.Size({ bounds.Width, bounds.Height });
-        m_target = compositor.CreateTargetForCurrentView();
-        m_target.Root(visual);
-
-        FileOpenPicker picker;
-        picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-        picker.FileTypeFilter().Append(L".wav");
-        StorageFile file = co_await picker.PickSingleFileAsync();
-
-        if (!file)
-        {
-            CoreApplication::Exit();
-            return;
-        }
-
-		AudioGraphSettings settings(AudioRenderCategory::Media);
-		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-		if (result.Status() != AudioGraphCreationStatus::Success)
+	// All external methods here are static and use C linkage, for P/Invokability.
+	// AudioGraph object references are passed by integer ID; lifecycle is documented
+	// per-API.
+	// Callbacks are implemented by passing statically invokable callback hooks
+	// together with callback IDs.
+	extern "C"
+	{
+		struct DeviceInfo
 		{
-			// Cannot create graph
-			CoreApplication::Exit();
-			return;
-		}
+			LPWSTR Id;
+			LPWSTR Name;
 
-		AudioGraph graph = result.Graph();
-
-		// Create a device output node
-		CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await graph.CreateDeviceOutputNodeAsync();
-
-		if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-		{
-			// Cannot create device output node
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioDeviceOutputNode deviceOutput = deviceOutputNodeResult.DeviceOutputNode();
-
-		CreateAudioFileInputNodeResult fileInputResult = co_await graph.CreateFileInputNodeAsync(file);
-		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-		{
-			// Cannot read input file
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
-
-		if (fileInput.Duration() <= timeSpanFromSeconds(3))
-		{
-			// Imported file is too short
-			CoreApplication::Exit();
-			return;
-		}
-
-		fileInput.AddOutgoingConnection(deviceOutput);
-
-		graph.Start();
-
-        window.PointerPressed([=](auto && ...)
-        {
-            static bool playing = true;
-            playing = !playing;
-
-			if (playing)
+			// Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
+			// Note that this does *not* own the strings; these must be owned elsewhere.
+			DeviceInfo(LPWSTR id, LPWSTR name)
 			{
-				graph.Start();
+				Id = id;
+				Name = name;
 			}
-			else
-			{
-				graph.Stop();
-			}
-        });
+		};
 
-        window.SizeChanged([=](auto &&, WindowSizeChangedEventArgs const & args)
-        {
-            visual.Size(args.Size());
-        });
-    }
+		enum AudioGraphState
+		{
+			// InitializeAsync() has not yet been called.
+			Uninitialized,
 
-    CoreWindow::Activated_revoker m_activated;
-    CompositionTarget m_target{ nullptr };
-};
+			// Some error has occurred; GetLastError() will have details.
+			InError,
 
-int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
-{
-    CoreApplication::Run(App());
+			// A gap in incoming audio data was detected; this should ideally never happen.
+			// NOTYET: Discontinuity,
+
+			// InitializeAsync() has completed; devices can now be queried.
+			Initialized,
+
+			// CreateAudioGraphAsync() has completed; other methods can now be called.
+			Created,
+
+			// The audio graph has been started and is running.
+			Running,
+
+			// The audio graph has been stopped.
+			// NOTYET: Stopped,
+		};
+
+		// The ID of a NowSound track; avoids issues with marshaling object references.
+		// Note that 0 is a valid value.
+		// NOTYET: typedef size_t TrackId;
+
+		// Operations on the audio graph as a whole.
+		// There is a single "static" audio graph defined here; multiple audio graphs are not supported.
+		// All async methods document the state the graph must be in when called, and the state the graph
+		// transitions to on completion.
+		class HolofunkAudioGraph
+		{
+			// Get the current state of the audio graph; intended to be efficiently pollable by the client.
+			// This is the only method that may be called in any state whatoever.
+			static AudioGraphState HolofunkAudioGraph_GetGraphState();
+
+			// Initialize the audio graph subsystem such that device information can be queried.
+			// Graph must be Uninitialized.  On completion, graph becomes Initialized.
+			static void HolofunkAudioGraph_InitializeAsync();
+
+			// Get the device info for the default render device.
+			// Graph must not be Uninitialized or InError.
+			static DeviceInfo HolofunkAudioGraph_GetDefaultRenderDeviceInfo();
+
+			// Create the audio graph.
+			// Graph must be Initialized.  On completion, graph becomes Created.
+			void HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice);
+
+			// Start the audio graph.
+			// Graph must be Created.  On completion, graph becomes Started.
+			void HolofunkAudioGraph_StartAudioGraphAsync();
+
+			// Play a user-selected sound file.
+			// Graph must be Started.
+			void HolofunkAudioGraph_PlayUserSelectedSoundFileAsync();
+
+			// Tear down the whole graph.
+			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
+			void HolofunkAudioGraph_DestroyAudioGraphAsync();
+		};
+	}
 }

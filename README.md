@@ -15,6 +15,25 @@ NowSound provides the following APIs:
 - Starting and stopping recording of an input to an in-memory audio track
 - Playing back in-memory audio tracks (with optional looping)
 
+All of these APIs can be asynchronous.  Currently NowSound makes no attempt to implement event or
+callback support; the only way to track the state of NowSound is by polling.  This actually works
+reasonably well for Unity applications which are based on a real-time event loop anyway.  Callback
+support will be added if particular applications require it.
+
+NowSound consists of the following subprojects:
+
+- NowSoundLib: the C++ NowSound library itself
+- NowSoundLibDotNet: a .NET C# wrapper library using P/Invoke to load and call NowSoundLib
+- NowSoundAppUWP: a C++ UWP demonstration app using NowSoundLib
+- NowSoundTestClr: a C# TAEF testing library for NowSoundLibDotNet
+- NowSoundUnityUWP: a Unity demonstration app targeting Windows UWP
+- NowSoundUnityDesktop: a Unity demonstration app targeting Windows desktop
+
+Yes, the demonstration and test apps just about outnumber the library itself, but the whole point
+here is to verify this actually works in all these combinations.
+
+Note that any pull requests must ensure that all tests are passing.
+
 [VST](https://en.wikipedia.org/wiki/Virtual_Studio_Technology) support is planned, in the desktop
 version of the library.  (UWP security restrictions are not friendly to most current VST plugins.) 
 
@@ -37,4 +56,9 @@ support building this project; at that time, I'll remove this warning (and repla
 warning stating that the latest Win10 version is required for building).
 
 If you are interested in NowSound, check out the project which motivated me to write it:
-[my gestural mixed reality live looper, Holofunk](http://holofunk.com).
+[my gestural Kinect-and-mixed-reality live looper, Holofunk](http://holofunk.com).  You might also
+enjoy [my blog](http://robjsoftware.info) and in particular [this post about why I need
+this sound library for my Holofunk project](https://robjsoftware.info/2017/12/02/big-ol-2017-mega-update-progress-almost-entirely-invisible/).
+(Though it turns out that I was wrong about one thing there: AudioGraph is *not* managed
+only, and when I realized this, I realized AudioGraph was the path of least resistance
+for this library.)
