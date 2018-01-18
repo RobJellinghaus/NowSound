@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include <experimental/resumable>
 
 using namespace std::chrono;
 using namespace winrt;
@@ -26,103 +27,116 @@ TimeSpan timeSpanFromSeconds(int seconds)
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Contract.h"
 #include "NowSoundLib.h"
 
 using namespace NowSound;
+using namespace concurrency;
+using namespace std;
 
-static AudioGraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
+static AudioGraphState s_audioGraphState{ AudioGraphState::Uninitialized };
+
+static AudioGraph s_audioGraph{ nullptr };
+
+AudioGraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
 {
+	return s_audioGraphState;
 }
 
-			// Initialize the audio graph subsystem such that device information can be queried.
-			// Graph must be Uninitialized.  On completion, graph becomes Initialized.
-			static void HolofunkAudioGraph_InitializeAsync();
-
-			// Get the device info for the default render device.
-			// Graph must not be Uninitialized or InError.
-			static DeviceInfo HolofunkAudioGraph_GetDefaultRenderDeviceInfo();
-
-			// Create the audio graph.
-			// Graph must be Initialized.  On completion, graph becomes Created.
-			void HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice);
-
-			// Start the audio graph.
-			// Graph must be Created.  On completion, graph becomes Started.
-			void HolofunkAudioGraph_StartAudioGraphAsync();
-
-			// Play a user-selected sound file.
-			// Graph must be Started.
-			void HolofunkAudioGraph_PlayUserSelectedSoundFileAsync();
-
-			// Tear down the whole graph.
-			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-			void HolofunkAudioGraph_DestroyAudioGraphAsync();
-		};
-	}
-}
-
-
+void HolofunkAudioGraph::HolofunkAudioGraph_InitializeAsync()
 {
-	FileOpenPicker picker;
-	picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-	picker.FileTypeFilter().Append(L".wav");
-	StorageFile file = co_await picker.PickSingleFileAsync();
+	Contract::Requires(s_audioGraphState == AudioGraphState::Uninitialized);
 
-	if (!file)
+	create_task([]() -> void
 	{
-		CoreApplication::Exit();
-		return;
-	}
+		AudioGraphSettings settings(AudioRenderCategory::Media);
+		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+
+		if (result.Status() != AudioGraphCreationStatus::Success)
+		{
+			// Cannot create graph
+			CoreApplication::Exit();
+			return;
+		}
+
+		s_audioGraph = result.Graph();
+		s_audioGraphState = AudioGraphState::Initialized;
+	});
 }
 
-
+DeviceInfo HolofunkAudioGraph::HolofunkAudioGraph_GetDefaultRenderDeviceInfo()
 {
-	AudioGraphSettings settings(AudioRenderCategory::Media);
-	CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-	if (result.Status() != AudioGraphCreationStatus::Success)
-	{
-		// Cannot create graph
-		CoreApplication::Exit();
-		return;
-	}
-
-	AudioGraph graph = result.Graph();
-}
-{
-	// Create a device output node
-	CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await graph.CreateDeviceOutputNodeAsync();
-
-	if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-	{
-		// Cannot create device output node
-		CoreApplication::Exit();
-		return;
-	}
-
-	AudioDeviceOutputNode deviceOutput = deviceOutputNodeResult.DeviceOutputNode();
-}
-{
-	CreateAudioFileInputNodeResult fileInputResult = await graph.CreateFileInputNodeAsync(file);
-	if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-	{
-		// Cannot read input file
-		CoreApplication::Exit();
-		return;
-	}
-
-	AudioFileInputNode fileInput = fileInputResult.FileInputNode();
-
-	if (fileInput.Duration() <= timeSpanFromSeconds(3))
-	{
-		// Imported file is too short
-		CoreApplication::Exit();
-		return;
-	}
-
-	fileInput.AddOutgoingConnection(deviceOutput);
 }
 
+// TODO: really really need a real graph node store
+AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
+
+void HolofunkAudioGraph::HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice)
 {
-	graph.Start();
+	Contract::Requires(s_audioGraphState == AudioGraphState::Initialized);
+
+	create_task([]() -> void
+	{
+		// Create a device output node
+		CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await s_audioGraph.CreateDeviceOutputNodeAsync();
+
+		if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
+		{
+			// Cannot create device output node
+			CoreApplication::Exit();
+			return;
+		}
+
+		s_deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
+		s_audioGraphState = AudioGraphState::Created;
+	});
+}
+
+void HolofunkAudioGraph::HolofunkAudioGraph_StartAudioGraphAsync()
+{
+	Contract::Requires(s_audioGraphState == AudioGraphState::Created);
+
+	s_audioGraph.Start();
+
+	s_audioGraphState = AudioGraphState::Running;
+}
+
+void HolofunkAudioGraph::HolofunkAudioGraph_PlayUserSelectedSoundFileAsync()
+{
+	create_task([]() -> void
+	{
+		FileOpenPicker picker;
+		picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
+		picker.FileTypeFilter().Append(L".wav");
+		StorageFile file = co_await picker.PickSingleFileAsync();
+
+		if (!file)
+		{
+			CoreApplication::Exit();
+			return;
+		}
+
+		CreateAudioFileInputNodeResult fileInputResult = co_await s_audioGraph.CreateFileInputNodeAsync(file);
+		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
+		{
+			// Cannot read input file
+			CoreApplication::Exit();
+			return;
+		}
+
+		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
+
+		if (fileInput.Duration() <= timeSpanFromSeconds(3))
+		{
+			// Imported file is too short
+			CoreApplication::Exit();
+			return;
+		}
+
+		fileInput.AddOutgoingConnection(s_deviceOutputNode);
+	});
+}
+
+void HolofunkAudioGraph::HolofunkAudioGraph_DestroyAudioGraphAsync()
+{
 }
