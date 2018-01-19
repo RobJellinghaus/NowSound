@@ -42,26 +42,24 @@ AudioGraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
 	return s_audioGraphState;
 }
 
-IAsyncAction HolofunkAudioGraph::InitializeAsyncImpl()
-{
-	AudioGraphSettings settings(AudioRenderCategory::Media);
-	CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-	if (result.Status() != AudioGraphCreationStatus::Success)
-	{
-		// Cannot create graph
-		CoreApplication::Exit();
-		return;
-	}
-
-	s_audioGraph = result.Graph();
-	s_audioGraphState = AudioGraphState::Initialized;
-}
-
 void HolofunkAudioGraph::HolofunkAudioGraph_InitializeAsync()
 {
 	Contract::Requires(s_audioGraphState == AudioGraphState::Uninitialized);
-	create_task([]() { InitializeAsyncImpl(); });
+	create_task([]() -> IAsyncAction
+	{
+		AudioGraphSettings settings(AudioRenderCategory::Media);
+		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+
+		if (result.Status() != AudioGraphCreationStatus::Success)
+		{
+			// Cannot create graph
+			CoreApplication::Exit();
+			return;
+		}
+
+		s_audioGraph = result.Graph();
+		s_audioGraphState = AudioGraphState::Initialized;
+	});
 }
 
 DeviceInfo HolofunkAudioGraph::HolofunkAudioGraph_GetDefaultRenderDeviceInfo()
