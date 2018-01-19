@@ -6,15 +6,14 @@
 using namespace std::chrono;
 using namespace winrt;
 
+using namespace Windows::ApplicationModel::Activation;
 using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
+using namespace Windows::UI::Xaml;
+using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::System;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
 
 TimeSpan timeSpanFromSeconds(int seconds)
 {
@@ -22,105 +21,42 @@ TimeSpan timeSpanFromSeconds(int seconds)
 	return TimeSpan(seconds * 10000000);
 }
 
-struct App : implements<App, IFrameworkViewSource, IFrameworkView>
+struct App : ApplicationT<App>
 {
-    IFrameworkView CreateView()
+    void OnLaunched(LaunchActivatedEventArgs const&)
     {
-        return *this;
-    }
+		m_button1 = Button();
+		m_button1.Content(IReference<hstring>(L"Play Something For Me, Charley"));
 
-    void Initialize(CoreApplicationView const &)
-    {
-    }
+		m_button1.Click([&](IInspectable const& sender, RoutedEventArgs const&)
+		{
+			m_button1.Content(IReference<hstring>(L"Psych!"));
+		});
 
-    void Load(hstring const&)
-    {
-    }
+		m_button2 = Button();
+		m_button2.Content(IReference<hstring>(L"Play Something For Me, Charley"));
 
-    void Uninitialize()
-    {
-    }
+		m_button2.Click([&](IInspectable const& sender, RoutedEventArgs const&)
+		{
+			m_button2.Content(IReference<hstring>(L"Psych!"));
+		});
 
-    void Run()
-    {
-        CoreWindow window = CoreWindow::GetForCurrentThread();
-        window.Activate();
+		Window xamlWindow = Window::Current();
 
-        CoreDispatcher dispatcher = window.Dispatcher();
-        dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
-    }
+		StackPanel stackPanel = StackPanel();
+		stackPanel.Children().Append(m_button1);
+		stackPanel.Children().Append(m_button2);
 
-    void SetWindow(CoreWindow const & window)
-    {
-        m_activated = window.Activated(auto_revoke, { this, &App::OnActivated });
-    }
+		xamlWindow.Content(stackPanel);
+		xamlWindow.Activate();
 
-    fire_and_forget OnActivated(CoreWindow window, WindowActivatedEventArgs)
-    {
-        m_activated.revoke();
-
+		/*
         Compositor compositor;
         SpriteVisual visual = compositor.CreateSpriteVisual();
         Rect bounds = window.Bounds();
         visual.Size({ bounds.Width, bounds.Height });
         m_target = compositor.CreateTargetForCurrentView();
         m_target.Root(visual);
-
-        FileOpenPicker picker;
-        picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-        picker.FileTypeFilter().Append(L".wav");
-        StorageFile file = co_await picker.PickSingleFileAsync();
-
-        if (!file)
-        {
-            CoreApplication::Exit();
-            return;
-        }
-
-		AudioGraphSettings settings(AudioRenderCategory::Media);
-		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-		if (result.Status() != AudioGraphCreationStatus::Success)
-		{
-			// Cannot create graph
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioGraph graph = result.Graph();
-
-		// Create a device output node
-		CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await graph.CreateDeviceOutputNodeAsync();
-
-		if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-		{
-			// Cannot create device output node
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioDeviceOutputNode deviceOutput = deviceOutputNodeResult.DeviceOutputNode();
-
-		CreateAudioFileInputNodeResult fileInputResult = await graph.CreateFileInputNodeAsync(file);
-		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-		{
-			// Cannot read input file
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
-
-		if (fileInput.Duration() <= timeSpanFromSeconds(3))
-		{
-			// Imported file is too short
-			CoreApplication::Exit();
-			return;
-		}
-
-		fileInput.AddOutgoingConnection(deviceOutput);
-
-		graph.Start();
 
         window.PointerPressed([=](auto && ...)
         {
@@ -141,13 +77,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         {
             visual.Size(args.Size());
         });
-    }
+		*/
+	}
 
-    CoreWindow::Activated_revoker m_activated;
-    CompositionTarget m_target{ nullptr };
+	Button m_button1{ nullptr };
+	Button m_button2{ nullptr };
 };
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
-    CoreApplication::Run(App());
+	Application::Start([](auto &&) { make<App>(); });
 }
