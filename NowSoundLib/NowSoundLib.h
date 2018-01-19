@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include <future>
 
 using namespace std::chrono;
 using namespace winrt;
@@ -69,6 +70,7 @@ namespace NowSound
 		// transitions to on completion.
 		class HolofunkAudioGraph
 		{
+		public:
 			// Get the current state of the audio graph; intended to be efficiently pollable by the client.
 			// This is the only method that may be called in any state whatoever.
 			static AudioGraphState HolofunkAudioGraph_GetGraphState();
@@ -83,19 +85,22 @@ namespace NowSound
 
 			// Create the audio graph.
 			// Graph must be Initialized.  On completion, graph becomes Created.
-			void HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice);
+			static void HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice);
 
 			// Start the audio graph.
 			// Graph must be Created.  On completion, graph becomes Started.
-			void HolofunkAudioGraph_StartAudioGraphAsync();
+			static void HolofunkAudioGraph_StartAudioGraphAsync();
 
 			// Play a user-selected sound file.
 			// Graph must be Started.
-			void HolofunkAudioGraph_PlayUserSelectedSoundFileAsync();
+			static void HolofunkAudioGraph_PlayUserSelectedSoundFileAsync();
 
 			// Tear down the whole graph.
 			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-			void HolofunkAudioGraph_DestroyAudioGraphAsync();
+			static void HolofunkAudioGraph_DestroyAudioGraphAsync();
+
+		private:
+			static IAsyncAction InitializeAsyncImpl();
 		};
 	}
 }

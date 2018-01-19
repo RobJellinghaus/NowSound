@@ -2,7 +2,6 @@
 // Licensed under the MIT license
 
 #include "pch.h"
-#include <experimental/resumable>
 
 using namespace std::chrono;
 using namespace winrt;
@@ -43,29 +42,31 @@ AudioGraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
 	return s_audioGraphState;
 }
 
+IAsyncAction HolofunkAudioGraph::InitializeAsyncImpl()
+{
+	AudioGraphSettings settings(AudioRenderCategory::Media);
+	CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+
+	if (result.Status() != AudioGraphCreationStatus::Success)
+	{
+		// Cannot create graph
+		CoreApplication::Exit();
+		return;
+	}
+
+	s_audioGraph = result.Graph();
+	s_audioGraphState = AudioGraphState::Initialized;
+}
+
 void HolofunkAudioGraph::HolofunkAudioGraph_InitializeAsync()
 {
 	Contract::Requires(s_audioGraphState == AudioGraphState::Uninitialized);
-
-	create_task([]() -> void
-	{
-		AudioGraphSettings settings(AudioRenderCategory::Media);
-		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-		if (result.Status() != AudioGraphCreationStatus::Success)
-		{
-			// Cannot create graph
-			CoreApplication::Exit();
-			return;
-		}
-
-		s_audioGraph = result.Graph();
-		s_audioGraphState = AudioGraphState::Initialized;
-	});
+	create_task([]() { InitializeAsyncImpl(); });
 }
 
 DeviceInfo HolofunkAudioGraph::HolofunkAudioGraph_GetDefaultRenderDeviceInfo()
 {
+	return DeviceInfo(nullptr, nullptr);
 }
 
 // TODO: really really need a real graph node store
@@ -75,7 +76,7 @@ void HolofunkAudioGraph::HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo out
 {
 	Contract::Requires(s_audioGraphState == AudioGraphState::Initialized);
 
-	create_task([]() -> void
+	create_task([]() -> IAsyncAction
 	{
 		// Create a device output node
 		CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await s_audioGraph.CreateDeviceOutputNodeAsync();
@@ -103,7 +104,7 @@ void HolofunkAudioGraph::HolofunkAudioGraph_StartAudioGraphAsync()
 
 void HolofunkAudioGraph::HolofunkAudioGraph_PlayUserSelectedSoundFileAsync()
 {
-	create_task([]() -> void
+	create_task([]() -> IAsyncAction
 	{
 		FileOpenPicker picker;
 		picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
