@@ -71,7 +71,7 @@ struct App : ApplicationT<App>
 
 		m_button1.Click([&](IInspectable const& sender, RoutedEventArgs const&)
 		{
-			m_button1.Content(IReference<hstring>(L"Psych!"));
+			NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync();
 		});
 
 		Window xamlWindow = Window::Current();
@@ -141,12 +141,6 @@ struct App : ApplicationT<App>
 		NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
 
 		co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(1000));
-
-		// Have to go back to UI thread for this UI interaction.
-		// Calling into the DLL from the UI thread is the requirement... hmmm....
-		// TODO: cross-DLL thread contracts on all APIs
-		co_await ui_thread;
-		NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync();
 	}
 
 	TextBlock m_textBlock{ nullptr };
