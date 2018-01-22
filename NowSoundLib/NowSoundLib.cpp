@@ -43,6 +43,9 @@ void NowSoundGraph::NowSoundGraph_InitializeAsync()
 	create_task([]() -> IAsyncAction
 	{
 		AudioGraphSettings settings(AudioRenderCategory::Media);
+		settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
+		settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
+		// leaving PrimaryRenderDevice uninitialized will use default output device
 		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
 
 		if (result.Status() != AudioGraphCreationStatus::Success)
@@ -95,40 +98,44 @@ void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
 	s_audioGraphState = NowSoundGraph_State::Running;
 }
 
+IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
+{
+	// This must be called on the UI thread.
+	FileOpenPicker picker;
+	picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
+	picker.FileTypeFilter().Append(L".wav");
+	StorageFile file = co_await picker.PickSingleFileAsync();
+
+	if (!file)
+	{
+		CoreApplication::Exit();
+		return;
+	}
+
+	CreateAudioFileInputNodeResult fileInputResult = co_await s_audioGraph.CreateFileInputNodeAsync(file);
+	if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
+	{
+		// Cannot read input file
+		CoreApplication::Exit();
+		return;
+	}
+
+	AudioFileInputNode fileInput = fileInputResult.FileInputNode();
+
+	if (fileInput.Duration() <= timeSpanFromSeconds(3))
+	{
+		// Imported file is too short
+		CoreApplication::Exit();
+		return;
+	}
+
+	fileInput.AddOutgoingConnection(s_deviceOutputNode);
+	fileInput.Start();
+}
+
 void NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync()
 {
-	create_task([]() -> IAsyncAction
-	{
-		FileOpenPicker picker;
-		picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-		picker.FileTypeFilter().Append(L".wav");
-		StorageFile file = co_await picker.PickSingleFileAsync();
-
-		if (!file)
-		{
-			CoreApplication::Exit();
-			return;
-		}
-
-		CreateAudioFileInputNodeResult fileInputResult = co_await s_audioGraph.CreateFileInputNodeAsync(file);
-		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-		{
-			// Cannot read input file
-			CoreApplication::Exit();
-			return;
-		}
-
-		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
-
-		if (fileInput.Duration() <= timeSpanFromSeconds(3))
-		{
-			// Imported file is too short
-			CoreApplication::Exit();
-			return;
-		}
-
-		fileInput.AddOutgoingConnection(s_deviceOutputNode);
-	});
+	PlayUserSelectedSoundFileAsyncImpl();
 }
 
 void NowSoundGraph::NowSoundGraph_DestroyAudioGraphAsync()

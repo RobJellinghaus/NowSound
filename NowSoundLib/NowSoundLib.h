@@ -98,6 +98,9 @@ namespace NowSound
 			// Tear down the whole graph.
 			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 			static __declspec(dllexport) void __cdecl NowSoundGraph_DestroyAudioGraphAsync();
+
+		private:
+			static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 		};
 	}
 }

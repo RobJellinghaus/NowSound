@@ -64,7 +64,7 @@ struct App : ApplicationT<App>
     void OnLaunched(LaunchActivatedEventArgs const&)
     {
 		m_textBlock = TextBlock();
-		m_textBlock.Text() = AudioGraphStateString;
+		m_textBlock.Text(AudioGraphStateString);
 
 		m_button1 = Button();
 		m_button1.Content(IReference<hstring>(L"Play Something"));
@@ -77,8 +77,8 @@ struct App : ApplicationT<App>
 		Window xamlWindow = Window::Current();
 
 		StackPanel stackPanel = StackPanel();
+		stackPanel.Children().Append(m_textBlock);
 		stackPanel.Children().Append(m_button1);
-		//stackPanel.Children().Append(m_button2);
 
 		xamlWindow.Content(stackPanel);
 		xamlWindow.Activate();
@@ -123,12 +123,30 @@ struct App : ApplicationT<App>
 
 		co_await resume_background();
 		// wait only one second (and hopefully much less) for graph to become initialized.
-		co_await WaitForGraphState(NowSound::NowSoundGraph_State::Initialized, winrt::clock::now() + timeSpanFromSeconds(1));
+		// 1000 second timeout is for early stage debugging.
+		co_await WaitForGraphState(NowSound::NowSoundGraph_State::Initialized, winrt::clock::now() + timeSpanFromSeconds(1000));
 
 		co_await ui_thread;
 		std::wstring str(AudioGraphStateString);
 		str.append(StateLabel(NowSoundGraph_State::Initialized));
-		m_textBlock.Text() = str;
+		m_textBlock.Text(str);
+
+		co_await resume_background();
+		NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
+
+		NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(deviceInfo);
+
+		co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(1000));
+
+		NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
+
+		co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(1000));
+
+		// Have to go back to UI thread for this UI interaction.
+		// Calling into the DLL from the UI thread is the requirement... hmmm....
+		// TODO: cross-DLL thread contracts on all APIs
+		co_await ui_thread;
+		NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync();
 	}
 
 	TextBlock m_textBlock{ nullptr };
