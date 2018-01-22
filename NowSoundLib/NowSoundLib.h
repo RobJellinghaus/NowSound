@@ -36,7 +36,7 @@ namespace NowSound
 			}
 		};
 
-		enum NowSound_GraphState
+		enum NowSoundGraph_State
 		{
 			// InitializeAsync() has not yet been called.
 			Uninitialized,
@@ -68,39 +68,36 @@ namespace NowSound
 		// There is a single "static" audio graph defined here; multiple audio graphs are not supported.
 		// All async methods document the state the graph must be in when called, and the state the graph
 		// transitions to on completion.
-		class HolofunkAudioGraph
+		class NowSoundGraph
 		{
 		public:
 			// Get the current state of the audio graph; intended to be efficiently pollable by the client.
 			// This is the only method that may be called in any state whatoever.
-			static NowSound_GraphState HolofunkAudioGraph_GetGraphState();
+			static NowSoundGraph_State NowSoundGraph_GetGraphState();
 
 			// Initialize the audio graph subsystem such that device information can be queried.
 			// Graph must be Uninitialized.  On completion, graph becomes Initialized.
-			static void HolofunkAudioGraph_InitializeAsync();
+			static void NowSoundGraph_InitializeAsync();
 
 			// Get the device info for the default render device.
 			// Graph must not be Uninitialized or InError.
-			static NowSound_DeviceInfo HolofunkAudioGraph_GetDefaultRenderDeviceInfo();
+			static NowSound_DeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
 
 			// Create the audio graph.
 			// Graph must be Initialized.  On completion, graph becomes Created.
-			static void HolofunkAudioGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
+			static void NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
 
 			// Start the audio graph.
 			// Graph must be Created.  On completion, graph becomes Started.
-			static void HolofunkAudioGraph_StartAudioGraphAsync();
+			static void NowSoundGraph_StartAudioGraphAsync();
 
 			// Play a user-selected sound file.
 			// Graph must be Started.
-			static void HolofunkAudioGraph_PlayUserSelectedSoundFileAsync();
+			static void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
 			// Tear down the whole graph.
 			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-			static void HolofunkAudioGraph_DestroyAudioGraphAsync();
-
-		private:
-			static IAsyncAction InitializeAsyncImpl();
+			static void NowSoundGraph_DestroyAudioGraphAsync();
 		};
 	}
 }

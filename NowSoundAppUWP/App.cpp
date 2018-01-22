@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "NowSoundLib.h"
 
 using namespace std::chrono;
 using namespace winrt;
@@ -46,6 +47,9 @@ struct App : ApplicationT<App>
 
 		xamlWindow.Content(stackPanel);
 		xamlWindow.Activate();
+
+		// and here goes
+
 
 		/*
         Compositor compositor;
