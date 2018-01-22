@@ -22,21 +22,21 @@ namespace NowSound
 	// together with callback IDs.
 	extern "C"
 	{
-		struct DeviceInfo
+		struct NowSound_DeviceInfo
 		{
 			LPWSTR Id;
 			LPWSTR Name;
 
 			// Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
 			// Note that this does *not* own the strings; these must be owned elsewhere.
-			DeviceInfo(LPWSTR id, LPWSTR name)
+			NowSound_DeviceInfo(LPWSTR id, LPWSTR name)
 			{
 				Id = id;
 				Name = name;
 			}
 		};
 
-		enum AudioGraphState
+		enum NowSound_GraphState
 		{
 			// InitializeAsync() has not yet been called.
 			Uninitialized,
@@ -73,7 +73,7 @@ namespace NowSound
 		public:
 			// Get the current state of the audio graph; intended to be efficiently pollable by the client.
 			// This is the only method that may be called in any state whatoever.
-			static AudioGraphState HolofunkAudioGraph_GetGraphState();
+			static NowSound_GraphState HolofunkAudioGraph_GetGraphState();
 
 			// Initialize the audio graph subsystem such that device information can be queried.
 			// Graph must be Uninitialized.  On completion, graph becomes Initialized.
@@ -81,11 +81,11 @@ namespace NowSound
 
 			// Get the device info for the default render device.
 			// Graph must not be Uninitialized or InError.
-			static DeviceInfo HolofunkAudioGraph_GetDefaultRenderDeviceInfo();
+			static NowSound_DeviceInfo HolofunkAudioGraph_GetDefaultRenderDeviceInfo();
 
 			// Create the audio graph.
 			// Graph must be Initialized.  On completion, graph becomes Created.
-			static void HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice);
+			static void HolofunkAudioGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
 
 			// Start the audio graph.
 			// Graph must be Created.  On completion, graph becomes Started.

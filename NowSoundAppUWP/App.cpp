@@ -23,29 +23,26 @@ TimeSpan timeSpanFromSeconds(int seconds)
 
 struct App : ApplicationT<App>
 {
+	const std::wstring AudioGraphState = L"Audio graph state: ";
+
     void OnLaunched(LaunchActivatedEventArgs const&)
     {
+		m_textBlock = TextBlock();
+		m_textBlock.Text() = AudioGraphState;
+
 		m_button1 = Button();
-		m_button1.Content(IReference<hstring>(L"Play Something For Me, Charley"));
+		m_button1.Content(IReference<hstring>(L"Play Something"));
 
 		m_button1.Click([&](IInspectable const& sender, RoutedEventArgs const&)
 		{
 			m_button1.Content(IReference<hstring>(L"Psych!"));
 		});
 
-		m_button2 = Button();
-		m_button2.Content(IReference<hstring>(L"Play Something For Me, Charley"));
-
-		m_button2.Click([&](IInspectable const& sender, RoutedEventArgs const&)
-		{
-			m_button2.Content(IReference<hstring>(L"Psych!"));
-		});
-
 		Window xamlWindow = Window::Current();
 
 		StackPanel stackPanel = StackPanel();
 		stackPanel.Children().Append(m_button1);
-		stackPanel.Children().Append(m_button2);
+		//stackPanel.Children().Append(m_button2);
 
 		xamlWindow.Content(stackPanel);
 		xamlWindow.Activate();
@@ -80,8 +77,9 @@ struct App : ApplicationT<App>
 		*/
 	}
 
+	TextBlock m_textBlock{ nullptr };
 	Button m_button1{ nullptr };
-	Button m_button2{ nullptr };
+	// Button m_button2{ nullptr };
 };
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)

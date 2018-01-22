@@ -33,18 +33,18 @@ using namespace NowSound;
 using namespace concurrency;
 using namespace std;
 
-static AudioGraphState s_audioGraphState{ AudioGraphState::Uninitialized };
+static NowSound_GraphState s_audioGraphState{ NowSound_GraphState::Uninitialized };
 
 static AudioGraph s_audioGraph{ nullptr };
 
-AudioGraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
+NowSound_GraphState HolofunkAudioGraph::HolofunkAudioGraph_GetGraphState()
 {
 	return s_audioGraphState;
 }
 
 void HolofunkAudioGraph::HolofunkAudioGraph_InitializeAsync()
 {
-	Contract::Requires(s_audioGraphState == AudioGraphState::Uninitialized);
+	Contract::Requires(s_audioGraphState == NowSound_GraphState::Uninitialized);
 	create_task([]() -> IAsyncAction
 	{
 		AudioGraphSettings settings(AudioRenderCategory::Media);
@@ -58,21 +58,21 @@ void HolofunkAudioGraph::HolofunkAudioGraph_InitializeAsync()
 		}
 
 		s_audioGraph = result.Graph();
-		s_audioGraphState = AudioGraphState::Initialized;
+		s_audioGraphState = NowSound_GraphState::Initialized;
 	});
 }
 
-DeviceInfo HolofunkAudioGraph::HolofunkAudioGraph_GetDefaultRenderDeviceInfo()
+NowSound_DeviceInfo HolofunkAudioGraph::HolofunkAudioGraph_GetDefaultRenderDeviceInfo()
 {
-	return DeviceInfo(nullptr, nullptr);
+	return NowSound_DeviceInfo(nullptr, nullptr);
 }
 
 // TODO: really really need a real graph node store
 AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
-void HolofunkAudioGraph::HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo outputDevice)
+void HolofunkAudioGraph::HolofunkAudioGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice)
 {
-	Contract::Requires(s_audioGraphState == AudioGraphState::Initialized);
+	Contract::Requires(s_audioGraphState == NowSound_GraphState::Initialized);
 
 	create_task([]() -> IAsyncAction
 	{
@@ -87,17 +87,17 @@ void HolofunkAudioGraph::HolofunkAudioGraph_CreateAudioGraphAsync(DeviceInfo out
 		}
 
 		s_deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
-		s_audioGraphState = AudioGraphState::Created;
+		s_audioGraphState = NowSound_GraphState::Created;
 	});
 }
 
 void HolofunkAudioGraph::HolofunkAudioGraph_StartAudioGraphAsync()
 {
-	Contract::Requires(s_audioGraphState == AudioGraphState::Created);
+	Contract::Requires(s_audioGraphState == NowSound_GraphState::Created);
 
 	s_audioGraph.Start();
 
-	s_audioGraphState = AudioGraphState::Running;
+	s_audioGraphState = NowSound_GraphState::Running;
 }
 
 void HolofunkAudioGraph::HolofunkAudioGraph_PlayUserSelectedSoundFileAsync()
