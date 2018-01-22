@@ -73,31 +73,31 @@ namespace NowSound
 		public:
 			// Get the current state of the audio graph; intended to be efficiently pollable by the client.
 			// This is the only method that may be called in any state whatoever.
-			static NowSoundGraph_State NowSoundGraph_GetGraphState();
+			static __declspec(dllexport) NowSoundGraph_State NowSoundGraph_GetGraphState();
 
 			// Initialize the audio graph subsystem such that device information can be queried.
 			// Graph must be Uninitialized.  On completion, graph becomes Initialized.
-			static void NowSoundGraph_InitializeAsync();
+			static __declspec(dllexport) void NowSoundGraph_InitializeAsync();
 
 			// Get the device info for the default render device.
 			// Graph must not be Uninitialized or InError.
-			static NowSound_DeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
+			static __declspec(dllexport) NowSound_DeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
 
 			// Create the audio graph.
 			// Graph must be Initialized.  On completion, graph becomes Created.
-			static void NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
+			static __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
 
 			// Start the audio graph.
 			// Graph must be Created.  On completion, graph becomes Started.
-			static void NowSoundGraph_StartAudioGraphAsync();
+			static __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
 
 			// Play a user-selected sound file.
 			// Graph must be Started.
-			static void NowSoundGraph_PlayUserSelectedSoundFileAsync();
+			static __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
 			// Tear down the whole graph.
 			// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-			static void NowSoundGraph_DestroyAudioGraphAsync();
+			static __declspec(dllexport) void __cdecl NowSoundGraph_DestroyAudioGraphAsync();
 		};
 	}
 }

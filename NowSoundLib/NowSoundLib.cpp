@@ -2,7 +2,12 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Contract.h"
+#include "NowSoundLib.h"
 
+using namespace NowSound;
+using namespace concurrency;
+using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
@@ -22,16 +27,6 @@ TimeSpan timeSpanFromSeconds(int seconds)
 	return TimeSpan(seconds * 10000000);
 }
 
-// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
-// Licensed under the MIT license
-
-#include "pch.h"
-#include "Contract.h"
-#include "NowSoundLib.h"
-
-using namespace NowSound;
-using namespace concurrency;
-using namespace std;
 
 static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized };
 
