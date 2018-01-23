@@ -2,8 +2,8 @@
 // Licensed under the MIT license
 
 #include "pch.h"
-#include "Contract.h"
 #include "NowSoundLib.h"
+#include <sstream>
 
 using namespace NowSound;
 
@@ -27,23 +27,6 @@ TimeSpan timeSpanFromSeconds(int seconds)
 	return TimeSpan(seconds * TicksPerSecond);
 }
 
-// Wait until the graph state becomes the expected state, or timeoutTime is reached.
-std::future<bool> WaitForGraphState(NowSoundGraph_State expectedState, DateTime timeoutTime)
-{
-	// Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
-	// so we use polling in this example -- and to determine how it actually works in modern C++.
-	bool stateIsSame;
-	// While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
-	while (!(stateIsSame = expectedState == NowSoundGraph::NowSoundGraph_GetGraphState())
-		&& winrt::clock::now() < timeoutTime)
-	{
-		// wait in intervals of 1/100 sec
-		co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
-	}
-
-	return stateIsSame;
-}
-
 struct App : ApplicationT<App>
 {
 	const std::wstring AudioGraphStateString = L"Audio graph state: ";
@@ -57,14 +40,49 @@ struct App : ApplicationT<App>
 		case NowSoundGraph_State::Created: return L"Created";
 		case NowSoundGraph_State::Running: return L"Running";
 		case NowSoundGraph_State::InError: return L"InError";
-		default: Contract::Assert(false, L"Unknown graph state; should be impossible");
+		default: WINRT_ASSERT(false, L"Unknown graph state; should be impossible");
 		}
 	}
 
-    void OnLaunched(LaunchActivatedEventArgs const&)
+	// Update the state label.
+	// Transition to the UI thread to do so, and then return to calling context before exiting.
+	IAsyncAction UpdateStateLabel()
+	{
+		apartment_context calling_context;
+
+		co_await m_uiThread;
+		std::wstring str(AudioGraphStateString);
+		str.append(StateLabel(NowSoundGraph::NowSoundGraph_GetGraphState()));
+		m_textBlock1.Text(str);
+
+		co_await calling_context;
+	}
+
+	// Wait until the graph state becomes the expected state, or timeoutTime is reached.
+	std::future<bool> WaitForGraphState(NowSoundGraph_State expectedState, DateTime timeoutTime)
+	{
+		// Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
+		// so we use polling in this example -- and to determine how it actually works in modern C++.
+		bool stateIsSame;
+		// While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
+		while (!(stateIsSame = expectedState == NowSoundGraph::NowSoundGraph_GetGraphState())
+			&& winrt::clock::now() < timeoutTime)
+		{
+			// wait in intervals of 1/100 sec
+			co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
+		}
+
+		UpdateStateLabel();
+
+		return stateIsSame;
+	}
+
+	void OnLaunched(LaunchActivatedEventArgs const&)
     {
-		m_textBlock = TextBlock();
-		m_textBlock.Text(AudioGraphStateString);
+		m_textBlock1 = TextBlock();
+		m_textBlock1.Text(AudioGraphStateString);
+		m_textBlock2 = TextBlock();
+		m_textBlock2.Text(L"");
 
 		m_button1 = Button();
 		m_button1.Content(IReference<hstring>(L"Play Something"));
@@ -77,7 +95,8 @@ struct App : ApplicationT<App>
 		Window xamlWindow = Window::Current();
 
 		StackPanel stackPanel = StackPanel();
-		stackPanel.Children().Append(m_textBlock);
+		stackPanel.Children().Append(m_textBlock1);
+		stackPanel.Children().Append(m_textBlock2);
 		stackPanel.Children().Append(m_button1);
 
 		xamlWindow.Content(stackPanel);
@@ -120,16 +139,12 @@ struct App : ApplicationT<App>
 	fire_and_forget Async()
 	{
 		apartment_context ui_thread;
+		m_uiThread = ui_thread;
 
 		co_await resume_background();
 		// wait only one second (and hopefully much less) for graph to become initialized.
 		// 1000 second timeout is for early stage debugging.
 		co_await WaitForGraphState(NowSound::NowSoundGraph_State::Initialized, winrt::clock::now() + timeSpanFromSeconds(1000));
-
-		co_await ui_thread;
-		std::wstring str(AudioGraphStateString);
-		str.append(StateLabel(NowSoundGraph_State::Initialized));
-		m_textBlock.Text(str);
 
 		co_await resume_background();
 		NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
@@ -138,14 +153,25 @@ struct App : ApplicationT<App>
 
 		co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(1000));
 
+		NowSound_GraphInfo graphInfo = NowSoundGraph::NowSoundGraph_GetGraphInfo();
+
+		co_await m_uiThread;
+		std::wstringstream wstr;
+		wstr << L"Latency in samples: " << graphInfo.LatencyInSamples << " | Samples per quantum: " << graphInfo.SamplesPerQuantum;
+		m_textBlock2.Text(wstr.str());
+		co_await resume_background();
+
 		NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
 
 		co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(1000));
 	}
 
-	TextBlock m_textBlock{ nullptr };
+	TextBlock m_textBlock1{ nullptr };
+	TextBlock m_textBlock2{ nullptr };
 	Button m_button1{ nullptr };
 	// Button m_button2{ nullptr };
+
+	apartment_context m_uiThread;
 };
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)

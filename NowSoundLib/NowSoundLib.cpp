@@ -2,7 +2,6 @@
 // Licensed under the MIT license
 
 #include "pch.h"
-#include "Contract.h"
 #include "NowSoundLib.h"
 
 using namespace NowSound;
@@ -27,7 +26,6 @@ TimeSpan timeSpanFromSeconds(int seconds)
 	return TimeSpan(seconds * 10000000);
 }
 
-
 static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized };
 
 static AudioGraph s_audioGraph{ nullptr };
@@ -39,7 +37,7 @@ NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
 
 void NowSoundGraph::NowSoundGraph_InitializeAsync()
 {
-	Contract::Requires(s_audioGraphState == NowSoundGraph_State::Uninitialized);
+	WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Uninitialized);
 	create_task([]() -> IAsyncAction
 	{
 		AudioGraphSettings settings(AudioRenderCategory::Media);
@@ -56,6 +54,7 @@ void NowSoundGraph::NowSoundGraph_InitializeAsync()
 		}
 
 		s_audioGraph = result.Graph();
+
 		s_audioGraphState = NowSoundGraph_State::Initialized;
 	});
 }
@@ -70,7 +69,7 @@ AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
 void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice)
 {
-	Contract::Requires(s_audioGraphState == NowSoundGraph_State::Initialized);
+	WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Initialized);
 
 	create_task([]() -> IAsyncAction
 	{
@@ -89,9 +88,15 @@ void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outp
 	});
 }
 
+NowSound_GraphInfo NowSoundGraph::NowSoundGraph_GetGraphInfo()
+{
+	WINRT_ASSERT(s_audioGraphState >= NowSoundGraph_State::Created);
+	return NowSound_GraphInfo(s_audioGraph.LatencyInSamples(), s_audioGraph.SamplesPerQuantum());
+}
+
 void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
 {
-	Contract::Requires(s_audioGraphState == NowSoundGraph_State::Created);
+	WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Created);
 
 	s_audioGraph.Start();
 

@@ -305,9 +305,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Contract.h" />
+    <ClInclude Include="Averager.h" />
+    <ClInclude Include="BufferAllocator.h" />
+    <ClInclude Include="Averager.cpp" />
+    <ClInclude Include="Recorder.h" />
+    <ClInclude Include="SliceStream.h" />
+    <ClInclude Include="Clock.h" />
+    <ClInclude Include="IntervalMapper.h" />
     <ClInclude Include="NowSoundLib.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Slice.h" />
+    <ClInclude Include="Time.h" />
+    <ClInclude Include="Track.h" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -315,6 +324,11 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BufferAllocator.cpp" />
+    <ClCompile Include="Recorder.cpp" />
+    <ClCompile Include="SliceStream.cpp" />
+    <ClCompile Include="Clock.cpp" />
+    <ClCompile Include="IntervalMapper.cpp" />
     <ClCompile Include="NowSoundLib.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -324,6 +338,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Slice.cpp" />
+    <ClCompile Include="Track.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

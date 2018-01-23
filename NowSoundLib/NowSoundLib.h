@@ -22,6 +22,7 @@ namespace NowSound
 	// together with callback IDs.
 	extern "C"
 	{
+		// Information about an audio device.
 		struct NowSound_DeviceInfo
 		{
 			LPWSTR Id;
@@ -33,6 +34,19 @@ namespace NowSound
 			{
 				Id = id;
 				Name = name;
+			}
+		};
+
+		// Information about an audio graph.
+		struct NowSound_GraphInfo
+		{
+			int32_t LatencyInSamples;
+			int32_t SamplesPerQuantum;
+
+			NowSound_GraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
+			{
+				LatencyInSamples = latencyInSamples;
+				SamplesPerQuantum = samplesPerQuantum;
 			}
 		};
 
@@ -87,6 +101,10 @@ namespace NowSound
 			// Graph must be Initialized.  On completion, graph becomes Created.
 			static __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
 
+			// Get the graph info for the created graph.
+			// Graph must be Created or Running.
+			static __declspec(dllexport) NowSound_GraphInfo NowSoundGraph_GetGraphInfo();
+
 			// Start the audio graph.
 			// Graph must be Created.  On completion, graph becomes Started.
 			static __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
@@ -102,5 +120,101 @@ namespace NowSound
 		private:
 			static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 		};
+
+		/// <summary>
+		/// The state of a particular IHolofunkAudioTrack.
+		/// </summary>
+		public enum TrackState
+		{
+			/// <summary>
+			/// The track is being recorded and it is not known when it will finish.
+			/// </summary>
+			Recording,
+
+			/// <summary>
+			/// The track is finishing off its now-known recording time.
+			/// </summary>
+			FinishRecording,
+
+			/// <summary>
+			/// The track is playing back, looping.
+			/// </summary>
+			Looping,
+		}
+
+		/// <summary>
+		/// Interface used by the Unity code to invoke operations on a particular audio track.
+		/// </summary>
+		/// <remarks>
+		/// This interface exists because the HolofunkAudioGraph assembly is at a higher level (referentially) than
+		/// the Holofunk-Unity assembly. So the HolofunkAudioGraph assembly implements these operations, and the
+		/// Holofunk-Unity code invokes them via this "upcall" interface.
+		/// </remarks>
+		public interface IHolofunkAudioTrack
+		{
+			/// <summary>
+			/// In what state is this track?
+			/// </summary>
+			TrackState State{ get; }
+
+				/// <summary>
+				/// Duration in beats of current Clock.
+				/// </summary>
+				/// <remarks>
+				/// Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
+				/// </remarks>
+			Duration<Beat> BeatDuration{ get; }
+
+				/// <summary>
+				/// What beat position is playing right now?
+				/// </summary>
+				/// <remarks>
+				/// This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
+				/// playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
+				/// </remarks>
+			ContinuousDuration<Beat> BeatPositionUnityNow{ get; }
+
+				/// <summary>
+				/// How long is this track, in samples?
+				/// </summary>
+				/// <remarks>
+				/// This is increased during recording.  It may in general have fractional numbers of samples if 
+				/// Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
+				/// </remarks>
+			ContinuousDuration<AudioSample> Duration{ get; }
+
+				/// <summary>
+				/// The starting moment at which this Track was created.
+				/// </summary>
+			Moment StartMoment{ get; }
+
+				/// <summary>
+				/// The user wishes the track to finish recording now.
+				/// </summary>
+				/// <remarks>
+				/// Contractually requires State == TrackState.Recording.
+				/// </remarks>
+			void FinishRecording();
+
+			/// <summary>
+			/// True if this is muted.
+			/// </summary>
+			/// <remarks>
+			/// Note that something can be in FinishRecording state but still be muted, if the user is fast!
+			/// Hence this is a separate flag, not represented as a TrackState.
+			/// </remarks>
+			bool IsMuted{ get; set; }
+
+				/// <summary>
+				/// Delete this Track; after this, all methods become invalid to call (contract failure).
+				/// </summary>
+			void Delete();
+
+			/// <summary>
+			/// TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
+			/// </summary>
+			void UnityUpdate();
+		}
+
 	}
 }
