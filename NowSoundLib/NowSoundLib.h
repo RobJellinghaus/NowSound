@@ -121,98 +121,98 @@ namespace NowSound
 			static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 		};
 
-		/// <summary>
-		/// The state of a particular IHolofunkAudioTrack.
-		/// </summary>
+		// 
+		// The state of a particular IHolofunkAudioTrack.
+		// 
 		public enum TrackState
 		{
-			/// <summary>
-			/// The track is being recorded and it is not known when it will finish.
-			/// </summary>
+			// 
+			// The track is being recorded and it is not known when it will finish.
+			// 
 			Recording,
 
-			/// <summary>
-			/// The track is finishing off its now-known recording time.
-			/// </summary>
+			// 
+			// The track is finishing off its now-known recording time.
+			// 
 			FinishRecording,
 
-			/// <summary>
-			/// The track is playing back, looping.
-			/// </summary>
+			// 
+			// The track is playing back, looping.
+			// 
 			Looping,
 		}
 
-		/// <summary>
-		/// Interface used by the Unity code to invoke operations on a particular audio track.
-		/// </summary>
-		/// <remarks>
-		/// This interface exists because the HolofunkAudioGraph assembly is at a higher level (referentially) than
-		/// the Holofunk-Unity assembly. So the HolofunkAudioGraph assembly implements these operations, and the
-		/// Holofunk-Unity code invokes them via this "upcall" interface.
-		/// </remarks>
+		// 
+		// Interface used by the Unity code to invoke operations on a particular audio track.
+		// 
+		// 
+		// This interface exists because the HolofunkAudioGraph assembly is at a higher level (referentially) than
+		// the Holofunk-Unity assembly. So the HolofunkAudioGraph assembly implements these operations, and the
+		// Holofunk-Unity code invokes them via this "upcall" interface.
+		// </remarks>
 		public interface IHolofunkAudioTrack
 		{
-			/// <summary>
-			/// In what state is this track?
-			/// </summary>
+			// 
+			// In what state is this track?
+			// 
 			TrackState State{ get; }
 
-				/// <summary>
-				/// Duration in beats of current Clock.
-				/// </summary>
-				/// <remarks>
-				/// Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-				/// </remarks>
+				// 
+				// Duration in beats of current Clock.
+				// 
+				// 
+				// Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
+				// </remarks>
 			Duration<Beat> BeatDuration{ get; }
 
-				/// <summary>
-				/// What beat position is playing right now?
-				/// </summary>
-				/// <remarks>
-				/// This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
-				/// playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
-				/// </remarks>
+				// 
+				// What beat position is playing right now?
+				// 
+				// 
+				// This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
+				// playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
+				// </remarks>
 			ContinuousDuration<Beat> BeatPositionUnityNow{ get; }
 
-				/// <summary>
-				/// How long is this track, in samples?
-				/// </summary>
-				/// <remarks>
-				/// This is increased during recording.  It may in general have fractional numbers of samples if 
-				/// Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
-				/// </remarks>
+				// 
+				// How long is this track, in samples?
+				// 
+				// 
+				// This is increased during recording.  It may in general have fractional numbers of samples if 
+				// Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
+				// </remarks>
 			ContinuousDuration<AudioSample> Duration{ get; }
 
-				/// <summary>
-				/// The starting moment at which this Track was created.
-				/// </summary>
+				// 
+				// The starting moment at which this Track was created.
+				// 
 			Moment StartMoment{ get; }
 
-				/// <summary>
-				/// The user wishes the track to finish recording now.
-				/// </summary>
-				/// <remarks>
-				/// Contractually requires State == TrackState.Recording.
-				/// </remarks>
+				// 
+				// The user wishes the track to finish recording now.
+				// 
+				// 
+				// Contractually requires State == TrackState.Recording.
+				// </remarks>
 			void FinishRecording();
 
-			/// <summary>
-			/// True if this is muted.
-			/// </summary>
-			/// <remarks>
-			/// Note that something can be in FinishRecording state but still be muted, if the user is fast!
-			/// Hence this is a separate flag, not represented as a TrackState.
-			/// </remarks>
+			// 
+			// True if this is muted.
+			// 
+			// 
+			// Note that something can be in FinishRecording state but still be muted, if the user is fast!
+			// Hence this is a separate flag, not represented as a TrackState.
+			// </remarks>
 			bool IsMuted{ get; set; }
 
-				/// <summary>
-				/// Delete this Track; after this, all methods become invalid to call (contract failure).
-				/// </summary>
+				// 
+				// Delete this Track; after this, all methods become invalid to call (contract failure).
+				// 
 			void Delete();
 
-			/// <summary>
-			/// TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
-			/// </summary>
+			// 
+			// TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
+			// 
 			void UnityUpdate();
 		}
 

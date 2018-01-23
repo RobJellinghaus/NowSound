@@ -14,8 +14,8 @@ using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
 {
-	/// <summary>Rolling buffer which can average a number of T's.</summary>
-	/// <remarks>Parameterized with methods to handle summing / dividing the T's in question.</remarks>
+	// Rolling buffer which can average a number of T's.
+	// Parameterized with methods to handle summing / dividing the T's in question.</remarks>
 	public abstract class Averager<T>
 {
 	// the buffer of T's
@@ -38,10 +38,10 @@ using namespace Windows::Media::Render;
 		m_storage = new T[capacity];
 	}
 
-	/// <summary>Has this Averager got no data?</summary>
+	// Has this Averager got no data?
 	public bool IsEmpty{ get{ return m_index == 0 && !m_storageFull; } }
 
-		/// <summary>Update this Averager with another data point.</summary>
+		// Update this Averager with another data point.
 		public void Update(T nextT)
 	{
 		if (!IsValid(nextT)) {
@@ -63,7 +63,7 @@ using namespace Windows::Media::Render;
 		m_average = Divide(m_total, m_storageFull ? m_storage.Length : m_index);
 	}
 
-	/// <summary>Get the average; invalid if Average.IsEmpty.</summary>
+	// Get the average; invalid if Average.IsEmpty.
 	public T Average
 	{
 		get

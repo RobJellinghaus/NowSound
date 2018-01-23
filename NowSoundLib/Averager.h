@@ -3,71 +3,72 @@
 
 #include "pch.h"
 
+using namespace std;
+
 namespace NowSound
 {
-	/// <summary>Rolling buffer which can average a number of T's.</summary>
-	/// <remarks>Parameterized with methods to handle summing / dividing the T's in question.</remarks>
-	public abstract class Averager<T>
-{
-	// the buffer of T's
-	readonly T[] m_storage;
-
-	// have we filled the current storage?
-	bool m_storageFull;
-
-	// what's the next index to be overwritten with the next datum?
-	int m_index;
-
-	// the total
-	T m_total;
-
-	// the current average, so we don't have race conditions about it
-	T m_average;
-
-	public Averager(int capacity)
+	// Rolling buffer which can average a number of T's.
+	// Parameterized with methods to handle summing / dividing the T's in question.</remarks>
+	template <typename T> class Averager
 	{
-		m_storage = new T[capacity];
-	}
+	private:
+		// the buffer of T's
+		std::vector<T> _storage;
 
-	/// <summary>Has this Averager got no data?</summary>
-	public bool IsEmpty{ get{ return m_index == 0 && !m_storageFull; } }
+		// have we filled the current storage?
+		bool _storageFull;
 
-		/// <summary>Update this Averager with another data point.</summary>
-		public void Update(T nextT)
-	{
-		if (!IsValid(nextT)) {
-			return;
+		// what's the next index to be overwritten with the next datum?
+		int m_index;
+
+		// the total
+		T m_total;
+
+		// the current average, so we don't have race conditions about it
+		T m_average;
+
+	public:
+		Averager(int capacity) : m_storage(capacity) { }
+
+		// Has this Averager got no data?
+		bool IsEmpty() { return m_index == 0 && !m_storageFull; }
+
+		// Update this Averager with another data point.
+		void Update(T nextT)
+		{
+			if (!IsValid(nextT)) {
+				return;
+			}
+
+			if (m_index == m_storage.Length) {
+				// might as well unconditionally set it, branching is more expensive
+				m_storageFull = true;
+				m_index = 0;
+			}
+
+			if (m_storageFull) {
+				m_total = Subtract(m_total, m_storage[m_index]);
+			}
+			m_total = Add(m_total, nextT);
+			m_storage[m_index] = nextT;
+			m_index++;
+			m_average = Divide(m_total, m_storageFull ? m_storage.Length : m_index);
 		}
 
-		if (m_index == m_storage.Length) {
-			// might as well unconditionally set it, branching is more expensive
-			m_storageFull = true;
-			m_index = 0;
+		// Get the average; invalid if Average.IsEmpty.
+		public T Average
+		{
+			get
+		{
+			return m_average;
+		}
 		}
 
-		if (m_storageFull) {
-			m_total = Subtract(m_total, m_storage[m_index]);
-		}
-		m_total = Add(m_total, nextT);
-		m_storage[m_index] = nextT;
-		m_index++;
-		m_average = Divide(m_total, m_storageFull ? m_storage.Length : m_index);
+		protected abstract bool IsValid(T t);
+		protected abstract T Subtract(T total, T nextT);
+		protected abstract T Add(T total, T nextT);
+		protected abstract T Divide(T total, int count);
 	}
-
-	/// <summary>Get the average; invalid if Average.IsEmpty.</summary>
-	public T Average
-	{
-		get
-	{
-		return m_average;
-	}
-	}
-
-	protected abstract bool IsValid(T t);
-	protected abstract T Subtract(T total, T nextT);
-	protected abstract T Add(T total, T nextT);
-	protected abstract T Divide(T total, int count);
-}
 
 public class FloatAverager : Averager<float>
 {

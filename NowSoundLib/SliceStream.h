@@ -7,52 +7,52 @@
 
 namespace NowSound
 {
-	/// <summary>
-	/// A stream of data, which can be Shut, at which point it acquires a floating-point ContinuousDuration.
-	/// </summary>
-	/// <remarks>
-	/// Streams may be Open (in which case more data may be appended to them), or Shut (in which case they will
-	/// not change again).
-	/// 
-	/// Streams may have varying internal policies for mapping time to underlying data, and may form hierarchies
-	/// internally.
-	/// 
-	/// Streams have a SliverSize which denotes a larger granularity within the Stream's data.
-	/// A SliverSize of N represents that each element in the Stream logically consists of N contiguous
-	/// TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
-	/// A Stream with duration 1 has exactly one sliver of data. 
-	/// </remarks>
+	// 
+	// A stream of data, which can be Shut, at which point it acquires a floating-point ContinuousDuration.
+	// 
+	// 
+	// Streams may be Open (in which case more data may be appended to them), or Shut (in which case they will
+	// not change again).
+	// 
+	// Streams may have varying internal policies for mapping time to underlying data, and may form hierarchies
+	// internally.
+	// 
+	// Streams have a SliverSize which denotes a larger granularity within the Stream's data.
+	// A SliverSize of N represents that each element in the Stream logically consists of N contiguous
+	// TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
+	// A Stream with duration 1 has exactly one sliver of data. 
+	// </remarks>
 	public abstract class SliceStream<TTime, TValue> : IDisposable
 where TValue : struct
 {
-	/// <summary>
-	/// The initial time of this Stream.
-	/// </summary>
-	/// <remarks>
-	/// Note that this is discrete.  We don't consider a sub-sample's worth of error in the start time to be
-	/// significant.  The loop duration, on the other hand, is iterated so often that error can and does
-	/// accumulate; hence, ContinuousDuration, defined only once shut.
-	/// </remarks>
+	// 
+	// The initial time of this Stream.
+	// 
+	// 
+	// Note that this is discrete.  We don't consider a sub-sample's worth of error in the start time to be
+	// significant.  The loop duration, on the other hand, is iterated so often that error can and does
+	// accumulate; hence, ContinuousDuration, defined only once shut.
+	// </remarks>
 	protected Time<TTime> m_initialTime;
 
-	/// <summary>
-	/// The floating-point duration of this stream in terms of samples; only valid once shut.
-	/// </summary>
-	/// <remarks>
-	/// This allows streams to have lengths measured in fractional samples, which prevents roundoff error from
-	/// causing clock drift when using unevenly divisible BPM values and looping for long periods.
-	/// </remarks>
+	// 
+	// The floating-point duration of this stream in terms of samples; only valid once shut.
+	// 
+	// 
+	// This allows streams to have lengths measured in fractional samples, which prevents roundoff error from
+	// causing clock drift when using unevenly divisible BPM values and looping for long periods.
+	// </remarks>
 	ContinuousDuration<AudioSample> m_continuousDuration;
 
-	/// <summary>
-	/// As with Slice<typeparam name="TValue"></typeparam>, this defines the number of T values in an
-	/// individual slice.
-	/// </summary>
+	// 
+	// As with Slice<typeparam name="TValue"></typeparam>, this defines the number of T values in an
+	// individual slice.
+	// 
 	public readonly int SliverSize;
 
-	/// <summary>
-	/// Is this stream shut?
-	/// </summary>
+	// 
+	// Is this stream shut?
+	// 
 	bool m_isShut;
 
 	protected SliceStream(Time<TTime> initialTime, int sliverSize)
@@ -63,21 +63,21 @@ where TValue : struct
 
 	public bool IsShut{ get{ return m_isShut; } }
 
-		/// <summary>
-		/// The starting time of this Stream.
-		/// </summary>
+		// 
+		// The starting time of this Stream.
+		// 
 	public Time<TTime> InitialTime{ get{ return m_initialTime; } }
 
-		/// <summary>
-		/// The floating-point-accurate duration of this stream; only valid once shut.
-		/// </summary>
+		// 
+		// The floating-point-accurate duration of this stream; only valid once shut.
+		// 
 	public ContinuousDuration<AudioSample> ContinuousDuration{ get{ return m_continuousDuration; } }
 
-		/// <summary>
-		/// Shut the stream; no further appends may be accepted.
-		/// </summary>
-		/// <param name="finalDuration">The possibly fractional duration to be associated with the stream;
-		/// must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
+		// 
+		// Shut the stream; no further appends may be accepted.
+		// 
+		// <param name="finalDuration">The possibly fractional duration to be associated with the stream;
+		// must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
 		public virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
 	{
 		Contract.Assert(!IsShut);
@@ -85,48 +85,48 @@ where TValue : struct
 		m_continuousDuration = finalDuration;
 	}
 
-	/// <summary>
-	/// Drop this stream and all its owned data.
-	/// </summary>
-	/// <remarks>
-	/// This MAY need to become a ref counting structure if we want stream dependencies.
-	/// </remarks>
+	// 
+	// Drop this stream and all its owned data.
+	// 
+	// 
+	// This MAY need to become a ref counting structure if we want stream dependencies.
+	// </remarks>
 	public abstract void Dispose();
 
-	/// <summary>
-	/// The sizeof(TValue) -- sadly this is not expressible in C# 4.5.
-	/// </summary>
-	/// <returns></returns>
+	// 
+	// The sizeof(TValue) -- sadly this is not expressible in C# 4.5.
+	// 
+	// <returns></returns>
 	public abstract int SizeofValue();
 }
 }
 
-/// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
+// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
 
 using System;
 
 namespace Holofunk.Core
 {
-	/// <summary>
-	/// A stream of data, accessed through consecutive, densely sequenced Slices.
-	/// </summary>
-	/// <remarks>
-	/// The methods which take IntPtr arguments cannot be implemented generically in .NET; it is not possible to
-	/// take the address of a generic T[] array.  The type must be specialized to some known primitive type such
-	/// as float or byte.  This is done in the leaf subclasses in the Stream hierarchy.  All other operations are
-	/// generically implemented.
-	/// </remarks>
+	// 
+	// A stream of data, accessed through consecutive, densely sequenced Slices.
+	// 
+	// 
+	// The methods which take IntPtr arguments cannot be implemented generically in .NET; it is not possible to
+	// take the address of a generic T[] array.  The type must be specialized to some known primitive type such
+	// as float or byte.  This is done in the leaf subclasses in the Stream hierarchy.  All other operations are
+	// generically implemented.
+	// </remarks>
 	public abstract class DenseSliceStream<TTime, TValue> : SliceStream<TTime, TValue>
 	where TValue : struct
 	{
-		/// <summary>
-		/// The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices.
-		/// </summary>
+		// 
+		// The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices.
+		// 
 		protected Duration<TTime> m_discreteDuration;
 
-		/// <summary>
-		/// The mapper that converts absolute time into relative time for this stream.
-		/// </summary>
+		// 
+		// The mapper that converts absolute time into relative time for this stream.
+		// 
 		IntervalMapper<TTime> m_intervalMapper;
 
 		protected DenseSliceStream(Time<TTime> initialTime, int sliverSize)
@@ -134,9 +134,9 @@ namespace Holofunk.Core
 		{
 		}
 
-		/// <summary>
-		/// The discrete duration of this stream; always exactly equal to the number of timepoints appended.
-		/// </summary>
+		// 
+		// The discrete duration of this stream; always exactly equal to the number of timepoints appended.
+		// 
 		public Duration<TTime> DiscreteDuration{ get{ return m_discreteDuration; } }
 
 		public Interval<TTime> DiscreteInterval{ get{ return new Interval<TTime>(InitialTime, DiscreteDuration); } }
@@ -147,11 +147,11 @@ namespace Holofunk.Core
 		set{ m_intervalMapper = value; }
 		}
 
-			/// <summary>
-			/// Shut the stream; no further appends may be accepted.
-			/// </summary>
-			/// <param name="finalDuration">The possibly fractional duration to be associated with the stream;
-			/// must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
+			// 
+			// Shut the stream; no further appends may be accepted.
+			// 
+			// <param name="finalDuration">The possibly fractional duration to be associated with the stream;
+			// must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
 			public override void Shut(ContinuousDuration<AudioSample> finalDuration)
 		{
 			Contract.Requires(!IsShut, "!IsShut");
@@ -165,49 +165,49 @@ namespace Holofunk.Core
 			base.Shut(finalDuration);
 		}
 
-		/// <summary>
-		/// Get a reference to the next slice at the given time, up to the given duration if possible, or the
-		/// largest available slice if not.
-		/// </summary>
-		/// <remarks>
-		/// If the interval IsEmpty, return an empty slice.
-		/// </remarks>
+		// 
+		// Get a reference to the next slice at the given time, up to the given duration if possible, or the
+		// largest available slice if not.
+		// 
+		// 
+		// If the interval IsEmpty, return an empty slice.
+		// </remarks>
 		public abstract Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval);
 
 
-		/// <summary>
-		/// Append contiguous data; this must not be shut yet.
-		/// </summary>
+		// 
+		// Append contiguous data; this must not be shut yet.
+		// 
 		public abstract void Append(Slice<TTime, TValue> source);
 
-		/// <summary>
-		/// Append a rectangular, strided region of the source array.
-		/// </summary>
-		/// <remarks>
-		/// The width * height must together equal the sliverSize.
-		/// </remarks>
+		// 
+		// Append a rectangular, strided region of the source array.
+		// 
+		// 
+		// The width * height must together equal the sliverSize.
+		// </remarks>
 		public abstract void AppendSliver(TValue[] source, int startOffset, int width, int stride, int height);
 
-		/// <summary>
-		/// Append the given duration's worth of slices from the given pointer.
-		/// </summary>
-		/// <param name="p"></param>
-		/// <param name="duration"></param>
+		// 
+		// Append the given duration's worth of slices from the given pointer.
+		// 
+		// <param name="p"></param>
+		// <param name="duration"></param>
 		public abstract void Append(Duration<TTime> duration, IntPtr p);
 
-		/// <summary>
-		/// Copy the given interval of this stream to the destination.
-		/// </summary>
+		// 
+		// Copy the given interval of this stream to the destination.
+		// 
 		public abstract void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destination);
 
-		/// <summary>
-		/// Copy the given interval of this stream to the destination.
-		/// </summary>
+		// 
+		// Copy the given interval of this stream to the destination.
+		// 
 		public abstract void CopyTo(Interval<TTime> sourceInterval, IntPtr destination);
 	}
 }
 
-/// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
+// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
 
 using System;
 using System.Collections.Generic;
@@ -215,72 +215,72 @@ using System.Runtime.InteropServices;
 
 namespace Holofunk.Core
 {
-	/// <summary>
-	/// A stream that buffers some amount of data in memory.
-	/// </summary>
+	// 
+	// A stream that buffers some amount of data in memory.
+	// 
 	public abstract class BufferedSliceStream<TTime, TValue> : DenseSliceStream<TTime, TValue>
 	where TValue : struct
 	{
-		/// <summary>
-		/// Allocator for buffer management.
-		/// </summary>
+		// 
+		// Allocator for buffer management.
+		// 
 		readonly BufferAllocator<TValue> m_allocator;
 
-		/// <summary>
-		/// The slices making up the buffered data itself.
-		/// </summary>
-		/// <remarks>
-		/// The InitialTime of each entry in this list must exactly equal the InitialTime + Duration of the
-		/// previous entry; in other words, these are densely arranged in time.
-		/// </remarks>
+		// 
+		// The slices making up the buffered data itself.
+		// 
+		// 
+		// The InitialTime of each entry in this list must exactly equal the InitialTime + Duration of the
+		// previous entry; in other words, these are densely arranged in time.
+		// </remarks>
 		readonly List<TimedSlice<TTime, TValue>> m_data = new List<TimedSlice<TTime, TValue>>();
 
-		/// <summary>
-		/// The maximum amount that this stream will buffer while it is open; more appends will cause
-		/// earlier data to be dropped.  If 0, no buffering limit will be enforced.
-		/// </summary>
+		// 
+		// The maximum amount that this stream will buffer while it is open; more appends will cause
+		// earlier data to be dropped.  If 0, no buffering limit will be enforced.
+		// 
 		readonly Duration<TTime> m_maxBufferedDuration;
 
-		/// <summary>
-		/// Temporary space for, e.g., the IntPtr Append method.
-		/// </summary>
+		// 
+		// Temporary space for, e.g., the IntPtr Append method.
+		// 
 		readonly Buf<TValue> m_tempBuffer = new Buf<TValue>(-1, new TValue[1024]); // -1 id = temp buf
 
-																				   /// <summary>
-																				   /// This stream holds onto an entire buffer and copies data into it when appending.
-																				   /// </summary>
+																				   // 
+																				   // This stream holds onto an entire buffer and copies data into it when appending.
+																				   // 
 		Slice<TTime, TValue> m_remainingFreeBuffer;
 
-		/// <summary>
-		/// The mapper that converts absolute time into relative time for this stream.
-		/// </summary>
+		// 
+		// The mapper that converts absolute time into relative time for this stream.
+		// 
 		IntervalMapper<TTime> m_intervalMapper;
 
-		/// <summary>
-		/// Action to copy IntPtr data into a Slice.
-		/// </summary>
-		/// <remarks>
-		/// Since .NET offers no way to marshal into an array of generic type, we can't express this
-		/// function cleanly except in a specialized method defined in a subclass.
-		/// </remarks>
+		// 
+		// Action to copy IntPtr data into a Slice.
+		// 
+		// 
+		// Since .NET offers no way to marshal into an array of generic type, we can't express this
+		// function cleanly except in a specialized method defined in a subclass.
+		// </remarks>
 		readonly Action<IntPtr, Slice<TTime, TValue>> m_copyIntPtrToSliceAction;
 
-		/// <summary>
-		/// Action to copy Slice data into an IntPtr.
-		/// </summary>
-		/// <remarks>
-		/// Since .NET offers no way to marshal into an array of generic type, we can't express this
-		/// function cleanly except in a specialized method defined in a subclass.
-		/// </remarks>
+		// 
+		// Action to copy Slice data into an IntPtr.
+		// 
+		// 
+		// Since .NET offers no way to marshal into an array of generic type, we can't express this
+		// function cleanly except in a specialized method defined in a subclass.
+		// </remarks>
 		readonly Action<Slice<TTime, TValue>, IntPtr> m_copySliceToIntPtrAction;
 
-		/// <summary>
-		/// Action to obtain an IntPtr directly on a Slice's data, and invoke another action with that IntPtr.
-		/// </summary>
-		/// <remarks>
-		/// Again, since .NET does not allow taking the address of a generic array, we must use a
-		/// specialized implementation wrapped in this generic signature.
-		/// </remarks>
+		// 
+		// Action to obtain an IntPtr directly on a Slice's data, and invoke another action with that IntPtr.
+		// 
+		// 
+		// Again, since .NET does not allow taking the address of a generic array, we must use a
+		// specialized implementation wrapped in this generic signature.
+		// </remarks>
 		readonly Action<Slice<TTime, TValue>, Action<IntPtr, int>> m_rawSliceAccessAction;
 
 		readonly bool m_useContinuousLoopingMapper = false;
@@ -343,11 +343,11 @@ namespace Holofunk.Core
 #endif
 		}
 
-		/// <summary>
-		/// Return a temporary buffer slice of the given duration or the max temp buffer size, whichever is lower.
-		/// </summary>
-		/// <param name="duration"></param>
-		/// <returns></returns>
+		// 
+		// Return a temporary buffer slice of the given duration or the max temp buffer size, whichever is lower.
+		// 
+		// <param name="duration"></param>
+		// <returns></returns>
 		Slice<TTime, TValue> TempSlice(Duration<TTime> duration)
 		{
 			Duration<TTime> maxDuration = m_tempBuffer.Data.Length / SliverSize;
@@ -358,9 +358,9 @@ namespace Holofunk.Core
 				SliverSize);
 		}
 
-		/// <summary>
-		/// Append the given amount of data marshalled from the pointer P.
-		/// </summary>
+		// 
+		// Append the given amount of data marshalled from the pointer P.
+		// 
 		public override void Append(Duration<TTime> duration, IntPtr p)
 		{
 			Contract.Requires(!IsShut);
@@ -375,9 +375,9 @@ namespace Holofunk.Core
 			m_discreteDuration += duration;
 		}
 
-		/// <summary>
-		/// Append this slice's data, by copying it into this stream's private buffers.
-		/// </summary>
+		// 
+		// Append this slice's data, by copying it into this stream's private buffers.
+		// 
 		public override void Append(Slice<TTime, TValue> source)
 		{
 			Contract.Requires(!IsShut);
@@ -407,10 +407,10 @@ namespace Holofunk.Core
 			}
 		}
 
-		/// <summary>
-		/// Internally append this slice (which must be allocated from our free buffer); this does the work
-		/// of coalescing, updating m_data and other fields, etc.
-		/// </summary>
+		// 
+		// Internally append this slice (which must be allocated from our free buffer); this does the work
+		// of coalescing, updating m_data and other fields, etc.
+		// 
 		Slice<TTime, TValue> InternalAppend(Slice<TTime, TValue> dest)
 		{
 			Contract.Requires(dest.Buffer.Data == m_remainingFreeBuffer.Buffer.Data, "dest must be from our free buffer");
@@ -435,9 +435,9 @@ namespace Holofunk.Core
 			return dest;
 		}
 
-		/// <summary>
-		/// Copy strided data from a source array into a single destination sliver.
-		/// </summary>
+		// 
+		// Copy strided data from a source array into a single destination sliver.
+		// 
 		public override void AppendSliver(TValue[] source, int startOffset, int width, int stride, int height)
 		{
 			Contract.Assert(source != null);
@@ -464,11 +464,11 @@ namespace Holofunk.Core
 			Trim();
 		}
 
-		/// <summary>
-		/// Trim off any content beyond the maximum allowed to be buffered.
-		/// </summary>
-		/// <remarks>
-		/// Internal because wrapper streams want to delegate to this when they are themselves Trimmed.</remarks>
+		// 
+		// Trim off any content beyond the maximum allowed to be buffered.
+		// 
+		// 
+		// Internal because wrapper streams want to delegate to this when they are themselves Trimmed.</remarks>
 		void Trim()
 		{
 			if (m_maxBufferedDuration == 0 || m_discreteDuration <= m_maxBufferedDuration) {
@@ -524,11 +524,11 @@ namespace Holofunk.Core
 			}
 		}
 
-		/// <summary>
-		/// Map the interval time to stream local time, and get the next slice of it.
-		/// </summary>
-		/// <param name="interval"></param>
-		/// <returns></returns>
+		// 
+		// Map the interval time to stream local time, and get the next slice of it.
+		// 
+		// <param name="interval"></param>
+		// <returns></returns>
 		public override Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval)
 		{
 			Interval<TTime> firstMappedInterval = m_intervalMapper.MapNextSubInterval(interval);
@@ -588,26 +588,26 @@ namespace Holofunk.Core
 
 	public static class SliceFloatExtension
 	{
-		/// <summary>
-		/// Copy data from IntPtr to Slice.
-		/// </summary>
+		// 
+		// Copy data from IntPtr to Slice.
+		// 
 		public static void CopyToSlice<TTime>(this IntPtr src, Slice<TTime, float> dest)
 		{
 			Marshal.Copy(src, dest.Buffer.Data, (int)dest.Offset * dest.SliverSize, (int)dest.Duration * dest.SliverSize);
 		}
-		/// <summary>
-		/// Copy data from Slice to IntPtr.
-		/// </summary>
+		// 
+		// Copy data from Slice to IntPtr.
+		// 
 		public static void CopyToIntPtr<TTime>(this Slice<TTime, float> src, IntPtr dest)
 		{
 			Marshal.Copy(src.Buffer.Data, (int)src.Offset * src.SliverSize, dest, (int)src.Duration * src.SliverSize);
 		}
-		/// <summary>
-		/// Invoke some underlying action with an IntPtr directly to a Slice's data.
-		/// </summary>
-		/// <remarks>
-		/// The arguments to the action are an IntPtr to the fixed data, and the number of BYTES to act on.
-		/// </remarks>
+		// 
+		// Invoke some underlying action with an IntPtr directly to a Slice's data.
+		// 
+		// 
+		// The arguments to the action are an IntPtr to the fixed data, and the number of BYTES to act on.
+		// </remarks>
 		public static unsafe void RawAccess<TTime>(this Slice<TTime, float> src, Action<IntPtr, int> action)
 		{
 			// per http://www.un4seen.com/forum/?topic=12912.msg89978#msg89978
@@ -621,26 +621,26 @@ namespace Holofunk.Core
 
 	public static class SliceByteExtension
 	{
-		/// <summary>
-		/// Copy data from IntPtr to Slice.
-		/// </summary>
+		// 
+		// Copy data from IntPtr to Slice.
+		// 
 		public static void CopyToSlice<TTime>(this IntPtr src, Slice<TTime, byte> dest)
 		{
 			Marshal.Copy(src, dest.Buffer.Data, (int)dest.Offset * dest.SliverSize, (int)dest.Duration * dest.SliverSize);
 		}
-		/// <summary>
-		/// Copy data from Slice to IntPtr.
-		/// </summary>
+		// 
+		// Copy data from Slice to IntPtr.
+		// 
 		public static void CopyToIntPtr<TTime>(this Slice<TTime, byte> src, IntPtr dest)
 		{
 			Marshal.Copy(src.Buffer.Data, (int)src.Offset * src.SliverSize, dest, (int)src.Duration * src.SliverSize);
 		}
-		/// <summary>
-		/// Invoke some underlying action with an IntPtr directly to a Slice's data.
-		/// </summary>
-		/// <remarks>
-		/// The action receives an IntPtr to the data, and an int that is a count of bytes.
-		/// </remarks>
+		// 
+		// Invoke some underlying action with an IntPtr directly to a Slice's data.
+		// 
+		// 
+		// The action receives an IntPtr to the data, and an int that is a count of bytes.
+		// </remarks>
 		public static unsafe void RawAccess<TTime>(this Slice<TTime, byte> src, Action<IntPtr, int> action)
 		{
 			// per http://www.un4seen.com/forum/?topic=12912.msg89978#msg89978

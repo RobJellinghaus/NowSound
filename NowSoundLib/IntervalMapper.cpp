@@ -14,30 +14,30 @@ using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
 {
-	/// <summary>
-	/// Handle converting time intervals from absolute time (relative to start of app) to relative time
-	/// (relative to start of loop).  
-	/// </summary>
-	/// <remarks>
-	/// IntervalMappers are fundamentally how looping is implemented, by mapping current time modulo the
-	/// loop duration.  They are also able to handle delaying, by mapping current time backwards within a rolling
-	/// stream.
-	/// </remarks>
-	/// <typeparam name="TTime"></typeparam>
+	// 
+	// Handle converting time intervals from absolute time (relative to start of app) to relative time
+	// (relative to start of loop).  
+	// 
+	// 
+	// IntervalMappers are fundamentally how looping is implemented, by mapping current time modulo the
+	// loop duration.  They are also able to handle delaying, by mapping current time backwards within a rolling
+	// stream.
+	// </remarks>
+	// <typeparam name="TTime"></typeparam>
 	abstract class IntervalMapper<TTime>
 {
-	/// <summary>
-	/// Map an input Interval into a subset Interval.
-	/// </summary>
-	/// <remarks>
-	/// This may return an Interval of shorter duration than the input; this is typically because
-	/// the input interval wrapped around some underlying structure.  In this case, the function
-	/// should be called again, with input.SubsliceStartingAt(returnedSubInterval.Duration) --
-	/// in other words, slice off the portion that was mapped, and request the next portion.
-	/// 
-	/// The returned interval will have an initial time that is within the bounds of the stream
-	/// it is mapping to.
-	/// </remarks>
+	// 
+	// Map an input Interval into a subset Interval.
+	// 
+	// 
+	// This may return an Interval of shorter duration than the input; this is typically because
+	// the input interval wrapped around some underlying structure.  In this case, the function
+	// should be called again, with input.SubsliceStartingAt(returnedSubInterval.Duration) --
+	// in other words, slice off the portion that was mapped, and request the next portion.
+	// 
+	// The returned interval will have an initial time that is within the bounds of the stream
+	// it is mapping to.
+	// </remarks>
 	public abstract Interval<TTime> MapNextSubInterval(Interval<TTime> input);
 }
 

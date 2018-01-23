@@ -14,32 +14,32 @@ using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
 {
-	/// <summary>
-	/// Interface which can consume slice data.
-	/// </summary>
+	// 
+	// Interface which can consume slice data.
+	// 
 	public interface Recorder<TTime, TValue>
 	where TValue : struct
 	{
-		/// <summary>
-		/// Record the given data; return true if this recorder is done after recording that data.
-		/// </summary>
+		// 
+		// Record the given data; return true if this recorder is done after recording that data.
+		// 
 		bool Record(Moment now, Duration<TTime> duration, IntPtr data);
 
-		/// <summary>
-		/// Get the underlying stream, so it can be directly appended.
-		/// </summary>
+		// 
+		// Get the underlying stream, so it can be directly appended.
+		// 
 		DenseSampleFloatStream Stream{ get; }
 	}
 
-	/// <summary>
-	/// Interface which can consume slice data with an associated time.
-	/// </summary>
+	// 
+	// Interface which can consume slice data with an associated time.
+	// 
 	public interface TimedRecorder<TTime, TValue>
 		where TValue : struct
 		{
-			/// <summary>
-			/// Record a sliver from the given source at the given time; return true if this recorder is done.
-			/// </summary>
+			// 
+			// Record a sliver from the given source at the given time; return true if this recorder is done.
+			// 
 			bool Record(Time<TTime> time, TValue[] source, int offset, int width, int stride, int height);
 		}
 }

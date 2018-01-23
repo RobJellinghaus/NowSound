@@ -27,29 +27,29 @@ namespace NowSound
 	}
 }
 
-/// <summary>
-/// Allocate T[] of a predetermined size, and support returning such T[] to a free list.
-/// </summary>
+// 
+// Allocate T[] of a predetermined size, and support returning such T[] to a free list.
+// 
 public class BufferAllocator<T>
 	where T : struct
 	{
 		int m_latestBufferId = 1; // 0 = empty buf
 
-								  /// <summary>
-								  /// The number of T in a buffer from this allocator.
-								  /// </summary>
+								  // 
+								  // The number of T in a buffer from this allocator.
+								  // 
 		public readonly int BufferSize;
 
-		/// <summary>
-		/// Free list; we recycle from here if possible.
-		/// </summary>
+		// 
+		// Free list; we recycle from here if possible.
+		// 
 		readonly List<Buf<T>> m_freeList = new List<Buf<T>>();
 
 		readonly int m_sizeOfT;
 
-		/// <summary>
-		/// Total number of buffers we have ever allocated.
-		/// </summary>
+		// 
+		// Total number of buffers we have ever allocated.
+		// 
 		int m_totalBufferCount;
 
 		public BufferAllocator(int bufferSize, int initialBufferCount, int sizeOfT)
@@ -63,14 +63,14 @@ public class BufferAllocator<T>
 			m_totalBufferCount = initialBufferCount;
 		}
 
-		/// <summary>
-		/// Number of bytes reserved by this allocator; will increase if free list runs out, and includes free space.
-		/// </summary>
+		// 
+		// Number of bytes reserved by this allocator; will increase if free list runs out, and includes free space.
+		// 
 		public long TotalReservedSpace{ get{ return m_totalBufferCount * BufferSize; } }
 
-			/// <summary>
-			/// Number of bytes held in buffers on the free list.
-			/// </summary>
+			// 
+			// Number of bytes held in buffers on the free list.
+			// 
 		public long TotalFreeListSpace{ get{ return m_freeList.Count * BufferSize; } }
 
 			public Buf<T> Allocate()

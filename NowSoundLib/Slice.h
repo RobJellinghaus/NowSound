@@ -7,33 +7,33 @@
 
 namespace NowSound
 {
-	/// <summary>
-	/// A reference to a sub-segment of an underlying buffer, indexed by the given TTime type.
-	/// </summary>
+	// 
+	// A reference to a sub-segment of an underlying buffer, indexed by the given TTime type.
+	// 
 	public struct Slice<TTime, TValue>
 	where TValue : struct
 	{
-		/// <summary>
-		/// The backing store; logically divided into slivers.
-		/// </summary>
+		// 
+		// The backing store; logically divided into slivers.
+		// 
 		readonly Buf<TValue> m_buffer;
 
-		/// <summary>
-		/// The number of slivers contained.
-		/// </summary>
+		// 
+		// The number of slivers contained.
+		// 
 		public readonly Duration<TTime> Duration;
 
-		/// <summary>
-		/// The index to the sliver at which this slice actually begins.
-		/// </summary>
+		// 
+		// The index to the sliver at which this slice actually begins.
+		// 
 		readonly Duration<TTime> m_offset;
 
-		/// <summary>
-		/// The size of each sliver in this slice; a count of T.
-		/// </summary>
-		/// <remarks>
-		/// Slices are composed of multiple Slivers, one per unit of Duration.
-		/// </remarks>
+		// 
+		// The size of each sliver in this slice; a count of T.
+		// 
+		// 
+		// Slices are composed of multiple Slivers, one per unit of Duration.
+		// </remarks>
 		public readonly int SliverSize;
 
 		public Slice(Buf<TValue> buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
@@ -66,14 +66,14 @@ namespace NowSound
 
 		public bool IsEmpty() { return Duration == 0; }
 
-		/// <summary>
-		/// For use by extension methods only
-		/// </summary>
+		// 
+		// For use by extension methods only
+		// 
 		internal Buf<TValue> Buffer{ get{ return m_buffer; } }
 
-			/// <summary>
-			/// For use by extension methods only
-			/// </summary>
+			// 
+			// For use by extension methods only
+			// 
 		internal Duration<TTime> Offset{ get{ return m_offset; } }
 
 			public TValue this[Duration<TTime> offset, int subindex]
@@ -94,9 +94,9 @@ namespace NowSound
 		}
 		}
 
-			/// <summary>
-			/// Get a portion of this Slice, starting at the given offset, for the given duration.
-			/// </summary>
+			// 
+			// Get a portion of this Slice, starting at the given offset, for the given duration.
+			// 
 			public Slice<TTime, TValue> Subslice(Duration<TTime> initialOffset, Duration<TTime> duration)
 		{
 			Debug.Assert(initialOffset >= 0); // can't slice before the beginning of this slice
@@ -105,25 +105,25 @@ namespace NowSound
 			return new Slice<TTime, TValue>(m_buffer, m_offset + initialOffset, duration, SliverSize);
 		}
 
-		/// <summary>
-		/// Get the rest of this Slice starting at the given offset.
-		/// </summary>
+		// 
+		// Get the rest of this Slice starting at the given offset.
+		// 
 		public Slice<TTime, TValue> SubsliceStartingAt(Duration<TTime> initialOffset)
 		{
 			return Subslice(initialOffset, Duration - initialOffset);
 		}
 
-		/// <summary>
-		/// Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
-		/// </summary>
+		// 
+		// Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
+		// 
 		public Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration)
 		{
 			return Subslice(0, duration);
 		}
 
-		/// <summary>
-		/// Copy this slice's data into destination; destination must be long enough.
-		/// </summary>
+		// 
+		// Copy this slice's data into destination; destination must be long enough.
+		// 
 		public void CopyTo(Slice<TTime, TValue> destination)
 		{
 			Debug.Assert(destination.Duration >= Duration);
@@ -152,13 +152,13 @@ namespace NowSound
 				subWidth);
 		}
 
-		/// <summary>Are these samples adjacent in their underlying storage?</summary>
+		// Are these samples adjacent in their underlying storage?
 		public bool Precedes(Slice<TTime, TValue> next)
 		{
 			return m_buffer.Data == next.m_buffer.Data && m_offset + Duration == next.m_offset;
 		}
 
-		/// <summary>Merge two adjacent samples into a single sample.</summary>
+		// Merge two adjacent samples into a single sample.
 		public Slice<TTime, TValue> UnionWith(Slice<TTime, TValue> next)
 		{
 			Contract.Assert(Precedes(next));
@@ -170,9 +170,9 @@ namespace NowSound
 			return "Slice[buffer " + m_buffer + ", offset " + m_offset + ", duration " + Duration + ", sliverSize " + SliverSize + "]";
 		}
 
-		/// <summary>
-		/// Equality comparison; deliberately does not implement Equals(object) as this would cause slice boxing.
-		/// </summary>
+		// 
+		// Equality comparison; deliberately does not implement Equals(object) as this would cause slice boxing.
+		// 
 		public bool Equals(Slice<TTime, TValue> other)
 		{
 			return Buffer.Equals(other.Buffer) && Offset == other.Offset && Duration == other.Duration;
@@ -180,19 +180,19 @@ namespace NowSound
 	}
 }
 
-/// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
+// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
 
 using System.Collections.Generic;
 
 namespace Holofunk.Core
 {
-	/// <summary>
-	/// A slice with an absolute initial time associated with it.
-	/// </summary>
-	/// <remarks>
-	/// In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime
-	/// of the stream itself.
-	/// </remarks>
+	// 
+	// A slice with an absolute initial time associated with it.
+	// 
+	// 
+	// In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime
+	// of the stream itself.
+	// </remarks>
 	struct TimedSlice<TTime, TValue>
 	where TValue : struct
 	{

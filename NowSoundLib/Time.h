@@ -7,49 +7,49 @@
 
 namespace NowSound
 {
-	/// <summary>
-	/// Sample identifies Times based on audio sample counts. 
-	/// </summary>
-	/// <remarks>
-	/// This type is actually never instantiated; it is used purely as a generic type parameter.
-	/// </remarks>
+	// 
+	// Sample identifies Times based on audio sample counts. 
+	// 
+	// 
+	// This type is actually never instantiated; it is used purely as a generic type parameter.
+	// </remarks>
 	public class AudioSample
 {
 }
 
-/// <summary>
-/// Beat identifies times based on beat counts.
-/// </summary>
-/// <remarks>
-/// This type is actually never instantiated; it is used purely as a generic type parameter.
-/// </remarks>
+// 
+// Beat identifies times based on beat counts.
+// 
+// 
+// This type is actually never instantiated; it is used purely as a generic type parameter.
+// </remarks>
 public class Beat
 {
 }
 
-/// <summary>
-/// Seconds identifies times based on real-world seconds.
-/// </summary>
-/// <remarks>
-/// This type is actually never instantiated; it is used purely as a generic type parameter.
-/// </remarks>
+// 
+// Seconds identifies times based on real-world seconds.
+// 
+// 
+// This type is actually never instantiated; it is used purely as a generic type parameter.
+// </remarks>
 public class Second
 {
 }
 
-/// <summary>
-/// Frame identifies Times based on video frame counts. 
-/// </summary>
-/// <remarks>
-/// This type is actually never instantiated; it is used purely as a generic type parameter.
-/// </remarks>
+// 
+// Frame identifies Times based on video frame counts. 
+// 
+// 
+// This type is actually never instantiated; it is used purely as a generic type parameter.
+// </remarks>
 public class Frame
 {
 }
 
-/// <summary>
-/// Time parameterized on some underlying measurement.
-/// </summary>
+// 
+// Time parameterized on some underlying measurement.
+// 
 public struct Time<TTime>
 {
 	readonly long m_time;
@@ -140,10 +140,10 @@ public struct Time<TTime>
 	}
 }
 
-/// <summary>
-/// A distance between two Times.
-/// </summary>
-/// <typeparam name="TTime"></typeparam>
+// 
+// A distance between two Times.
+// 
+// <typeparam name="TTime"></typeparam>
 public struct Duration<TTime>
 {
 	readonly long m_count;
@@ -240,13 +240,13 @@ public struct Duration<TTime>
 	}
 }
 
-/// <summary>
-/// An interval, defined as a start time and a duration (aka length).
-/// </summary>
-/// <remarks>
-/// Empty intervals semantically have no InitialTime, and no distinction should be made between empty
-/// intervals based on InitialTime.</remarks>
-/// <typeparam name="TTime"></typeparam>
+// 
+// An interval, defined as a start time and a duration (aka length).
+// 
+// 
+// Empty intervals semantically have no InitialTime, and no distinction should be made between empty
+// intervals based on InitialTime.</remarks>
+// <typeparam name="TTime"></typeparam>
 public struct Interval<TTime>
 {
 	public readonly Time<TTime> InitialTime;
@@ -324,14 +324,14 @@ public struct Interval<TTime>
 }
 }
 
-/// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
+// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
 
 namespace Holofunk.Core
 {
-	/// <summary>
-	/// A continous distance between two Times.
-	/// </summary>
-	/// <typeparam name="TTime"></typeparam>
+	// 
+	// A continous distance between two Times.
+	// 
+	// <typeparam name="TTime"></typeparam>
 	public struct ContinuousDuration<TTime>
 {
 	readonly float m_duration;
