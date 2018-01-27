@@ -70,11 +70,7 @@ namespace NowSound
         // time in the system is derived from this.  This value can only currently be changed when
         // no tracks exist.</remarks>
         public float BPM() { return _beatsPerMinute; }
-        public void BPM(float value)
-        { 
-            _beatsPerMinute = value;
-            CalculateBeatDuration();
-        }
+        public void BPM(float value);
 
         public int BytesPerSecond() { return SampleRateHz * _inputChannelCount * suzeof(float); )
 

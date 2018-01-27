@@ -25,7 +25,7 @@ namespace NowSound
     // Frame identifies Times based on video frame counts. 
     // This type is actually never instantiated; it is used purely as a generic type parameter.
     class Frame {};
-    
+
     // Time parameterized on some underlying unit of measurement (such as those above).
     // This theoretically could also provide a timing base (e.g. number of units per other-unit),
     // but currently does not.
@@ -184,124 +184,82 @@ namespace NowSound
         }
     };
 
-// 
-// An interval, defined as a start time and a duration (aka length).
-// 
-// 
-// Empty intervals semantically have no InitialTime, and no distinction should be made between empty
-// intervals based on InitialTime.</remarks>
-// <typeparam name="TTime"></typeparam>
-public struct Interval<TTime>
-{
-    public readonly Time<TTime> InitialTime;
-    public readonly Duration<TTime> Duration;
-    readonly bool _isInitialized;
-
-    public Interval(Time<TTime> initialTime, Duration<TTime> duration)
-    {
-        Contract.Requires(duration >= 0, "duration >= 0");
-
-        InitialTime = initialTime;
-        Duration = duration;
-        _isInitialized = true;
-    }
-
-    public override string ToString()
-    {
-        return "I[" + InitialTime + ", " + Duration + "]";
-    }
-
-    Interval<TTime> Empty{ get{ return new Interval<TTime>(0, 0); } }
-
-    public bool IsInitialized{ get{ return _isInitialized; } }
-
-        public bool IsEmpty
-    {
-        get{ return Duration == 0; }
-    }
-
-        public Interval<TTime> SubintervalStartingAt(Duration<TTime> offset)
-    {
-        Debug.Assert(offset <= Duration);
-        return new Interval<TTime>(InitialTime + offset, Duration - offset);
-    }
-
-    public Interval<TTime> SubintervalOfDuration(Duration<TTime> duration)
-    {
-        Debug.Assert(duration <= Duration);
-        return new Interval<TTime>(InitialTime, duration);
-    }
-
-    public Interval<TTime> Intersect(Interval<TTime> other)
-    {
-        Time<TTime> intersectionStart = Time<TTime>.Max(InitialTime, other.InitialTime);
-        Time<TTime> intersectionEnd = Time<TTime>.Min(InitialTime + Duration, other.InitialTime + other.Duration);
-
-        if (intersectionEnd < intersectionStart) {
-            return Interval<TTime>.Empty;
-        }
-        else {
-            return new Interval<TTime>(intersectionStart, intersectionEnd - intersectionStart);
-        }
-    }
-
-    public bool Contains(Time<TTime> time)
-    {
-        if (IsEmpty) {
-            return false;
-        }
-
-        return InitialTime <= time
-            && (InitialTime + Duration) > time;
-    }
-
-    public override bool Equals(object obj)
-    {
-        return obj is Interval<TTime> && ((Interval<TTime>)obj).InitialTime == InitialTime && ((Interval<TTime>)obj).Duration == Duration;
-    }
-
-    public override int GetHashCode()
-    {
-        // TODO: XOR is a bad combiner, but better than disregarding both fields. Does Unity have HashUtilities or etc.?
-        return InitialTime.GetHashCode() ^ Duration.GetHashCode();
-    }
-}
-}
-
-// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
-
-namespace Holofunk.Core
-{
+    // An interval, defined as a start time and a duration (aka length).
     // 
+    // Empty intervals semantically have no InitialTime, and no distinction should be made between empty
+    // intervals based on InitialTime.
+    template<typename TTime>
+    struct Interval
+    {
+        const Time<TTime> InitialTime;
+        const readonly Duration<TTime> Duration;
+
+        Interval(Time<TTime> initialTime, Duration<TTime> duration)
+        {
+            Check(duration >= 0);
+
+            InitialTime = initialTime;
+            Duration = duration;
+        }
+
+        static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
+
+        bool IsEmpty() { return Duration == 0; }
+
+        Interval<TTime> SubintervalStartingAt(Duration<TTime> offset)
+        {
+            Check(offset <= Duration);
+            return new Interval<TTime>(InitialTime + offset, Duration - offset);
+        }
+
+        Interval<TTime> SubintervalOfDuration(Duration<TTime> duration)
+        {
+            Check(duration <= Duration);
+            return new Interval<TTime>(InitialTime, duration);
+        }
+
+        Interval<TTime> Intersect(Interval<TTime> other)
+        {
+            Time<TTime> intersectionStart = Time<TTime>.Max(InitialTime, other.InitialTime);
+            Time<TTime> intersectionEnd = Time<TTime>.Min(InitialTime + Duration, other.InitialTime + other.Duration);
+
+            if (intersectionEnd < intersectionStart) {
+                return Interval<TTime>.Empty;
+            }
+            else {
+                return new Interval<TTime>(intersectionStart, intersectionEnd - intersectionStart);
+            }
+        }
+
+        bool Contains(Time<TTime> time)
+        {
+            if (IsEmpty) {
+                return false;
+            }
+
+            return InitialTime <= time
+                && (InitialTime + Duration) > time;
+        }
+    };
+
     // A continous distance between two Times.
-    // 
-    // <typeparam name="TTime"></typeparam>
-    public struct ContinuousDuration<TTime>
-{
-    readonly float _duration;
+    template<typename TTime>
+    struct ContinuousDuration
+    {
+        const float _duration;
 
-    public ContinuousDuration(float duration)
-    {
-        _duration = duration;
-    }
+        ContinuousDuration(float duration)
+        {
+            _duration = duration;
+        }
 
-    explicit operator float(ContinuousDuration<TTime> duration)
-    {
-        return duration._duration;
-    }
-
-    explicit operator ContinuousDuration<TTime>(float value)
-    {
-        return new ContinuousDuration<TTime>(value);
-    }
-
-    ContinuousDuration<TTime> operator *(ContinuousDuration<TTime> duration, float value)
-    {
-        return new ContinuousDuration<TTime>(value * duration._duration);
-    }
-    ContinuousDuration<TTime> operator *(float value, ContinuousDuration<TTime> duration)
-    {
-        return new ContinuousDuration<TTime>(value * duration._duration);
-    }
-}
+        ContinuousDuration<TTime> operator *(ContinuousDuration<TTime> duration, float value)
+        {
+            return new ContinuousDuration<TTime>(value * duration._duration);
+        }
+        ContinuousDuration<TTime> operator *(float value, ContinuousDuration<TTime> duration)
+        {
+            return new ContinuousDuration<TTime>(value * duration._duration);
+        }
+    };
 }

@@ -326,7 +326,6 @@
     <ClCompile Include="Recorder.cpp" />
     <ClCompile Include="SliceStream.cpp" />
     <ClCompile Include="Clock.cpp" />
-    <ClCompile Include="IntervalMapper.cpp" />
     <ClCompile Include="NowSoundLib.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

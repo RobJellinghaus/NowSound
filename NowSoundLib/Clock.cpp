@@ -17,7 +17,7 @@ static std::unique_ptr<NowSound::Clock> NowSound::Clock::s_instance;
 
 void NowSound::Clock::Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount)
 {
-    std::unique_ptr<Clock> clock = new Clock(beatsPerMinute, beatsPerMeasure, inputChannelCount);
+    std::unique_ptr<Clock> clock(new Clock(beatsPerMinute, beatsPerMeasure, inputChannelCount));
     s_instance = std::move(clock);
 }
 
@@ -37,44 +37,13 @@ void NowSound::Clock::CalculateBeatDuration()
     _beatDuration = (ContinuousDuration<AudioSample>)(((float)SampleRateHz * 60f) / _beatsPerMinute);
 }
 
-// Advance this clock from an AudioGraph thread.
-public void AdvanceFromAudioGraph(Duration<AudioSample> duration)
+void NowSound::Clock::BPM(float value);
+{
+    _beatsPerMinute = value;
+    CalculateBeatDuration();
+}
+
+void NowSound::Clock::AdvanceFromAudioGraph(Duration<AudioSample> duration)
 {
     _audioTime += duration;
-}
-
-// Moments are immutable points in time, that can be converted to various
-// time measurements (timepoint-count, second, beat).
-public struct Moment
-{
-    public readonly Time<AudioSample> Time;
-
-    public readonly Clock Clock;
-
-    internal Moment(Time<AudioSample> time, Clock clock)
-    {
-        Time = time;
-        Clock = clock;
-    }
-
-    // Approximately how many seconds?
-    public double Seconds{ get{ return ((double)Time) / Clock.SampleRateHz; } }
-
-        // Exactly how many beats?
-    public ContinuousDuration<Beat> Beats{ get{ return (ContinuousDuration<Beat>)((double)Time / (double)Clock.BeatDuration); } }
-
-        // Exactly how many complete beats?
-        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-    public Duration<Beat> CompleteBeats{ get{ return (int)Beats; } }
-
-    private const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
-
-                                           // What fraction of a beat?
-    public ContinuousDuration<Beat> FractionalBeat{ get{ return (ContinuousDuration<Beat>)((float)Beats - (float)CompleteBeats); } }
-
-        public override string ToString()
-    {
-        return "Moment[" + Time + "]";
-    }
-}
 }
