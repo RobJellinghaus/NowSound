@@ -305,9 +305,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Averager.h" />
     <ClInclude Include="BufferAllocator.h" />
-    <ClInclude Include="Averager.cpp" />
     <ClInclude Include="Recorder.h" />
     <ClInclude Include="SliceStream.h" />
     <ClInclude Include="Clock.h" />
