@@ -306,6 +306,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BufferAllocator.h" />
+    <ClInclude Include="Check.h" />
     <ClInclude Include="Recorder.h" />
     <ClInclude Include="SliceStream.h" />
     <ClInclude Include="Clock.h" />
@@ -322,7 +323,6 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BufferAllocator.cpp" />
     <ClCompile Include="Recorder.cpp" />
     <ClCompile Include="SliceStream.cpp" />
     <ClCompile Include="Clock.cpp" />

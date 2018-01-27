@@ -4,241 +4,185 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "math.h"
+
+using namespace winrt;
 
 namespace NowSound
 {
-    // 
     // Sample identifies Times based on audio sample counts. 
-    // 
-    // 
     // This type is actually never instantiated; it is used purely as a generic type parameter.
-    // </remarks>
-    public class AudioSample
-{
-}
+    class AudioSample {};
 
-// 
-// Beat identifies times based on beat counts.
-// 
-// 
-// This type is actually never instantiated; it is used purely as a generic type parameter.
-// </remarks>
-public class Beat
-{
-}
+    // Beat identifies times based on beat counts.
+    // This type is actually never instantiated; it is used purely as a generic type parameter.
+    class Beat {};
 
-// 
-// Seconds identifies times based on real-world seconds.
-// 
-// 
-// This type is actually never instantiated; it is used purely as a generic type parameter.
-// </remarks>
-public class Second
-{
-}
+    // Seconds identifies times based on real-world seconds.
+    // This type is actually never instantiated; it is used purely as a generic type parameter.
+    class Second {};
 
-// 
-// Frame identifies Times based on video frame counts. 
-// 
-// 
-// This type is actually never instantiated; it is used purely as a generic type parameter.
-// </remarks>
-public class Frame
-{
-}
-
-// 
-// Time parameterized on some underlying measurement.
-// 
-public struct Time<TTime>
-{
-    readonly long _time;
-
-    public Time(long time)
+    // Frame identifies Times based on video frame counts. 
+    // This type is actually never instantiated; it is used purely as a generic type parameter.
+    class Frame {};
+    
+    // Time parameterized on some underlying unit of measurement (such as those above).
+    // This theoretically could also provide a timing base (e.g. number of units per other-unit),
+    // but currently does not.
+    template<typename TUnit>
+    struct Time
     {
-        _time = time;
-    }
+        // The number of TTime units represented by this time.
+        const long _time;
 
-    public override string ToString()
+        Time(long time)
+        {
+            _time = time;
+        }
+
+        static Time<TTime> Min(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return new Time<TTime>(__min(first, second));
+        }
+
+        static Time<TTime> Max(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return new Time<TTime>(__max(first, second));
+        }
+
+        bool operator <(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time < second._time;
+        }
+
+        bool operator >(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time > second._time;
+        }
+
+        bool operator ==(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time == second._time;
+        }
+
+        bool operator !=(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time != second._time;
+        }
+
+        bool operator <=(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time <= second._time;
+        }
+
+        bool operator >=(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return first._time >= second._time;
+        }
+
+        Duration<TTime> operator -(const Time<TTime>& first, const Time<TTime>& second)
+        {
+            return new Duration<TTime>(first._time - second._time);
+        }
+
+        Time<TTime> operator -(const Time<TTime>& first, Duration<TTime> second)
+        {
+            return new Time<TTime>(first._time - second._time);
+        }
+    };
+
+    // A distance between two Times.
+    template<typename T>
+    struct Duration<TTime>
     {
-        return "T[" + (long)this + "]";
-    }
+        const long _count;
 
-    public static Time<TTime> Min(Time<TTime> first, Time<TTime> second)
-    {
-        return new Time<TTime>(Math.Min(first, second));
-    }
+        public Duration(long count)
+        {
+            WINRT_ASSERT(count >= 0);
+            _count = count;
+        }
 
-    public static Time<TTime> Max(Time<TTime> first, Time<TTime> second)
-    {
-        return new Time<TTime>(Math.Max(first, second));
-    }
+        implicit operator long(Duration<TTime> offset)
+        {
+            return offset._count;
+        }
 
-    public static implicit operator long(Time<TTime> time)
-    {
-        return time._time;
-    }
+        implicit operator Duration<TTime>(long value)
+        {
+            return new Duration<TTime>(value);
+        }
 
-    public static implicit operator Time<TTime>(long time)
-    {
-        return new Time<TTime>(time);
-    }
+        explicit operator Duration<TTime>(Time<TTime> value)
+        {
+            return new Duration<TTime>(value);
+        }
 
-    public static explicit operator Time<TTime>(Duration<TTime> duration)
-    {
-        return new Time<TTime>(duration);
-    }
+        Duration<TTime> Min(Duration<TTime> first, Duration<TTime> second)
+        {
+            return new Duration<TTime>(Math.Min(first, second));
+        }
 
-    public static bool operator <(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first < (long)second;
-    }
+        Duration<TTime> operator +(Duration<TTime> first, Duration<TTime> second)
+        {
+            return new Duration<TTime>(first._time + second._time);
+        }
 
-    public static bool operator >(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first > (long)second;
-    }
+        Duration<TTime> operator -(Duration<TTime> first, Duration<TTime> second)
+        {
+            return new Duration<TTime>(first._time - second._time);
+        }
 
-    public static bool operator ==(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first == (long)second;
-    }
+        Duration<TTime> operator /(Duration<TTime> first, int second)
+        {
+            return new Duration<TTime>(first._time / second);
+        }
 
-    public static bool operator !=(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first != (long)second;
-    }
+        bool operator <(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time < second._time;
+        }
 
-    public static bool operator <=(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first <= (long)second;
-    }
+        bool operator >(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time > second._time;
+        }
 
-    public static bool operator >=(Time<TTime> first, Time<TTime> second)
-    {
-        return (long)first >= (long)second;
-    }
+        bool operator <=(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time <= second._time;
+        }
 
-    public static Duration<TTime> operator -(Time<TTime> first, Time<TTime> second)
-    {
-        return new Duration<TTime>((long)first - (long)second);
-    }
+        bool operator >=(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time >= second._time;
+        }
 
-    public static Time<TTime> operator -(Time<TTime> first, Duration<TTime> second)
-    {
-        return new Time<TTime>((long)first - (long)second);
-    }
+        bool operator ==(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time == second._time;
+        }
 
-    public override bool Equals(object obj)
-    {
-        return obj is Time<TTime> && ((Time<TTime>)obj)._time == _time;
-    }
+        bool operator !=(Duration<TTime> first, Duration<TTime> second)
+        {
+            return first._time != second._time;
+        }
 
-    public override int GetHashCode()
-    {
-        return _time.GetHashCode();
-    }
-}
+        Time<TTime> operator +(Time<TTime> first, Duration<TTime> second)
+        {
+            return new Time<TTime>(first._time + second._time);
+        }
 
-// 
-// A distance between two Times.
-// 
-// <typeparam name="TTime"></typeparam>
-public struct Duration<TTime>
-{
-    readonly long _count;
+        public override bool Equals(object obj)
+        {
+            return obj is Duration<TTime> && ((Duration<TTime>)obj)._count == _count;
+        }
 
-    public Duration(long count)
-    {
-        Contract.Requires(count >= 0, "count >= 0");
-        _count = count;
-    }
-
-    public override string ToString()
-    {
-        return "D[" + (long)this + "]";
-    }
-
-    public static implicit operator long(Duration<TTime> offset)
-    {
-        return offset._count;
-    }
-
-    public static implicit operator Duration<TTime>(long value)
-    {
-        return new Duration<TTime>(value);
-    }
-
-    public static explicit operator Duration<TTime>(Time<TTime> value)
-    {
-        return new Duration<TTime>(value);
-    }
-
-    public static Duration<TTime> Min(Duration<TTime> first, Duration<TTime> second)
-    {
-        return new Duration<TTime>(Math.Min(first, second));
-    }
-
-    public static Duration<TTime> operator +(Duration<TTime> first, Duration<TTime> second)
-    {
-        return new Duration<TTime>((long)first + (long)second);
-    }
-
-    public static Duration<TTime> operator -(Duration<TTime> first, Duration<TTime> second)
-    {
-        return new Duration<TTime>((long)first - (long)second);
-    }
-
-    public static Duration<TTime> operator /(Duration<TTime> first, int second)
-    {
-        return new Duration<TTime>((long)first / second);
-    }
-
-    public static bool operator <(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first < (long)second;
-    }
-
-    public static bool operator >(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first > (long)second;
-    }
-
-    public static bool operator <=(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first <= (long)second;
-    }
-
-    public static bool operator >=(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first >= (long)second;
-    }
-
-    public static bool operator ==(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first == (long)second;
-    }
-
-    public static bool operator !=(Duration<TTime> first, Duration<TTime> second)
-    {
-        return (long)first != (long)second;
-    }
-
-    public static Time<TTime> operator +(Time<TTime> first, Duration<TTime> second)
-    {
-        return new Time<TTime>((long)first + (long)second);
-    }
-
-    public override bool Equals(object obj)
-    {
-        return obj is Duration<TTime> && ((Duration<TTime>)obj)._count == _count;
-    }
-
-    public override int GetHashCode()
-    {
-        return _count.GetHashCode();
-    }
-}
+        public override int GetHashCode()
+        {
+            return _count.GetHashCode();
+        }
+    };
 
 // 
 // An interval, defined as a start time and a duration (aka length).
@@ -267,7 +211,7 @@ public struct Interval<TTime>
         return "I[" + InitialTime + ", " + Duration + "]";
     }
 
-    public static Interval<TTime> Empty{ get{ return new Interval<TTime>(0, 0); } }
+    Interval<TTime> Empty{ get{ return new Interval<TTime>(0, 0); } }
 
     public bool IsInitialized{ get{ return _isInitialized; } }
 
@@ -341,21 +285,21 @@ namespace Holofunk.Core
         _duration = duration;
     }
 
-    public static explicit operator float(ContinuousDuration<TTime> duration)
+    explicit operator float(ContinuousDuration<TTime> duration)
     {
         return duration._duration;
     }
 
-    public static explicit operator ContinuousDuration<TTime>(float value)
+    explicit operator ContinuousDuration<TTime>(float value)
     {
         return new ContinuousDuration<TTime>(value);
     }
 
-    public static ContinuousDuration<TTime> operator *(ContinuousDuration<TTime> duration, float value)
+    ContinuousDuration<TTime> operator *(ContinuousDuration<TTime> duration, float value)
     {
         return new ContinuousDuration<TTime>(value * duration._duration);
     }
-    public static ContinuousDuration<TTime> operator *(float value, ContinuousDuration<TTime> duration)
+    ContinuousDuration<TTime> operator *(float value, ContinuousDuration<TTime> duration)
     {
         return new ContinuousDuration<TTime>(value * duration._duration);
     }
