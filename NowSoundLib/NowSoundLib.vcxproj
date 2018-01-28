@@ -323,8 +323,6 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Recorder.cpp" />
-    <ClCompile Include="SliceStream.cpp" />
     <ClCompile Include="Clock.cpp" />
     <ClCompile Include="NowSoundLib.cpp" />
     <ClCompile Include="pch.cpp">
@@ -335,7 +333,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Slice.cpp" />
     <ClCompile Include="Track.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

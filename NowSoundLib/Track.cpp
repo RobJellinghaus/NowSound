@@ -13,6 +13,8 @@ using namespace Windows::Foundation;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
+/*
+
 {
     internal class HolofunkAudioTrack : IHolofunkAudioTrack, Recorder<AudioSample, float>
 {
@@ -303,11 +305,11 @@ using namespace Windows::Media::Render;
 
                         TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
-                        /*
-                        string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-                        HoloDebug.Log(line);
-                        Spam.Audio.WriteLine(line);
-                        */
+                        
+                        //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+                        //HoloDebug.Log(line);
+                        //Spam.Audio.WriteLine(line);
+                        
 
                         dataInBytes += longest.Duration * sizeof(float) * longest.SliverSize;
                         _localTime += longest.Duration;
@@ -400,3 +402,5 @@ using namespace Windows::Media::Render;
     }
 }
 }
+
+*/

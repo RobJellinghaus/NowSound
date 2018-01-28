@@ -5,129 +5,96 @@
 
 #include "pch.h"
 
+#include "BufferAllocator.h"
+#include "Time.h"
+
 namespace NowSound
 {
-    // 
     // A reference to a sub-segment of an underlying buffer, indexed by the given TTime type.
-    // 
-    public struct Slice<TTime, TValue>
-    where TValue : struct
+    // A Slice is a contiguous segment of Slivers; think of each Sliver as a stereo pair of audio samples,
+    // or a video frame, etc., with a Slice being a logically and physically continuous sequence
+    // thereof.
+    template<typename TTime, typename TValue>
+    class Slice
     {
-        // 
+    private:
         // The backing store; logically divided into slivers.
-        // 
-        readonly Buf<TValue> _buffer;
+        // This is a borrowed reference; the Buf's BufferAllocator owns it.
+        const Buf<TValue>* _buffer;
 
-        // 
+    public:
         // The number of slivers contained.
-        // 
-        public readonly Duration<TTime> Duration;
+        const Duration<TTime> Duration;
 
-        // 
         // The index to the sliver at which this slice actually begins.
-        // 
-        readonly Duration<TTime> _offset;
+        const Duration<TTime> Offset;
 
-        // 
         // The size of each sliver in this slice; a count of T.
-        // 
-        // 
         // Slices are composed of multiple Slivers, one per unit of Duration.
-        // </remarks>
-        public readonly int SliverSize;
+        const int SliverSize;
 
-        public Slice(Buf<TValue> buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
+        Slice(Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
+            : _buffer(buffer), Offset(offset), Duration(duration), SliverSize(sliverSize)
         {
-            Contract.Requires(buffer.Data != null);
-            Contract.Requires(offset >= 0);
-            Contract.Requires(duration >= 0);
-            Contract.Requires((offset * sliverSize) + (duration * sliverSize) <= buffer.Data.Length);
+            Check(buffer.Data != null);
+            Check(offset >= 0);
+            Check(duration >= 0);
+            Check((offset * sliverSize) + (duration * sliverSize) <= buffer.Data.Length);
 
             _buffer = buffer;
-            _offset = offset;
             Duration = duration;
+            Offset = offset;
             SliverSize = sliverSize;
         }
 
-        public Slice(Buf<TValue> buffer, int sliverSize)
+        Slice(Buf<TValue> buffer, int sliverSize)
             : this(buffer, 0, (buffer.Data.Length / sliverSize), sliverSize)
         {
         }
 
-        static Buf<TValue> s_emptyBuf = new Buf<TValue>(0, new TValue[0]);
+        static Buf<TValue> s_emptyBuf(0, new TValue[0]);
 
-        public static Slice<TTime, TValue> Empty
-        {
-            get
-        {
-            return new Slice<TTime, TValue>(s_emptyBuf, 0, 0, 0);
-        }
-        }
+        static const Slice<TTime, TValue> Empty(&s_emptyBuf, 0, 0, 0);
 
-        public bool IsEmpty() { return Duration == 0; }
+        bool IsEmpty() { return Duration == 0; }
 
-        // 
         // For use by extension methods only
-        // 
-        internal Buf<TValue> Buffer{ get{ return _buffer; } }
+        Buf<TValue>* Buffer() { return _buffer; }
 
-            // 
-            // For use by extension methods only
-            // 
-        internal Duration<TTime> Offset{ get{ return _offset; } }
-
-            public TValue this[Duration<TTime> offset, int subindex]
+        TValue& operator[](Duration<TTime> offset, int subindex)
         {
-            get
-        {
-            Duration<TTime> totalOffset = _offset + offset;
-        Debug.Assert(totalOffset * SliverSize < Buffer.Data.Length);
-        long finalOffset = totalOffset * SliverSize + subindex;
-        return _buffer.Data[finalOffset];
-        }
-            set
-        {
-            Duration<TTime> totalOffset = _offset + offset;
-        Debug.Assert(totalOffset < (Buffer.Data.Length / SliverSize));
-        long finalOffset = totalOffset * SliverSize + subindex;
-        _buffer.Data[finalOffset] = value;
-        }
+            Duration<TTime> totalOffset = Offset + offset;
+            Check(totalOffset * SliverSize < Buffer.Data.Length);
+            long finalOffset = totalOffset * SliverSize + subindex;
+            return _buffer.Data[finalOffset];
         }
 
-            // 
-            // Get a portion of this Slice, starting at the given offset, for the given duration.
-            // 
-            public Slice<TTime, TValue> Subslice(Duration<TTime> initialOffset, Duration<TTime> duration)
+        // Get a portion of this Slice, starting at the given offset, for the given duration.
+        Slice<TTime, TValue> Subslice(Duration<TTime> initialOffset, Duration<TTime> duration)
         {
-            Debug.Assert(initialOffset >= 0); // can't slice before the beginning of this slice
-            Debug.Assert(duration >= 0); // must be nonnegative count
-            Debug.Assert(initialOffset + duration <= Duration); // can't slice beyond the end
-            return new Slice<TTime, TValue>(_buffer, _offset + initialOffset, duration, SliverSize);
+            Check(initialOffset >= 0); // can't slice before the beginning of this slice
+            Check(duration >= 0); // must be nonnegative count
+            Check(initialOffset + duration <= Duration); // can't slice beyond the end
+            return new Slice<TTime, TValue>(_buffer, Offset + initialOffset, duration, SliverSize);
         }
 
-        // 
         // Get the rest of this Slice starting at the given offset.
-        // 
-        public Slice<TTime, TValue> SubsliceStartingAt(Duration<TTime> initialOffset)
+        Slice<TTime, TValue> SubsliceStartingAt(Duration<TTime> initialOffset)
         {
             return Subslice(initialOffset, Duration - initialOffset);
         }
 
-        // 
         // Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
-        // 
-        public Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration)
+        Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration)
         {
             return Subslice(0, duration);
         }
 
-        // 
         // Copy this slice's data into destination; destination must be long enough.
-        // 
-        public void CopyTo(Slice<TTime, TValue> destination)
+        void CopyTo(Slice<TTime, TValue>& destination)
         {
-            Debug.Assert(destination.Duration >= Duration);
-            Debug.Assert(destination.SliverSize == SliverSize);
+            Check(destination.Duration >= Duration);
+            Check(destination.SliverSize == SliverSize);
 
             // TODO: support backwards copies etc.
             Array.Copy(
@@ -138,11 +105,11 @@ namespace NowSound
                 (int)Duration * SliverSize);
         }
 
-        public void CopyFrom(TValue[] source, int sourceOffset, int destinationSubIndex, int subWidth)
+        void CopyFrom(TValue[] source, int sourceOffset, int destinationSubIndex, int subWidth)
         {
-            Debug.Assert((int)(sourceOffset + subWidth) <= source.Length);
+            Check((int)(sourceOffset + subWidth) <= source.Length);
             int destinationOffset = (int)(_offset * SliverSize + destinationSubIndex);
-            Debug.Assert(destinationOffset + subWidth <= _buffer.Data.Length);
+            Check(destinationOffset + subWidth <= _buffer.Data.Length);
 
             Array.Copy(
                 source,
@@ -153,77 +120,41 @@ namespace NowSound
         }
 
         // Are these samples adjacent in their underlying storage?
-        public bool Precedes(Slice<TTime, TValue> next)
+        bool Precedes(const Slice<TTime, TValue>& next)
         {
             return _buffer.Data == next._buffer.Data && _offset + Duration == next._offset;
         }
 
         // Merge two adjacent samples into a single sample.
-        public Slice<TTime, TValue> UnionWith(Slice<TTime, TValue> next)
+        public Slice<TTime, TValue> UnionWith(const Slice<TTime, TValue>& next) const
         {
             Contract.Assert(Precedes(next));
             return new Slice<TTime, TValue>(_buffer, _offset, Duration + next.Duration, SliverSize);
         }
 
-        public override string ToString()
-        {
-            return "Slice[buffer " + _buffer + ", offset " + _offset + ", duration " + Duration + ", sliverSize " + SliverSize + "]";
-        }
-
-        // 
         // Equality comparison; deliberately does not implement Equals(object) as this would cause slice boxing.
-        // 
-        public bool Equals(Slice<TTime, TValue> other)
+        bool Equals(const Slice<TTime, TValue>& other)
         {
             return Buffer.Equals(other.Buffer) && Offset == other.Offset && Duration == other.Duration;
         }
-    }
-}
+    };
 
-// Copyright 2011-2017 by Rob Jellinghaus.  All rights reserved.
-
-using System.Collections.Generic;
-
-namespace Holofunk.Core
-{
-    // 
     // A slice with an absolute initial time associated with it.
-    // 
     // 
     // In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime
     // of the stream itself.
-    // </remarks>
-    struct TimedSlice<TTime, TValue>
-    where TValue : struct
+    template<typename TTime, typename TValue>
+    struct TimedSlice
     {
-        internal readonly Time<TTime> InitialTime;
-        internal readonly Slice<TTime, TValue> Slice;
+        const Time<TTime> InitialTime;
+        const Slice<TTime, TValue> Slice;
 
-        internal TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice)
+        TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : InitialTime(startTime), Slice(slice)
         {
             InitialTime = startTime;
             Slice = slice;
         }
 
-        internal Interval<TTime> Interval{ get{ return new Interval<TTime>(InitialTime, Slice.Duration); } }
-
-            internal class Comparer : IComparer<TimedSlice<TTime, TValue>>
-        {
-            internal static Comparer Instance = new Comparer();
-
-            public int Compare(TimedSlice<TTime, TValue> x, TimedSlice<TTime, TValue> y)
-            {
-                if (x.InitialTime < y.InitialTime) {
-                    return -1;
-                }
-                else if (x.InitialTime > y.InitialTime) {
-                    return 1;
-                }
-                else {
-                    return 0;
-                }
-            }
-        }
-
-    }
+        Interval<TTime> Interval() { return new Interval<TTime>(InitialTime, Slice.Duration); }
+    };
 }

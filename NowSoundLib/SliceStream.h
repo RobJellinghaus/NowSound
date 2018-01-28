@@ -6,7 +6,8 @@
 #include "pch.h"
 
 namespace NowSound
-{
+
+    /*
     // 
     // A stream of data, which can be Shut, at which point it acquires a floating-point ContinuousDuration.
     // 
@@ -718,4 +719,5 @@ namespace Holofunk.Core
             return sizeof(byte);
         }
     }
+    */
 }

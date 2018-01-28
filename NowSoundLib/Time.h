@@ -6,8 +6,6 @@
 #include "pch.h"
 #include "math.h"
 
-using namespace winrt;
-
 namespace NowSound
 {
     // Sample identifies Times based on audio sample counts. 
@@ -29,7 +27,7 @@ namespace NowSound
     // Time parameterized on some underlying unit of measurement (such as those above).
     // This theoretically could also provide a timing base (e.g. number of units per other-unit),
     // but currently does not.
-    template<typename TUnit>
+    template<typename TTime>
     struct Time
     {
         // The number of TTime units represented by this time.
@@ -42,12 +40,12 @@ namespace NowSound
 
         static Time<TTime> Min(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__min(first, second));
+            return new Time<TTime>(__min(first._time, second._time));
         }
 
         static Time<TTime> Max(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__max(first, second));
+            return new Time<TTime>(__max(first._time, second._time));
         }
 
         bool operator <(const Time<TTime>& first, const Time<TTime>& second)

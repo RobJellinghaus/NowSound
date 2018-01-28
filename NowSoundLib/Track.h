@@ -7,6 +7,7 @@
 
 namespace NowSound
 {
+    /*
     internal class HolofunkAudioTrack : IHolofunkAudioTrack, Recorder<AudioSample, float>
 {
     #region Static state
@@ -294,11 +295,11 @@ namespace NowSound
 
                         TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
-                        /*
-                        string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-                        HoloDebug.Log(line);
-                        Spam.Audio.WriteLine(line);
-                        */
+                        
+                        //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+                        //HoloDebug.Log(line);
+                        //Spam.Audio.WriteLine(line);
+                       
 
                         dataInBytes += longest.Duration * sizeof(float) * longest.SliverSize;
                         _localTime += longest.Duration;
@@ -390,4 +391,5 @@ namespace NowSound
         return continueRecording;
     }
 }
+*/
 }

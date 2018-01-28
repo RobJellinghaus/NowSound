@@ -121,6 +121,7 @@ namespace NowSound
             static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
         };
 
+        /*
         // 
         // The state of a particular IHolofunkAudioTrack.
         // 
@@ -215,6 +216,6 @@ namespace NowSound
             // 
             void UnityUpdate();
         }
-
+        */
     }
 }

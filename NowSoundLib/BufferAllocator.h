@@ -10,9 +10,9 @@ namespace NowSound
     struct Buf
     {
         const int Id;
-        const T[] Data;
+        const T* Data;
 
-        Buf(int id, T[]&& data)
+        Buf(int id, T*&& data)
         {
             Id = id;
             Data = std::move(data);
@@ -29,13 +29,13 @@ namespace NowSound
         {
             return Id == other.Id && Data == other.Data;
         }
-    }
+    };
 
     // 
     // Allocate T[] of a predetermined size, and support returning such T[] to a free list.
     // 
     template<typename T>
-    class BufferAllocator<T>
+    class BufferAllocator
     {
     private:
         int _latestBufferId = 1; // 0 = empty buf
@@ -93,11 +93,12 @@ namespace NowSound
         {
             for (const Buf<T>& t : _freeList)
             {
-                if (t.Data == buffer.Data) {
+                if (t.Data == buffer.Data)
+                {
                     return;
                 }
             }
             _freeList.append(std::move(buffer));
         }
-    }
+    };
 }

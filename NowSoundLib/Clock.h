@@ -4,6 +4,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Check.h"
 #include "Time.h"
 
 namespace NowSound
@@ -12,26 +13,26 @@ namespace NowSound
     // and converts it to seconds and beats.
     class Clock
     {
-        // Since the audio thread is fundamentally driving the time if it exists, the current clock
+        // Since the audio thread is fundamentally driving the time, the current clock
         // reading is subject to change out from under the UI thread.  So the Clock hands out immutable
         // Moment instances, which represent the time at the moment the clock was asked.  Moments in
         // turn can be converted to timepoint-counts,  seconds, and beats, consistently and without racing.
 
-        static std::unique_ptr<Clock> s_instance = null;
-
-        Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        static std::unique_ptr<Clock> s_instance;
 
     public:
+
+        Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
 
         // Construct a Clock and initialize Clock.Instance.
         // This must be called exactly once per process; multiple calls will be contract failure (unless closely
         // overlapped in time in which case they will race).
-        static void InitializeClock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        static void Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
 
         // The singleton Clock used by the application.
         static Clock& Instance()
         {
-            Check(s_instance != null); // Clock must have been initialized
+            Check(s_instance != nullptr); // Clock must have been initialized
             return *(s_instance.get());
         }
 
@@ -69,14 +70,14 @@ namespace NowSound
         // This is the most useful value for humans to control and see, and in fact pretty much all 
         // time in the system is derived from this.  This value can only currently be changed when
         // no tracks exist.</remarks>
-        public float BPM() { return _beatsPerMinute; }
-        public void BPM(float value);
+        float BPM() const { return _beatsPerMinute; }
+        void BPM(float value);
 
-        public int BytesPerSecond() { return SampleRateHz * _inputChannelCount * suzeof(float); )
+        int BytesPerSecond() const { return SampleRateHz * _inputChannelCount * sizeof(float); }
 
-        double BeatsPerSecond() { return ((double)_beatsPerMinute) / 60.0; }
+        double BeatsPerSecond() const { return ((double)_beatsPerMinute) / 60.0; }
 
-        ContinuousDuration<AudioSample> BeatDuration() { return _beatDuration; }
+        ContinuousDuration<AudioSample> BeatDuration() const { return _beatDuration; }
 
         int BeatsPerMeasure() { return _beatsPerMeasure; }
     };
@@ -85,31 +86,28 @@ namespace NowSound
     // time measurements (timepoint-count, second, beat).
     struct Moment
     {
-        const Time<AudioSample> Time;
+        const Time<AudioSample> _time;
 
-        const Clock* Clock;
+        const Clock* _clock;
 
-        internal Moment(Time<AudioSample> time, Clock* clock)
+        Moment(Time<AudioSample> time, Clock* clock) : _time(time), _clock(clock)
         {
             Check(clock != nullptr); // must actually have a clock
-
-            Time = time;
-            Clock = clock;
         }
 
         // Approximately how many seconds?
-        double Seconds() { return ((double)Time) / Clock.SampleRateHz; }
+        double Seconds() const { return ((double)_time._time) / _clock->SampleRateHz; }
 
         // Approximately how many beats?
-        ContinuousDuration<Beat> Beats() { return (ContinuousDuration<Beat>)((double)Time / (double)Clock.BeatDuration); }
+        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((double)_time._time / _clock->BeatDuration()._duration); }
 
         // Exactly how many complete beats?
         // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-        Duration<Beat> CompleteBeats() { return (int)Beats; }
+        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats()._duration); }
 
         const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
 
         // What fraction of a beat?
-        public ContinuousDuration<Beat> FractionalBeat() { return (ContinuousDuration<Beat>)((float)Beats - (float)CompleteBeats); }
+        public ContinuousDuration<Beat> FractionalBeat() const { return (ContinuousDuration<Beat>)(Beats()._duration - CompleteBeats()); }
     };
 }
