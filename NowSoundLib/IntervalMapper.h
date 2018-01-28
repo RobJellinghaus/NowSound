@@ -67,12 +67,12 @@ namespace NowSound
 
         virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input)
         {
-            Check(input.InitialTime >= _stream.InitialTime);
+            Check(input._initialTime >= _stream.InitialTime);
 
-            Duration <TTime> inputDelayDuration = input.InitialTime - _stream.InitialTime;
+            Duration <TTime> inputDelayDuration = input._initialTime - _stream.InitialTime;
             // now we want to take that modulo the *discrete* duration
             inputDelayDuration %= _stream.DiscreteDuration;
-            Duration<TTime> mappedDuration = Math.Min((long)input.Duration, (long)(_stream.DiscreteDuration - inputDelayDuration));
+            Duration<TTime> mappedDuration = Math.Min((long)input._duration, (long)(_stream.DiscreteDuration - inputDelayDuration));
             Interval<TTime> ret = new Interval<TTime>(_stream.InitialTime + inputDelayDuration, mappedDuration);
 
             Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: _stream " + _stream + ", input " + input + ", ret " + ret);

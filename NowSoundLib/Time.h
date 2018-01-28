@@ -27,160 +27,170 @@ namespace NowSound
     // Time parameterized on some underlying unit of measurement (such as those above).
     // This theoretically could also provide a timing base (e.g. number of units per other-unit),
     // but currently does not.
+    // The rationale for these types and the boilerplate around them is that plain numeric types
+    // in a multimedia program always lead to confusion -- what is that "int" exactly?  These types
+    // eliminate these confusions and help to catch real bugs.
     template<typename TTime>
-    struct Time
+    class Time
     {
+    private:
         // The number of TTime units represented by this time.
-        const long _time;
+        long _value;
 
-        Time(long time)
+    public:
+        Time() = delete;
+
+        Time(long value) : _value(value)
         {
-            _time = time;
         }
+
+        long Value() const { return _value; }
 
         static Time<TTime> Min(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__min(first._time, second._time));
+            return new Time<TTime>(__min(_value, second.Value()));
         }
 
         static Time<TTime> Max(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__max(first._time, second._time));
+            return new Time<TTime>(__max(_value, second.Value()));
         }
 
-        bool operator <(const Time<TTime>& first, const Time<TTime>& second)
+        Time<TTime>& operator=(const Time<TTime>& other)
         {
-            return first._time < second._time;
+            _value = other.Value();
+            return *this;
         }
 
-        bool operator >(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator <(const Time<TTime>& second)
         {
-            return first._time > second._time;
+            return _value < second.Value();
         }
 
-        bool operator ==(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator >(const Time<TTime>& second)
         {
-            return first._time == second._time;
+            return _value > second.Value();
         }
 
-        bool operator !=(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator ==(const Time<TTime>& second)
         {
-            return first._time != second._time;
+            return _value == second.Value();
         }
 
-        bool operator <=(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator !=(const Time<TTime>& second)
         {
-            return first._time <= second._time;
+            return _value != second.Value();
         }
 
-        bool operator >=(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator <=(const Time<TTime>& second)
         {
-            return first._time >= second._time;
+            return _value <= second.Value();
         }
 
-        Duration<TTime> operator -(const Time<TTime>& first, const Time<TTime>& second)
+        bool operator >=(const Time<TTime>& second)
         {
-            return new Duration<TTime>(first._time - second._time);
-        }
-
-        Time<TTime> operator -(const Time<TTime>& first, Duration<TTime> second)
-        {
-            return new Time<TTime>(first._time - second._time);
+            return _value >= second.Value();
         }
     };
 
     // A distance between two Times.
-    template<typename T>
-    struct Duration<TTime>
+    template<typename TTime>
+    class Duration
     {
-        const long _count;
+    private:
+        const long _value;
 
-        public Duration(long count)
+    public:
+        Duration() = delete;
+
+        Duration(long duration) : _value(duration)
         {
-            WINRT_ASSERT(count >= 0);
-            _count = count;
         }
 
-        implicit operator long(Duration<TTime> offset)
-        {
-            return offset._count;
-        }
+        long Value() const { return _value; }
 
-        implicit operator Duration<TTime>(long value)
-        {
-            return new Duration<TTime>(value);
-        }
-
-        explicit operator Duration<TTime>(Time<TTime> value)
-        {
-            return new Duration<TTime>(value);
-        }
-
-        Duration<TTime> Min(Duration<TTime> first, Duration<TTime> second)
+        static Duration<TTime> Min(Duration<TTime> first, Duration<TTime> second)
         {
             return new Duration<TTime>(Math.Min(first, second));
         }
 
-        Duration<TTime> operator +(Duration<TTime> first, Duration<TTime> second)
+        Duration<TTime>& operator=(const Duration<TTime>& other)
         {
-            return new Duration<TTime>(first._time + second._time);
+            _value = other.Value();
+            return *this;
         }
 
-        Duration<TTime> operator -(Duration<TTime> first, Duration<TTime> second)
+        Duration<TTime> operator /(int second) const
         {
-            return new Duration<TTime>(first._time - second._time);
+            return new Duration<TTime>(_value / second);
         }
 
-        Duration<TTime> operator /(Duration<TTime> first, int second)
+        bool operator <(Duration<TTime> second) const
         {
-            return new Duration<TTime>(first._time / second);
+            return _value < second.Value();
         }
 
-        bool operator <(Duration<TTime> first, Duration<TTime> second)
+        bool operator >(Duration<TTime> second) const
         {
-            return first._time < second._time;
+            return _value > second.Value();
         }
 
-        bool operator >(Duration<TTime> first, Duration<TTime> second)
+        bool operator <=(Duration<TTime> second) const
         {
-            return first._time > second._time;
+            return _value <= second.Value();
         }
 
-        bool operator <=(Duration<TTime> first, Duration<TTime> second)
+        bool operator >=(Duration<TTime> second) const
         {
-            return first._time <= second._time;
+            return _value >= second.Value();
         }
 
-        bool operator >=(Duration<TTime> first, Duration<TTime> second)
+        bool operator ==(Duration<TTime> second) const
         {
-            return first._time >= second._time;
+            return _value == second.Value();
         }
 
-        bool operator ==(Duration<TTime> first, Duration<TTime> second)
+        bool operator !=(Duration<TTime> second) const
         {
-            return first._time == second._time;
-        }
-
-        bool operator !=(Duration<TTime> first, Duration<TTime> second)
-        {
-            return first._time != second._time;
-        }
-
-        Time<TTime> operator +(Time<TTime> first, Duration<TTime> second)
-        {
-            return new Time<TTime>(first._time + second._time);
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is Duration<TTime> && ((Duration<TTime>)obj)._count == _count;
-        }
-
-        public override int GetHashCode()
-        {
-            return _count.GetHashCode();
+            return _value != second.Value();
         }
     };
+
+    template<typename TTime>
+    Duration<TTime> operator -(Time<TTime> first, Time<TTime> second)
+    {
+        return new Duration<TTime>(first.Value() - second.Value());
+    }
+
+    template<typename TTime>
+    Time<TTime> operator -(Time<TTime> first, Duration<TTime> second)
+    {
+        return new Time<TTime>(first.Value() - second.Value());
+    }
+
+    template<typename TTime>
+    Duration<TTime> operator +(Duration<TTime> first, Duration<TTime> second)
+    {
+        return Duration<TTime>(first.Value() + second.Value());
+    }
+
+    template<typename TTime>
+    Duration<TTime> operator -(Duration<TTime> first, Duration<TTime> second)
+    {
+        return Duration<TTime>(first.Value() - second.Value());
+    }
+
+    template<typename TTime>
+    Time<TTime> operator +(Time<TTime> first, Duration<TTime> second)
+    {
+        return Time<TTime>(first.Value() + second.Value());
+    }
+
+    template<typename TTime>
+    Time<TTime> operator +(Duration<TTime> first, Time<TTime> second)
+    {
+        return Time<TTime>(first._duration + second.Value());
+    }
 
     // An interval, defined as a start time and a duration (aka length).
     // 
@@ -189,54 +199,60 @@ namespace NowSound
     template<typename TTime>
     struct Interval
     {
-        const Time<TTime> InitialTime;
-        const readonly Duration<TTime> Duration;
+    private:
+        Time<TTime> _initialTime;
+        Duration<TTime> _duration;
+
+    public:
+        Interval() = delete;
 
         Interval(Time<TTime> initialTime, Duration<TTime> duration)
         {
             Check(duration >= 0);
 
-            InitialTime = initialTime;
-            Duration = duration;
+            _initialTime = initialTime;
+            _duration = duration;
         }
 
         static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
 
-        bool IsEmpty() { return Duration == 0; }
+        bool IsEmpty() const { return _duration.Value() == 0; }
 
-        Interval<TTime> SubintervalStartingAt(Duration<TTime> offset)
+        Interval<TTime> SubintervalStartingAt(Duration<TTime> offset) const
         {
-            Check(offset <= Duration);
-            return new Interval<TTime>(InitialTime + offset, Duration - offset);
+            Check(offset <= _duration);
+            return new Interval<TTime>(_initialTime + offset, _duration - offset);
         }
 
-        Interval<TTime> SubintervalOfDuration(Duration<TTime> duration)
+        Interval<TTime> SubintervalOfDuration(Duration<TTime> duration) const
         {
-            Check(duration <= Duration);
-            return new Interval<TTime>(InitialTime, duration);
+            Check(duration <= _duration);
+            return new Interval<TTime>(_initialTime, duration);
         }
 
-        Interval<TTime> Intersect(Interval<TTime> other)
+        Interval<TTime> Intersect(Interval<TTime> other) const
         {
-            Time<TTime> intersectionStart = Time<TTime>.Max(InitialTime, other.InitialTime);
-            Time<TTime> intersectionEnd = Time<TTime>.Min(InitialTime + Duration, other.InitialTime + other.Duration);
+            Time<TTime> intersectionStart = Time<TTime>.Max(_initialTime, other._initialTime);
+            Time<TTime> intersectionEnd = Time<TTime>.Min(_initialTime + _duration, other._initialTime + other._duration);
 
-            if (intersectionEnd < intersectionStart) {
+            if (intersectionEnd < intersectionStart)
+            {
                 return Interval<TTime>.Empty;
             }
-            else {
+            else
+            {
                 return new Interval<TTime>(intersectionStart, intersectionEnd - intersectionStart);
             }
         }
 
-        bool Contains(Time<TTime> time)
+        bool Contains(Time<TTime> time) const
         {
-            if (IsEmpty) {
+            if (IsEmpty) 
+            {
                 return false;
             }
 
-            return InitialTime <= time
-                && (InitialTime + Duration) > time;
+            return _initialTime <= time && (_initialTime + _duration) > time;
         }
     };
 
@@ -244,20 +260,32 @@ namespace NowSound
     template<typename TTime>
     struct ContinuousDuration
     {
-        const float _duration;
+    private:
+        float _value;
 
-        ContinuousDuration(float duration)
+    public:
+        ContinuousDuration() = delete;
+
+        ContinuousDuration(float value) : _value(value)
         {
-            _duration = duration;
+            Check(value >= 0);
         }
 
-        ContinuousDuration<TTime> operator *(ContinuousDuration<TTime> duration, float value)
+        ContinuousDuration(const ContinuousDuration<TTime>& other) : _value(other.Value())
         {
-            return new ContinuousDuration<TTime>(value * duration._duration);
         }
-        ContinuousDuration<TTime> operator *(float value, ContinuousDuration<TTime> duration)
+
+        float Value() const { return _value; }
+
+        ContinuousDuration<TTime>& operator =(const ContinuousDuration<TTime>& other)
         {
-            return new ContinuousDuration<TTime>(value * duration._duration);
+            _value = other._value;
+            return *this;
+        }
+
+        ContinuousDuration<TTime> operator *(float value) const
+        {
+            return new ContinuousDuration<TTime>(value * _value);
         }
     };
 }

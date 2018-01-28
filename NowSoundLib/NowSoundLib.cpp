@@ -37,7 +37,7 @@ NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
 
 void NowSoundGraph::NowSoundGraph_InitializeAsync()
 {
-    WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Uninitialized);
+    Check(s_audioGraphState == NowSoundGraph_State::Uninitialized);
     create_task([]() -> IAsyncAction
     {
         AudioGraphSettings settings(AudioRenderCategory::Media);
@@ -69,7 +69,7 @@ AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
 void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice)
 {
-    WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Initialized);
+    Check(s_audioGraphState == NowSoundGraph_State::Initialized);
 
     create_task([]() -> IAsyncAction
     {
@@ -90,13 +90,13 @@ void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outp
 
 NowSound_GraphInfo NowSoundGraph::NowSoundGraph_GetGraphInfo()
 {
-    WINRT_ASSERT(s_audioGraphState >= NowSoundGraph_State::Created);
+    Check(s_audioGraphState >= NowSoundGraph_State::Created);
     return NowSound_GraphInfo(s_audioGraph.LatencyInSamples(), s_audioGraph.SamplesPerQuantum());
 }
 
 void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
 {
-    WINRT_ASSERT(s_audioGraphState == NowSoundGraph_State::Created);
+    Check(s_audioGraphState == NowSoundGraph_State::Created);
 
     s_audioGraph.Start();
 

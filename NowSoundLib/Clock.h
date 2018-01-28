@@ -86,28 +86,31 @@ namespace NowSound
     // time measurements (timepoint-count, second, beat).
     struct Moment
     {
-        const Time<AudioSample> _time;
+    private:
+        Time<AudioSample> _time;
+        Clock* _clock;
 
-        const Clock* _clock;
-
+    public:
         Moment(Time<AudioSample> time, Clock* clock) : _time(time), _clock(clock)
         {
             Check(clock != nullptr); // must actually have a clock
         }
 
+        Time<AudioSample> Time() { return _time; }
+
         // Approximately how many seconds?
-        double Seconds() const { return ((double)_time._time) / _clock->SampleRateHz; }
+        double Seconds() const { return ((double)_time.Value()) / _clock->SampleRateHz; }
 
         // Approximately how many beats?
-        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((double)_time._time / _clock->BeatDuration()._duration); }
+        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_time.Value() / _clock->BeatDuration().Value()); }
 
         // Exactly how many complete beats?
         // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats()._duration); }
+        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats().Value()); }
 
         const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
 
         // What fraction of a beat?
-        public ContinuousDuration<Beat> FractionalBeat() const { return (ContinuousDuration<Beat>)(Beats()._duration - CompleteBeats()); }
+        ContinuousDuration<Beat> FractionalBeat() const { return ContinuousDuration<Beat>(Beats().Value() - CompleteBeats().Value()); }
     };
 }

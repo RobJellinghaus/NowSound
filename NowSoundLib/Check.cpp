@@ -4,9 +4,19 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Check.h"
 
 namespace NowSound
 {
     // Unconditional check that runs whether in debug mode or not.
-    void Check(bool condition);
+    void Check(bool condition)
+    {
+        if (!condition)
+        {
+#if DEBUG
+            Debug::Break();
+#endif
+            std::abort();
+        }
+    }
 }

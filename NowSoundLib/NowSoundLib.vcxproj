@@ -323,6 +323,7 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Check.cpp" />
     <ClCompile Include="Clock.cpp" />
     <ClCompile Include="NowSoundLib.cpp" />
     <ClCompile Include="pch.cpp">

@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Check.h"
 #include <future>
 
 using namespace std::chrono;
