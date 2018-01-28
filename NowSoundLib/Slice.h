@@ -40,11 +40,6 @@ namespace NowSound
             Check(offset >= 0);
             Check(duration >= 0);
             Check((offset * sliverSize) + (duration * sliverSize) <= buffer.Data.Length);
-
-            _buffer = buffer;
-            _duration = duration;
-            offset = offset;
-            _sliverSize = sliverSize;
         }
 
         Slice(Buf<TValue> buffer, int sliverSize)
@@ -83,6 +78,8 @@ namespace NowSound
         {
             return Subslice(initialOffset, _duration - initialOffset);
         }
+
+        TValue* OffsetPointer() { return Buffer()->Data + (_offset * _sliverSize); }
 
         // Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
         Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration)
