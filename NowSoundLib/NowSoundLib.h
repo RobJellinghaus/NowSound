@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include "Check.h"
+#include "SliceStream.h"
 #include <future>
 
 using namespace std::chrono;

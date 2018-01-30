@@ -40,7 +40,7 @@ struct App : ApplicationT<App>
         case NowSoundGraph_State::Created: return L"Created";
         case NowSoundGraph_State::Running: return L"Running";
         case NowSoundGraph_State::InError: return L"InError";
-        default: Check(false, L"Unknown graph state; should be impossible");
+        default: Check(false); // Unknown graph state; should be impossible
         }
     }
 

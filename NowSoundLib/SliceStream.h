@@ -25,7 +25,7 @@ namespace NowSound
     // TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
     // A Stream with duration 1 has exactly one sliver of data. 
     template<typename TTime, typename TValue>
-    class SliceStream
+    class SliceStream : IStream<TTime>
     {
         // The initial time of this Stream.
         // 
@@ -59,10 +59,12 @@ namespace NowSound
         bool IsShut() { return _isShut; }
 
         // The starting time of this Stream.
-        Time<TTime> InitialTime() { return _initialTime; }
+        virtual Time<TTime> InitialTime() { return _initialTime; }
 
         // The floating-point-accurate duration of this stream; only valid once shut.
-        ContinuousDuration<AudioSample> ContinuousDuration() { return _continuousDuration; }
+        // This may have a fractional part if the BPM of the stream can't be evenly divided into
+        // the sample rate.
+        ContinuousDuration<AudioSample> PreciseDuration() { return _continuousDuration; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -109,8 +111,8 @@ namespace NowSound
 
         Interval<TTime> DiscreteInterval() { return new Interval<TTime>(InitialTime(), DiscreteDuration()); }
 
-        IntervalMapper<TTime> IntervalMapper() { return _intervalMapper; }
-        void IntervalMapper(IntervalMapper<TTime> value) { _intervalMapper = value; }
+        IntervalMapper<TTime> Mapper() { return _intervalMapper; }
+        void Mapper(IntervalMapper<TTime> value) { _intervalMapper = value; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -180,12 +182,12 @@ namespace NowSound
 
         bool _useContinuousLoopingMapper; // = false;
 
-        public BufferedSliceStream(
+        BufferedSliceStream(
             Time<TTime> initialTime,
             BufferAllocator<TValue> allocator,
             int sliverSize,
-            Duration<TTime> maxBufferedDuration = default(Duration<TTime>),
-            bool useContinuousLoopingMapper = false)
+            Duration<TTime> maxBufferedDuration,
+            bool useContinuousLoopingMapper)
             : base(initialTime, sliverSize),
             _allocator(allocator),
             _maxBufferedDuration(maxBufferedDuration),
@@ -193,7 +195,7 @@ namespace NowSound
         {
             // as long as we are appending, we use the identity mapping
             // TODO: support delay mapping
-            _intervalMapper = new IdentityIntervalMapper<TTime, TValue>(this);
+            _intervalMapper = new IdentityIntervalMapper<TTime>(this);
         }
 
         void EnsureFreeBuffer()
@@ -273,7 +275,8 @@ namespace NowSound
 
                 // if source is larger than available free buffer, then we'll iterate
                 Slice<TTime, TValue> originalSource = source;
-                if (source.Duration > _remainingFreeBuffer.Duration) {
+                if (source.Duration > _remainingFreeBuffer.Duration)
+                {
                     source = source.Subslice(0, _remainingFreeBuffer.Duration);
                 }
 
@@ -300,15 +303,19 @@ namespace NowSound
         {
             Check(dest.Buffer.Data == _remainingFreeBuffer.Buffer.Data); // dest must be from our free buffer
 
-            if (_data.Count == 0) {
+            if (_data.Count == 0)
+            {
                 _data.Add(new TimedSlice<TTime, TValue>(InitialTime, dest));
             }
-            else {
+            else
+            {
                 TimedSlice<TTime, TValue> last = _data[_data.Count - 1];
-                if (last.Slice.Precedes(dest)) {
+                if (last.Slice.Precedes(dest))
+                {
                     _data[_data.Count - 1] = new TimedSlice<TTime, TValue>(last.InitialTime, last.Slice.UnionWith(dest));
                 }
-                else {
+                else
+                {
                     //Spam.Audio.WriteLine("BufferedSliceStream.InternalAppend: last did not precede; last slice is " + last.Slice + ", last slice time " + last.InitialTime + ", dest is " + dest);
                     _data.Add(new TimedSlice<TTime, TValue>(last.InitialTime + last.Slice.Duration, dest));
                 }
@@ -321,7 +328,7 @@ namespace NowSound
         }
 
         // Copy strided data from a source array into a single destination sliver.
-        virtual void AppendSliver(TValue[] source, int startOffset, int width, int stride, int height)
+        virtual void AppendSliver(TValue* source, int startOffset, int width, int stride, int height)
         {
             Check(source != null);
             int neededLength = startOffset + stride * (height - 1) + width;
@@ -351,19 +358,22 @@ namespace NowSound
         // Trim off any content beyond the maximum allowed to be buffered.
         void Trim()
         {
-            if (_maxBufferedDuration == 0 || _discreteDuration <= _maxBufferedDuration) {
+            if (_maxBufferedDuration == 0 || _discreteDuration <= _maxBufferedDuration)
+            {
                 return;
             }
 
-            while (DiscreteDuration > _maxBufferedDuration) {
+            while (DiscreteDuration > _maxBufferedDuration)
+            {
                 Duration<TTime> toTrim = DiscreteDuration - _maxBufferedDuration;
                 // get the first slice
                 TimedSlice<TTime, TValue> firstSlice = _data[0];
-                if (firstSlice.Slice.Duration <= toTrim) {
+                if (firstSlice.Slice.Duration <= toTrim)
+                {
                     _data.RemoveAt(0);
 #if DEBUG
-                    foreach(TimedSlice<TTime, TValue> slice in _data) {
-                        Contract.Assert(slice.Slice.Buffer.Data != firstSlice.Slice.Buffer.Data,
+                    for (TimedSlice<TTime, TValue> slice : _data) {
+                        Check(slice.Slice.Buffer.Data != firstSlice.Slice.Buffer.Data,
                             "make sure our later stream data doesn't reference this one we're about to free");
                     }
 #endif
@@ -371,7 +381,8 @@ namespace NowSound
                     _discreteDuration -= firstSlice.Slice.Duration;
                     _initialTime += firstSlice.Slice.Duration;
                 }
-                else {
+                else
+                {
                     TimedSlice<TTime, TValue> newFirstSlice = new TimedSlice<TTime, TValue>(
                         firstSlice.InitialTime + toTrim,
                         new Slice<TTime, TValue>(
@@ -386,18 +397,20 @@ namespace NowSound
             }
         }
 
-        public override void CopyTo(Interval<TTime> sourceInterval, IntPtr p)
+        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* p)
         {
-            while (!sourceInterval.IsEmpty) {
+            while (!sourceInterval.IsEmpty)
+            {
                 Slice<TTime, TValue> source = GetNextSliceAt(sourceInterval);
                 _copySliceToIntPtrAction(source, p);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.Duration);
             }
         }
 
-        public override void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destinationStream)
+        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destinationStream)
         {
-            while (!sourceInterval.IsEmpty) {
+            while (!sourceInterval.IsEmpty)
+            {
                 Slice<TTime, TValue> source = GetNextSliceAt(sourceInterval);
                 destinationStream.Append(source);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.Duration);
@@ -409,21 +422,22 @@ namespace NowSound
         // 
         // <param name="interval"></param>
         // <returns></returns>
-        public override Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval)
+        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval)
         {
             Interval<TTime> firstMappedInterval = _intervalMapper.MapNextSubInterval(interval);
 
-            if (firstMappedInterval.IsEmpty) {
+            if (firstMappedInterval.IsEmpty)
+            {
                 return Slice<TTime, TValue>.Empty;
             }
 
-            Contract.Assert(firstMappedInterval.InitialTime >= InitialTime, "firstMappedInterval.InitialTime >= InitialTime");
-            Contract.Assert(firstMappedInterval.InitialTime + firstMappedInterval.Duration <= InitialTime + DiscreteDuration,
+            Check(firstMappedInterval.InitialTime >= InitialTime, "firstMappedInterval.InitialTime >= InitialTime");
+            Check(firstMappedInterval.InitialTime + firstMappedInterval.Duration <= InitialTime + DiscreteDuration,
                 "mapped interval fits within slice");
 
             TimedSlice<TTime, TValue> foundTimedSlice = GetInitialTimedSlice(firstMappedInterval);
             Interval<TTime> intersection = foundTimedSlice.Interval.Intersect(firstMappedInterval);
-            Contract.Assert(!intersection.IsEmpty, "interval intersects slice");
+            Check(!intersection.IsEmpty, "interval intersects slice");
             Slice<TTime, TValue> ret = foundTimedSlice.Slice.Subslice(
                 intersection.InitialTime - foundTimedSlice.InitialTime,
                 intersection.Duration);
@@ -434,7 +448,7 @@ namespace NowSound
         TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval)
         {
             // we must overlap somewhere
-            Contract.Requires(!firstMappedInterval.Intersect(new Interval<TTime>(InitialTime, DiscreteDuration)).IsEmpty,
+            Check(!firstMappedInterval.Intersect(new Interval<TTime>(InitialTime, DiscreteDuration)).IsEmpty,
                 "first mapped interval intersects this slice somewhere");
 
             // Get the biggest available slice at firstMappedInterval.InitialTime.
@@ -443,160 +457,28 @@ namespace NowSound
             int originalIndex = _data.BinarySearch(target, TimedSlice<TTime, TValue>.Comparer.Instance);
             int index = originalIndex;
 
-            if (index < 0) {
+            if (index < 0)
+            {
                 // index is then the index of the next larger element
                 // -- we know there is a smaller element because we know firstMappedInterval fits inside stream interval
                 index = (~index) - 1;
-                Contract.Assert(index >= 0, "index >= 0");
+                Check(index >= 0, "index >= 0");
             }
 
             TimedSlice<TTime, TValue> foundTimedSlice = _data[index];
             return foundTimedSlice;
         }
 
-        public override void Dispose()
+        void Dispose()
         {
             // release each T[] back to the buffer
-            foreach(TimedSlice<TTime, TValue> slice in _data) {
+            for (TimedSlice<TTime, TValue> slice : _data)
+            {
                 // this requires that Free be idempotent; in general we don't expect
                 // many slices per buffer, since each Stream allocates from a private
                 // buffer and coalesces aggressively
                 _allocator.Free(slice.Slice.Buffer);
             }
         }
-    }
-
-    public static class SliceFloatExtension
-    {
-        // 
-        // Copy data from IntPtr to Slice.
-        // 
-        public static void CopyToSlice<TTime>(this IntPtr src, Slice<TTime, float> dest)
-        {
-            Marshal.Copy(src, dest.Buffer.Data, (int)dest.Offset * dest.SliverSize, (int)dest.Duration * dest.SliverSize);
-        }
-        // 
-        // Copy data from Slice to IntPtr.
-        // 
-        public static void CopyToIntPtr<TTime>(this Slice<TTime, float> src, IntPtr dest)
-        {
-            Marshal.Copy(src.Buffer.Data, (int)src.Offset * src.SliverSize, dest, (int)src.Duration * src.SliverSize);
-        }
-        // 
-        // Invoke some underlying action with an IntPtr directly to a Slice's data.
-        // 
-        // 
-        // The arguments to the action are an IntPtr to the fixed data, and the number of BYTES to act on.
-        // </remarks>
-        public static unsafe void RawAccess<TTime>(this Slice<TTime, float> src, Action<IntPtr, int> action)
-        {
-            // per http://www.un4seen.com/forum/?topic=12912.msg89978#msg89978
-            fixed(float* p = &src.Buffer.Data[src.Offset * src.SliverSize]) {
-                byte* b = (byte*)p;
-
-                action(new IntPtr(p), (int)src.Duration * src.SliverSize * sizeof(float));
-            }
-        }
-    }
-
-    public static class SliceByteExtension
-    {
-        // 
-        // Copy data from IntPtr to Slice.
-        // 
-        public static void CopyToSlice<TTime>(this IntPtr src, Slice<TTime, byte> dest)
-        {
-            Marshal.Copy(src, dest.Buffer.Data, (int)dest.Offset * dest.SliverSize, (int)dest.Duration * dest.SliverSize);
-        }
-        // 
-        // Copy data from Slice to IntPtr.
-        // 
-        public static void CopyToIntPtr<TTime>(this Slice<TTime, byte> src, IntPtr dest)
-        {
-            Marshal.Copy(src.Buffer.Data, (int)src.Offset * src.SliverSize, dest, (int)src.Duration * src.SliverSize);
-        }
-        // 
-        // Invoke some underlying action with an IntPtr directly to a Slice's data.
-        // 
-        // 
-        // The action receives an IntPtr to the data, and an int that is a count of bytes.
-        // </remarks>
-        public static unsafe void RawAccess<TTime>(this Slice<TTime, byte> src, Action<IntPtr, int> action)
-        {
-            // per http://www.un4seen.com/forum/?topic=12912.msg89978#msg89978
-            fixed(byte* p = &src.Buffer.Data[src.Offset * src.SliverSize]) {
-
-                action(new IntPtr(p), (int)src.Duration * src.SliverSize);
-            }
-        }
-    }
-
-    public class DenseSampleFloatStream : BufferedSliceStream<AudioSample, float>
-    {
-        public DenseSampleFloatStream(
-            Time<AudioSample> initialTime,
-            BufferAllocator<float> allocator,
-            int sliverSize,
-            Duration<AudioSample> maxBufferedDuration = default(Duration<AudioSample>),
-            bool useContinuousLoopingMapper = false)
-            : base(initialTime,
-                allocator,
-                sliverSize,
-                SliceFloatExtension.CopyToSlice,
-                SliceFloatExtension.CopyToIntPtr,
-                SliceFloatExtension.RawAccess,
-                maxBufferedDuration,
-                useContinuousLoopingMapper)
-        {
-        }
-
-        public override int SizeofValue()
-        {
-            return sizeof(float);
-        }
-    }
-
-    public class DenseFrameByteStream : BufferedSliceStream<Frame, byte>
-    {
-        public DenseFrameByteStream(
-            BufferAllocator<byte> allocator,
-            int sliverSize,
-            Duration<Frame> maxBufferedDuration = default(Duration<Frame>),
-            bool useContinuousLoopingMapper = false)
-            : base(0,
-                allocator,
-                sliverSize,
-                SliceByteExtension.CopyToSlice,
-                SliceByteExtension.CopyToIntPtr,
-                SliceByteExtension.RawAccess,
-                maxBufferedDuration,
-                useContinuousLoopingMapper)
-        {
-        }
-
-        public override int SizeofValue()
-        {
-            return sizeof(byte);
-        }
-    }
-
-    public class SparseSampleByteStream : SparseSliceStream<AudioSample, byte>
-    {
-        public SparseSampleByteStream(
-            Time<AudioSample> initialTime,
-            BufferAllocator<byte> allocator,
-            int sliverSize,
-            int maxBufferedFrameCount = 0)
-            : base(initialTime,
-                new DenseFrameByteStream(allocator, sliverSize, maxBufferedFrameCount),
-                maxBufferedFrameCount)
-        {
-        }
-
-        public override int SizeofValue()
-        {
-            return sizeof(byte);
-        }
-    }
-    */
+    };
 }

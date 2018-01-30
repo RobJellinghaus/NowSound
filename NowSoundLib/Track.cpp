@@ -118,8 +118,8 @@ using namespace Windows::Media::Render;
         // Tracks should only be created from the Unity thread.
         ThreadContract.RequireUnity();
 
-        Contract.Requires(audioGraph != null);
-        Contract.Requires(Clock.Instance != null);
+        Check(audioGraph != null);
+        Check(Clock.Instance != null);
 
         // yes, not thread safe -- but we already assume only one unity thread
         _sequenceNumber = s_sequenceNumber++;
@@ -347,7 +347,7 @@ using namespace Windows::Media::Render;
                 {
                     _beatDuration = completeBeats + 1;
                     // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
-                    Contract.Assert(completeBeats < BeatDuration, "completeBeats < BeatDuration");
+                    Check(completeBeats < BeatDuration, "completeBeats < BeatDuration");
                 }
 
                 // and actually record the full amount of available data
@@ -362,7 +362,7 @@ using namespace Windows::Media::Render;
                 Duration<AudioSample> roundedUpDuration = (long)Math.Ceiling((float)Duration);
 
                 // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-                Contract.Assert(_audioStream.DiscreteDuration <= roundedUpDuration, "_localTime <= roundedUpDuration");
+                Check(_audioStream.DiscreteDuration <= roundedUpDuration, "_localTime <= roundedUpDuration");
 
                 if (_audioStream.DiscreteDuration + duration >= roundedUpDuration)
                 {

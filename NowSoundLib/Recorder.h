@@ -33,5 +33,5 @@ namespace NowSound
         // Record a sliver from the given source at the given time; return true if this recorder is done.
         // 
         virtual bool Record(Time<TTime> time, TValue[] source, int offset, int width, int stride, int height);
-    }
+    };
 }

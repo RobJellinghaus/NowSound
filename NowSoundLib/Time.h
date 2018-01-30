@@ -216,6 +216,9 @@ namespace NowSound
 
         static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
 
+        Time<TTime> InitialTime() { return _initialTime; }
+        Duration<TTime> IntervalDuration() { return _duration;  }
+
         bool IsEmpty() const { return _duration.Value() == 0; }
 
         Interval<TTime> SubintervalStartingAt(Duration<TTime> offset) const

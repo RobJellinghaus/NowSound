@@ -4,10 +4,19 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "SliceStream.h"
 #include "Time.h"
 
 namespace NowSound
 {
+    // Class which provides an interface to the Stream functions that mappers need.
+    template<typename TTime>
+    class IStream
+    {
+        Time<TTime> InitialTime() = 0;
+        Duration<TTime> Duration() = 0;
+    };
+
     // Handle converting time intervals from absolute time (relative to start of app) to relative time
     // (relative to start of loop).
     //
@@ -32,14 +41,14 @@ namespace NowSound
     };
 
     // Identity mapping.
-    template<typename TTime, typename TValue>
+    template<typename TTime>
     class IdentityIntervalMapper : IntervalMapper<TTime>
     {
     private:
-        DenseSliceStream<TTime, TValue> _stream;
+        IStream<TTime> _stream;
 
     public:
-        IdentityIntervalMapper(BufferedSliceStream<TTime, TValue> stream)
+        IdentityIntervalMapper(IStream<TTime> stream)
         {
             _stream = stream;
         }
@@ -51,31 +60,31 @@ namespace NowSound
     };
 
     // Simple mapper that maps all later times back into the duration of the loop, without taking fractional samples into account.
-    template<typename TTime, typename TValue>
+    template<typename TTime>
     class SimpleLoopingIntervalMapper : IntervalMapper<TTime>
     {
     private:
-        DenseSliceStream<TTime, TValue> _stream;
+        IStream<TTime> _stream;
     
     public:
-        SimpleLoopingIntervalMapper(BufferedSliceStream<TTime, TValue> stream)
+        SimpleLoopingIntervalMapper(IStream<TTime> stream)
         {
             // Should only use this mapper on shut streams with a fixed ContinuousDuration.
-            Debug.Assert(stream.IsShut);
+            Check(stream.IsShut);
             _stream = stream;
         }
 
         virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input)
         {
-            Check(input._initialTime >= _stream.InitialTime);
+            Check(input._initialTime >= _stream.InitialTime());
 
-            Duration <TTime> inputDelayDuration = input._initialTime - _stream.InitialTime;
+            Duration<TTime> inputDelayDuration = input._initialTime - _stream.InitialTime();
             // now we want to take that modulo the *discrete* duration
-            inputDelayDuration %= _stream.DiscreteDuration;
-            Duration<TTime> mappedDuration = Math.Min((long)input._duration, (long)(_stream.DiscreteDuration - inputDelayDuration));
-            Interval<TTime> ret = new Interval<TTime>(_stream.InitialTime + inputDelayDuration, mappedDuration);
+            inputDelayDuration %= _stream.DiscreteDuration();
+            Duration<TTime> mappedDuration = Math.Min((long)input._duration, (long)(_stream.DiscreteDuration() - inputDelayDuration));
+            Interval<TTime> ret = new Interval<TTime>(_stream.InitialTime() + inputDelayDuration, mappedDuration);
 
-            Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: _stream " + _stream + ", input " + input + ", ret " + ret);
+            // Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: _stream " + _stream + ", input " + input + ", ret " + ret);
 
             return ret;
         }
@@ -84,19 +93,19 @@ namespace NowSound
     // Accurate mapper that takes fractional samples into account, ensuring accurate BPM playback over indefinite intervals
     // for arbitrary durations.  (This may not matter as much as I think but it was a nice problem to get precise about...
     // without this, a one second loop at 48Khz would drift by 1/10 second after 160 minutes, which just seems wrong in principle.)
-    template<typename TTime, typename TValue>
+    template<typename TTime>
     class LoopingIntervalMapper : IntervalMapper<TTime>
     {
-        DenseSliceStream<TTime, TValue> _stream;
+        IStream<TTime> _stream;
 
-        internal LoopingIntervalMapper(BufferedSliceStream<TTime, TValue> stream)
+        LoopingIntervalMapper(IStream<TTime> stream)
         {
             // Should only use this mapper on shut streams with a fixed ContinuousDuration.
-            Debug.Assert(stream.IsShut);
+            Check(stream.IsShut);
             _stream = stream;
         }
 
-        public override Interval<TTime> MapNextSubInterval(Interval<TTime> input)
+        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input)
         {
             // for example reference
             /*
@@ -130,7 +139,7 @@ namespace NowSound
             */
 
             // First thing we do is, subtract our initial time from the initial time of the input.
-            Duration<TTime> loopRelativeInitialTime = input.InitialTime - _stream.InitialTime;
+            Duration<TTime> loopRelativeInitialTime = input.InitialTime() - _stream.InitialTime;
             float continuousDuration = (float)_stream.ContinuousDuration;
 
             // Now, we need to figure out how many multiples of the stream's CONTINUOUS length this is.
