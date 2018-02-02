@@ -76,6 +76,36 @@ namespace NowSound
             // NOTYET: Stopped,
         };
 
+        // The state of a particular IHolofunkAudioTrack.
+        enum TrackState
+        {
+            // The track is being recorded and it is not known when it will finish.
+            Recording,
+
+            // The track is finishing off its now-known recording time.
+            FinishRecording,
+
+            // The track is playing back, looping.
+            Looping,
+        };
+
+        // The audio inputs known to the app.
+        /// Prevents confusing an audio input with some other int value.
+        // 
+        // The predefined values are really irrelevant; it can be cast to and from int as necessary.
+        // But, used in parameters, the type helps with making the code self-documenting.
+        enum AudioInputId
+        {
+            Input0,
+            Input1,
+            Input2,
+            Input3,
+            Input4,
+            Input5,
+            Input6,
+            Input7,
+        };
+
         // The ID of a NowSound track; avoids issues with marshaling object references.
         // Note that 0 is a valid value.
         // NOTYET: typedef size_t TrackId;
@@ -123,37 +153,8 @@ namespace NowSound
             static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
         };
 
-        /*
-        // 
-        // The state of a particular IHolofunkAudioTrack.
-        // 
-        public enum TrackState
-        {
-            // 
-            // The track is being recorded and it is not known when it will finish.
-            // 
-            Recording,
-
-            // 
-            // The track is finishing off its now-known recording time.
-            // 
-            FinishRecording,
-
-            // 
-            // The track is playing back, looping.
-            // 
-            Looping,
-        }
-
-        // 
-        // Interface used by the Unity code to invoke operations on a particular audio track.
-        // 
-        // 
-        // This interface exists because the HolofunkAudioGraph assembly is at a higher level (referentially) than
-        // the Holofunk-Unity assembly. So the HolofunkAudioGraph assembly implements these operations, and the
-        // Holofunk-Unity code invokes them via this "upcall" interface.
-        // </remarks>
-        public interface IHolofunkAudioTrack
+        // Interface used to invoke operations on a particular audio track.
+        class NowSoundTrack
         {
             // 
             // In what state is this track?

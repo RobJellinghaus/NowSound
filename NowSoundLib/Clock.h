@@ -4,6 +4,9 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+
+#include "stdint.h"
+
 #include "Check.h"
 #include "Time.h"
 
@@ -38,7 +41,7 @@ namespace NowSound
 
         // The rate of sound measurements (individual sample data points) per second.
         // TODO: don't hardcode this!
-        const int SampleRateHz = 48000;
+        static const uint32_t SampleRateHz = 48000;
 
         // The current BPM of this Clock.
         float _beatsPerMinute;
