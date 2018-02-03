@@ -2,9 +2,13 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+
+#include <future>
+
+#include "stdint.h"
+
 #include "Check.h"
 #include "SliceStream.h"
-#include <future>
 
 using namespace std::chrono;
 using namespace winrt;
@@ -108,12 +112,13 @@ namespace NowSound
 
         // The ID of a NowSound track; avoids issues with marshaling object references.
         // Note that 0 is a valid value.
-        // NOTYET: typedef size_t TrackId;
+        typedef int32_t TrackId;
 
         // Operations on the audio graph as a whole.
         // There is a single "static" audio graph defined here; multiple audio graphs are not supported.
         // All async methods document the state the graph must be in when called, and the state the graph
         // transitions to on completion.
+        // TODO: make this support multiple (non-static) graphs.
         class NowSoundGraph
         {
         public:
@@ -147,78 +152,61 @@ namespace NowSound
 
             // Tear down the whole graph.
             // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-            static __declspec(dllexport) void __cdecl NowSoundGraph_DestroyAudioGraphAsync();
+            static __declspec(dllexport) void NowSoundGraph_DestroyAudioGraphAsync();
+
+            // Create a new track and begin recording.
+            // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
+            static __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync();
 
         private:
             static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
+
+        public:
+            // For internal use (since not exported and not using an exportable type): get the static graph.
+            static Windows::Media::Audio::AudioGraph GetAudioGraph();
+            static Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
         };
 
         // Interface used to invoke operations on a particular audio track.
-        class NowSoundTrack
+        class NowSoundTrackAPI
         {
-            // 
+        public:
             // In what state is this track?
-            // 
-            TrackState State{ get; }
+            static __declspec(dllexport) TrackState NowSoundTrack_State(TrackId trackId);
 
-                // 
-                // Duration in beats of current Clock.
-                // 
-                // 
-                // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-                // </remarks>
-            Duration<Beat> BeatDuration{ get; }
+            // Duration in beats of current Clock.
+            // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
+            static __declspec(dllexport) int32_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId);
 
-                // 
-                // What beat position is playing right now?
-                // 
-                // 
-                // This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
-                // playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
-                // </remarks>
-            ContinuousDuration<Beat> BeatPositionUnityNow{ get; }
+            // What beat position is playing right now?
+            // This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
+            // playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
+            static __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId);
 
-                // 
-                // How long is this track, in samples?
-                // 
-                // 
-                // This is increased during recording.  It may in general have fractional numbers of samples if 
-                // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
-                // </remarks>
-            ContinuousDuration<AudioSample> Duration{ get; }
+            // How long is this track, in samples?
+            // This is increased during recording.  It may in general have fractional numbers of samples if 
+            // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
+            static __declspec(dllexport) ContinuousDuration<AudioSample> NowSoundTrack_Duration(TrackId trackId);
 
-                // 
-                // The starting moment at which this Track was created.
-                // 
-            Moment StartMoment{ get; }
+            // The starting moment at which this Track was created.
+            static __declspec(dllexport) int64_t /*Moment aka Time<AudioSample>*/ NowSoundTrack_StartMoment(TrackId trackId);
 
-                // 
-                // The user wishes the track to finish recording now.
-                // 
-                // 
-                // Contractually requires State == TrackState.Recording.
-                // </remarks>
-            void FinishRecording();
+            // The user wishes the track to finish recording now.
+            // Contractually requires State == TrackState.Recording.
+            static __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 
-            // 
             // True if this is muted.
-            // 
             // 
             // Note that something can be in FinishRecording state but still be muted, if the user is fast!
             // Hence this is a separate flag, not represented as a TrackState.
-            // </remarks>
-            bool IsMuted{ get; set; }
+            static __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId);
+            static __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
 
-                // 
-                // Delete this Track; after this, all methods become invalid to call (contract failure).
-                // 
-            void Delete();
+            // Delete this Track; after this, all methods become invalid to call (contract failure).
+            static void __declspec(dllexport) NowSoundTrack_Delete(TrackId trackId);
 
-            // 
             // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
-            // 
-            void UnityUpdate();
-        }
-        */
-    }
+            static void __declspec(dllexport) NowSoundTrack_UnityUpdate(TrackId trackId);
+        };
+    };
 }

@@ -43,6 +43,7 @@ namespace NowSound
         // TODO: don't hardcode this!
         static const uint32_t SampleRateHz = 48000;
 
+    private:
         // The current BPM of this Clock.
         float _beatsPerMinute;
 
@@ -66,6 +67,7 @@ namespace NowSound
         // TODO: this doesn't seem like a good way to do this -- why not do this at construction?
         void CalculateBeatDuration();
 
+    public:
         // Advance this clock from an AudioGraph thread.
         void AdvanceFromAudioGraph(Duration<AudioSample> duration);
 

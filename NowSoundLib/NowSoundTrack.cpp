@@ -8,6 +8,7 @@
 #include "BufferAllocator.h"
 #include "Clock.h"
 #include "NowSoundLib.h"
+#include "NowSoundTrack.h"
 #include "Recorder.h"
 #include "Slice.h"
 #include "SliceStream.h"
@@ -24,135 +25,47 @@ using namespace Windows::Media::Render;
 
 namespace NowSound
 {
-    class NowSoundTrack : Recorder<AudioSample, float>
+    NowSoundTrack::NowSoundTrack(AudioInputId inputId)
+        : _sequenceNumber(s_sequenceNumber++)
     {
-        // Sequence number of next Track; purely diagnostic, never exposed to outside.
-        // 
-        static int s_sequenceNumber;
+        // Tracks should only be created from the Unity thread.
+        // TODO: thread contracts.
 
-        // We keep a one-quarter-second (stereo float) AudioFrame and reuse it (between all inputs?! TODO fix this for multiple inputs)
-        // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
-        // buffers, which therefore still have time to drain.
-        // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
-        static Windows::Media::AudioFrame s_audioFrame;
+        // should only ever call this when graph is fully up and running
+        Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraph_State::Running);
 
-        // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
-        static int s_zeroByteOutgoingFrameCount;
+        // yes, not thread safe -- but we already assume only one unity thread
 
-        // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
-        const int _sequenceNumber;
+        _state = TrackState::Recording;
+        _startMoment = Clock::Instance().UnityNow();
 
-        // The audio graph which created this Track.
-        // HolofunkAudioGraph _audioGraph; // TODO: do we want to have graph objects? Might we want multiple graphs for different output devices?
+        // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
+        // audio thread.
+        _audioFrameInputNode = NowSoundGraph::GetAudioGraph().CreateFrameInputNode();
+        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::GetAudioDeviceOutputNode());
+        _audioFrameInputNode.QuantumStarted(this, FrameInputNode_QuantumStarted);
 
-        // The current state of the track.
-        TrackState _state;
+        _audioStream = new BufferedSliceStream<AudioSample, float>(
+            _startMoment.Time,
+            NowSoundGraph::GetAudioGraph().AudioAllocator(),
+            2); // stereo inputs, for now
 
-        // The number of complete beats thaat measures the duration of this track.
-        // Increases steadily while Recording; sets a time limit to further recording during FinishRecording;
-        // remains constant while Looping.
-        // TODO: relax this to permit non-quantized looping.
-        Duration<Beat> _beatDuration;
-
-        // The starting moment of recording this track.
-        const Moment _startMoment;
-
-        // The node this track uses for emitting data into the audio graph.
-        // This is the output node for this Track, but the input node for the audio graph.
-        Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
-
-        // The stream containing this Track's data.
-        BufferedSliceStream<AudioSample, float> _audioStream;
-
-        // Local time is based on the Now when the track started looping, and advances strictly
-        // based on what the Track has pushed during looping; this variable should be unused except
-        // in Looping state.
-        // 
-        // HISTORICAL EXPLANATION FROM ASIO ERA:
-        // 
-        // This is because BASS doesn't have rock-solid consistency between the MixerToOutputAsioProc
-        // and the Track's SyncProc.  We would expect that if at time T we push N samples from this
-        // track, that the SyncProc would then be called back at exactly time T+N.  However, this is not
-        // in fact the case -- there is some nontrivial variability of +/- one sample buffer.  So we
-        // use a local time to avoid requiring this exact timing behavior from BASS.
-        // 
-        // The previous code just pushed one sample buffer after another based on their indices; it paid
-        // no attention to "global time" at all.
-        // 
-        // CURRENT NOTE FROM AUDIOGRAPH ERA:
-        // 
-        // It will be interesting to see whether this complexity is still warranted, but since it seems
-        // a reasonably robust strategy, we will stick with it at this point; future testing possible if
-        // energy is available.
-        Time<AudioSample> _localTime;
-
-        DateTime _lastQuantumTime;
-
-        NowSoundTrack(AudioInputId inputId)
-        {
-            // Tracks should only be created from the Unity thread.
-            ThreadContract.RequireUnity();
-
-            Check(audioGraph != null);
-            Check(Clock.Instance != null);
-
-            // yes, not thread safe -- but we already assume only one unity thread
-            _sequenceNumber = s_sequenceNumber++;
-
-            _audioGraph = audioGraph;
-            _state = TrackState.Recording;
-            _startMoment = Clock.Instance.UnityNow;
-
-            // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
-            // audio thread.
-            _audioFrameInputNode = _audioGraph.AudioGraph.CreateFrameInputNode();
-            _audioFrameInputNode.AddOutgoingConnection(_audioGraph.AudioDeviceOutputNode);
-            _audioFrameInputNode.QuantumStarted += FrameInputNode_QuantumStarted;
-
-            _audioStream = new DenseSampleFloatStream(
-                _startMoment.Time,
-                audioGraph.AudioAllocator,
-                2); // stereo inputs, for now
-
-                    // and always start at one beat
-            _beatDuration = 1;
-        }
-
-        #region Properties
-
-            // 
-            // In what state is this track?
-            // 
-            public TrackState State = > _state;
-
-        // 
-        // Duration in beats of current Clock.
-        // 
-        // 
-        // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-        // </remarks>
-        public Duration<Beat> BeatDuration = > _beatDuration;
-
-        // 
-        // What beat position is playing right now?
-        // 
-        // 
-        // This uses Clock.Instance.UnityNow to determine the current time, and is continuous because we may be
-        // playing a fraction of a beat right now.
-        // </remarks>
-        public ContinuousDuration<Beat> BeatPositionUnityNow
-        {
-            get
-        {
-            ThreadContract.RequireUnity();
-
-        Duration<AudioSample> sinceStart = Clock.Instance.UnityNow.Time - _startMoment.Time;
-        Moment sinceStartMoment = Clock.Instance.DurationToMoment(sinceStart);
+                // and always start at one beat
+        _beatDuration = 1;
+    }
+    
+    TrackState NowSoundTrack::State() { return _state; }
+    
+    Duration<Beat> NowSoundTrack::BeatDuration() { return _beatDuration; }
+    
+    ContinuousDuration<Beat> NowSoundTrack::BeatPositionUnityNow()
+    {
+        Duration<AudioSample> sinceStart = Clock::UnityNow()::Time - _startMoment.Time;
+        Moment sinceStartMoment = Clock::Instance.DurationToMoment(sinceStart);
 
         int completeBeatsSinceStart = (int)sinceStartMoment.CompleteBeats % (int)BeatDuration;
         return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (float)sinceStartMoment.FractionalBeat);
-        }
-        }
+    }
 
             // 
             // How long is this track?
@@ -160,12 +73,12 @@ namespace NowSound
             // 
             // This is increased during recording.  It may in general have fractional numbers of samples.
             // </remarks>
-        public ContinuousDuration<AudioSample> Duration = > (int)BeatDuration * Clock.Instance.BeatDuration;
+        ContinuousDuration<AudioSample> NowSoundTrack::Duration = > (int)BeatDuration * Clock.Instance.BeatDuration;
 
         // 
         // The starting moment at which this Track was created.
         // 
-        public Moment StartMoment = > _startMoment;
+        Moment NowSoundTrack::StartMoment = > _startMoment;
 
         // 
         // True if this is muted.
@@ -174,11 +87,9 @@ namespace NowSound
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
         // Hence this is a separate flag, not represented as a TrackState.
         // </remarks>
-        public bool IsMuted{ get; set; }
+        bool NowSoundTrack::IsMuted{ get; set; }
 
-        public DenseSampleFloatStream Stream = > throw new NotImplementedException();
-
-        #endregion
+        DenseSampleFloatStream NowSoundTrack::Stream = > throw new NotImplementedException();
 
             // 
             // The user wishes the track to finish recording now.
@@ -186,7 +97,7 @@ namespace NowSound
             // 
             // Contractually requires State == TrackState.Recording.
             // </remarks>
-            public void FinishRecording()
+            void NowSoundTrack::FinishRecording()
         {
             ThreadContract.RequireUnity();
 
@@ -197,7 +108,7 @@ namespace NowSound
         // 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         // 
-        public void Delete()
+        void NowSoundTrack::Delete()
         {
             ThreadContract.RequireUnity();
 
@@ -214,26 +125,13 @@ namespace NowSound
         // 
         // If there is any coordination that is needed from outside the audio graph thread, this method implements it.
         // </remarks>
-        public void UnityUpdate()
+        void NowSoundTrack::UnityUpdate()
         {
-            ThreadContract.RequireUnity();
         }
 
-        // 
-        // Handle a frame of outgoing audio to the output device.
-        // 
-        // 
-        // There is a very interesting tradeoff here.  It is possible to push more audio into the FrameInputNode
-        // than is requested; requiredSamples is a minimum value, but more data can be provided.  Below, the 
-        // definition of bytesRemaining allows you to choose either alternative, or any value in between,
-        // based on whether you want minimum callbacks to the app (return a full buffer of data), or low-latency
-        // app responsiveness (return only the minimum requiredSamples).
-        // </remarks>
-        private unsafe void FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
+        void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
         {
-            ThreadContract.RequireAudioGraph();
-
-            DateTime dateTimeNow = DateTime.Now;
+            DateTime dateTimeNow = DateTime::Now();
 
             if (IsMuted)
             {
@@ -302,7 +200,7 @@ namespace NowSound
         // 
         // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
         // 
-        public bool Record(Moment now, Duration<AudioSample> duration, IntPtr data)
+        bool NowSoundTrack::Record(Moment now, Duration<AudioSample> duration, IntPtr data)
         {
             ThreadContract.RequireAudioGraph();
 

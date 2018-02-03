@@ -15,7 +15,7 @@ using namespace Windows::Foundation;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
+using namespace Windows::Media::Ren;
 using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
@@ -29,6 +29,13 @@ TimeSpan timeSpanFromSeconds(int seconds)
 static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized };
 
 static AudioGraph s_audioGraph{ nullptr };
+
+// TODO: really really need a real graph node store
+AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
+
+AudioGraph NowSoundGraph::GetAudioGraph() { return s_audioGraph; }
+
+AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return s_deviceOutputNode; }
 
 NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
 {
@@ -63,9 +70,6 @@ NowSound_DeviceInfo NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo()
 {
     return NowSound_DeviceInfo(nullptr, nullptr);
 }
-
-// TODO: really really need a real graph node store
-AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
 void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice)
 {
