@@ -160,7 +160,7 @@ namespace NowSound
     {
     private:
         // Allocator for buffer management.
-        const BufferAllocator<TValue> _allocator;
+        const BufferAllocator<TValue>* _allocator;
 
         // The slices making up the buffered data itself.
         // The InitialTime of each entry in this list must exactly equal the InitialTime + Duration of the
@@ -182,9 +182,23 @@ namespace NowSound
 
         bool _useContinuousLoopingMapper; // = false;
 
+        void EnsureFreeBuffer()
+        {
+            if (_remainingFreeBuffer.IsEmpty())
+            {
+                Buf<TValue> chunk = _allocator->Allocate();
+                _remainingFreeBuffer = new Slice<TTime, TValue>(
+                    chunk,
+                    0,
+                    (chunk.Data.Length / SliverSize),
+                    SliverSize);
+            }
+        }
+
+    public:
         BufferedSliceStream(
             Time<TTime> initialTime,
-            BufferAllocator<TValue> allocator,
+            BufferAllocator<TValue>* allocator,
             int sliverSize,
             Duration<TTime> maxBufferedDuration,
             bool useContinuousLoopingMapper)
@@ -196,19 +210,6 @@ namespace NowSound
             // as long as we are appending, we use the identity mapping
             // TODO: support delay mapping
             _intervalMapper = new IdentityIntervalMapper<TTime>(this);
-        }
-
-        void EnsureFreeBuffer()
-        {
-            if (_remainingFreeBuffer.IsEmpty())
-            {
-                Buf<TValue> chunk = _allocator.Allocate();
-                _remainingFreeBuffer = new Slice<TTime, TValue>(
-                    chunk,
-                    0,
-                    (chunk.Data.Length / SliverSize),
-                    SliverSize);
-            }
         }
 
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
@@ -377,7 +378,7 @@ namespace NowSound
                             "make sure our later stream data doesn't reference this one we're about to free");
                     }
 #endif
-                    _allocator.Free(firstSlice.Slice.Buffer);
+                    _allocator->Free(firstSlice.Slice.Buffer);
                     _discreteDuration -= firstSlice.Slice.Duration;
                     _initialTime += firstSlice.Slice.Duration;
                 }
@@ -469,6 +470,7 @@ namespace NowSound
             return foundTimedSlice;
         }
 
+        // TODO: make this 1) actually work, 2) be a destructor, 3) become unnecessary because the slices share pointers to the bufs
         void Dispose()
         {
             // release each T[] back to the buffer
@@ -477,7 +479,7 @@ namespace NowSound
                 // this requires that Free be idempotent; in general we don't expect
                 // many slices per buffer, since each Stream allocates from a private
                 // buffer and coalesces aggressively
-                _allocator.Free(slice.Slice.Buffer);
+                _allocator->Free(slice.Slice.Buffer);
             }
         }
     };

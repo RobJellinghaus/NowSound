@@ -26,7 +26,14 @@ using namespace Windows::Media::Render;
 namespace NowSound
 {
     NowSoundTrack::NowSoundTrack(AudioInputId inputId)
-        : _sequenceNumber(s_sequenceNumber++)
+        : _sequenceNumber(s_sequenceNumber++),
+        _state(TrackState::Recording),
+        _startMoment(),
+        _audioStream(_startMoment.Time(), NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
+        // one beat is the shortest any track ever is
+        _beatDuration(1),
+        _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
+        _localTime(0)
     {
         // Tracks should only be created from the Unity thread.
         // TODO: thread contracts.
@@ -34,24 +41,10 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraph_State::Running);
 
-        // yes, not thread safe -- but we already assume only one unity thread
-
-        _state = TrackState::Recording;
-        _startMoment = Clock::Instance().UnityNow();
-
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
-        _audioFrameInputNode = NowSoundGraph::GetAudioGraph().CreateFrameInputNode();
         _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::GetAudioDeviceOutputNode());
-        _audioFrameInputNode.QuantumStarted(this, FrameInputNode_QuantumStarted);
-
-        _audioStream = new BufferedSliceStream<AudioSample, float>(
-            _startMoment.Time,
-            NowSoundGraph::GetAudioGraph().AudioAllocator(),
-            2); // stereo inputs, for now
-
-                // and always start at one beat
-        _beatDuration = 1;
+        _audioFrameInputNode.QuantumStarted(FrameInputNode_QuantumStarted);
     }
     
     TrackState NowSoundTrack::State() { return _state; }

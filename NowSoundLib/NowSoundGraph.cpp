@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Clock.h"
 #include "NowSoundLib.h"
 
 using namespace NowSound;
@@ -33,9 +34,14 @@ static AudioGraph s_audioGraph{ nullptr };
 // TODO: really really need a real graph node store
 AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
+// First, an allocator for 128-second 48Khz stereo float sample buffers.
+BufferAllocator<float> s_audioAllocator(((int)Clock::SampleRateHz * 2 * sizeof(float)), 128);
+
 AudioGraph NowSoundGraph::GetAudioGraph() { return s_audioGraph; }
 
 AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return s_deviceOutputNode; }
+
+BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &s_audioAllocator; }
 
 NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
 {

@@ -13,11 +13,13 @@ namespace NowSound
     {
         const int Id;
         const T* Data;
+        const int Length;
 
-        Buf(int id, T*&& data)
+        Buf(int id, T*&& data, int length)
         {
             Id = id;
             Data = std::move(data);
+            Length = length;
         }
 
         // move constructor
@@ -25,11 +27,12 @@ namespace NowSound
         {
             Id = std::move(other.Id);
             Data = std::move(other.Data);
+            Length = other.Length;
         }
 
         bool Equals(const Buf<T>& other)
         {
-            return Id == other.Id && Data == other.Data;
+            return Id == other.Id && Data == other.Data && Length == other.Length;
         }
     };
 
@@ -44,43 +47,50 @@ namespace NowSound
 
     public:
         // The number of T in a buffer from this allocator.
-        const int BufferSize;
+        const int BufferLength;
 
     private:
         // Free list; we recycle from here if possible.
+        // This allocator owns all these buffers.
         const std::vector<Buf<T>> _freeList;
 
         // Total number of buffers we have ever allocated.
         int _totalBufferCount;
 
     public:
-        BufferAllocator(int bufferSize, int initialBufferCount)
+        // bufferCount is the number of values in each buffer; initialNumberOfBuffers is the number of buffers to pre-allocate
+        BufferAllocator(int bufferLength, int initialNumberOfBuffers)
         {
-            Check(bufferSize > 0);
-            Check(initialBufferCount > 0);
+            Check(bufferLength > 0);
+            Check(initialNumberOfBuffers > 0);
 
-            BufferSize = bufferSize;
+            BufferLength = bufferLength;
 
-            for (int i = 0; i < initialBufferCount; i++)
+            // Prepopulate the free list as a way of preallocating.
+            for (int i = 0; i < initialNumberOfBuffers; i++)
             {
-                _freeList.Add(new Buf<T>(_latestBufferId++, new T[BufferSize]));
+                _freeList.emplace(std::move(Buf<T>(_latestBufferId++, new T[BufferLength], bufferLength)));
             }
-            _totalBufferCount = initialBufferCount;
+            _totalBufferCount = initialNumberOfBuffers;
         }
 
+        // no copying this
+        BufferAllocator(const BufferAllocator&) = delete;
+
         // Number of bytes reserved by this allocator; will increase if free list runs out, and includes free space.
-        long TotalReservedSpace() { return _totalBufferCount * BufferSize * sizeof(T); }
+        long TotalReservedSpace() { return _totalBufferCount * BufferLength * sizeof(T); }
 
         // Number of bytes held in buffers on the free list.
-        long TotalFreeListSpace() { return _freeList.Count * BufferSize * sizeof(T); }
+        long TotalFreeListSpace() { return _freeList.Count * BufferLength * sizeof(T); }
 
         // Allocate a new Buf<T>, returned by rvalue reference.
+        // TODO: needs thread safety or contractual thread affinity
         Buf<T>&& Allocate()
         {
             if (_freeList.Count == 0)
             {
                 _totalBufferCount++;
-                return std::move(new Buf<T>(_latestBufferId++, new T[BufferSize]));
+                return std::move(Buf<T>(_latestBufferId++, new T[BufferLength], BufferLength));
             }
             else
             {

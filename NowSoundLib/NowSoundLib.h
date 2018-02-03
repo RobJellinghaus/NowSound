@@ -7,6 +7,7 @@
 
 #include "stdint.h"
 
+#include "BufferAllocator.h"
 #include "Check.h"
 #include "SliceStream.h"
 
@@ -159,12 +160,17 @@ namespace NowSound
             static __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync();
 
         private:
+            // Async helper method.
             static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 
         public:
-            // For internal use (since not exported and not using an exportable type): get the static graph.
+            // These methods are for internal use only (since they not dllexported and are not using exportable types).
+
             static Windows::Media::Audio::AudioGraph GetAudioGraph();
             static Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
+            // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
+            // referencing it everywhere, because all this mutable static state continues to be concerning.
+            static BufferAllocator<float>* GetAudioAllocator();
         };
 
         // Interface used to invoke operations on a particular audio track.

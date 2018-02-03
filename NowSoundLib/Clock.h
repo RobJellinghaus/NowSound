@@ -85,6 +85,8 @@ namespace NowSound
         ContinuousDuration<AudioSample> BeatDuration() const { return _beatDuration; }
 
         int BeatsPerMeasure() { return _beatsPerMeasure; }
+
+        Time<AudioSample> Now() { return _audioTime; }
     };
 
     // Moments are immutable points in time, that can be converted to various
@@ -93,21 +95,21 @@ namespace NowSound
     {
     private:
         Time<AudioSample> _time;
-        Clock* _clock;
 
     public:
-        Moment(Time<AudioSample> time, Clock* clock) : _time(time), _clock(clock)
+        Moment(Time<AudioSample> time) : _time(time)
         {
-            Check(clock != nullptr); // must actually have a clock
         }
 
-        Time<AudioSample> Time() { return _time; }
+        Moment() : _time(Clock::Instance().Now()) {}
+
+        Time<AudioSample> Time() const { return _time; }
 
         // Approximately how many seconds?
-        double Seconds() const { return ((double)_time.Value()) / _clock->SampleRateHz; }
+        double Seconds() const { return ((double)_time.Value()) / Clock::SampleRateHz; }
 
         // Approximately how many beats?
-        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_time.Value() / _clock->BeatDuration().Value()); }
+        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_time.Value() / Clock::Instance()->BeatDuration().Value()); }
 
         // Exactly how many complete beats?
         // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
