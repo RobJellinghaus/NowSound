@@ -88,36 +88,4 @@ namespace NowSound
 
         Time<AudioSample> Now() { return _audioTime; }
     };
-
-    // Moments are immutable points in time, that can be converted to various
-    // time measurements (timepoint-count, second, beat).
-    struct Moment
-    {
-    private:
-        Time<AudioSample> _time;
-
-    public:
-        Moment(Time<AudioSample> time) : _time(time)
-        {
-        }
-
-        Moment() : _time(Clock::Instance().Now()) {}
-
-        Time<AudioSample> Time() const { return _time; }
-
-        // Approximately how many seconds?
-        double Seconds() const { return ((double)_time.Value()) / Clock::SampleRateHz; }
-
-        // Approximately how many beats?
-        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_time.Value() / Clock::Instance()->BeatDuration().Value()); }
-
-        // Exactly how many complete beats?
-        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats().Value()); }
-
-        const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
-
-        // What fraction of a beat?
-        ContinuousDuration<Beat> FractionalBeat() const { return ContinuousDuration<Beat>(Beats().Value() - CompleteBeats().Value()); }
-    };
 }

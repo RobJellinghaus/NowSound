@@ -54,8 +54,8 @@ namespace NowSound
         // TODO: relax this to permit non-quantized looping.
         Duration<Beat> _beatDuration;
 
-        // The starting moment of recording this track.
-        const Moment _startMoment;
+        // The starting time of this track.
+        const Time<AudioSample> _startTime;
 
         // The node this track uses for emitting data into the audio graph.
         // This is the output node for this Track, but the input node for the audio graph.
@@ -88,38 +88,40 @@ namespace NowSound
 
         DateTime _lastQuantumTime;
 
+        bool _isMuted;
+
     public:
         NowSoundTrack(AudioInputId inputId);
 
         // In what state is this track?
-        TrackState State();
+        TrackState State() const;
 
         // Duration in beats of current Clock.
         // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-        Duration<Beat> BeatDuration();
+        Duration<Beat> BeatDuration() const;
 
         // What beat position is playing right now?
         // This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
         // playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
-        ContinuousDuration<Beat> BeatPositionUnityNow();
+        ContinuousDuration<Beat> BeatPositionUnityNow() const;
 
         // How long is this track, in samples?
         // This is increased during recording.  It may in general have fractional numbers of samples if 
-        // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
-        ContinuousDuration<AudioSample> Duration();
+        // Clock::Instance().BeatsPerMinute does not evenly divide Clock::Instance().SampleRateHz.
+        ContinuousDuration<AudioSample> ExactDuration() const;
 
         // The starting moment at which this Track was created.
-        Moment StartMoment();
+        Time<AudioSample> StartTime() const;
 
         // The user wishes the track to finish recording now.
-        // Contractually requires State == TrackState.Recording.
+        // Contractually requires State == TrackState::Recording.
         void FinishRecording();
 
         // True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
         // Hence this is a separate flag, not represented as a TrackState.
-        bool IsMuted();
+        bool IsMuted() const;
         void SetIsMuted(bool isMuted);
 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
@@ -128,6 +130,7 @@ namespace NowSound
         // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
         void UnityUpdate();
 
+        // The quantum has started; consume input audio for this recording.
         void FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args);
     };
 }

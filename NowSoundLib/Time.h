@@ -91,6 +91,21 @@ namespace NowSound
         {
             return _value >= second.Value();
         }
+
+
+        double Seconds() const { return ((double)_value.Value()) / Clock::SampleRateHz; }
+
+        // Approximately how many beats?
+        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_value.Value() / Clock::Instance().BeatDuration().Value()); }
+
+        // Exactly how many complete beats?
+        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
+        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats().Value()); }
+
+        const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
+
+                                       // What fraction of a beat?
+        ContinuousDuration<Beat> FractionalBeat() const { return ContinuousDuration<Beat>(Beats().Value() - CompleteBeats().Value()); }
     };
 
     // A distance between two Times.

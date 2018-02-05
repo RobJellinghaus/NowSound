@@ -23,13 +23,21 @@ using namespace Windows::Foundation;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
+#include "winrt/Windows.Foundation.h"
+
+// From https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
+struct __declspec(uuid("5b0d3235-4dba-4d44-865e-8f1d0e4fd04d")) __declspec(novtable) IMemoryBufferByteAccess : ::IUnknown
+{
+    virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
+};
+
 namespace NowSound
 {
     NowSoundTrack::NowSoundTrack(AudioInputId inputId)
         : _sequenceNumber(s_sequenceNumber++),
         _state(TrackState::Recording),
-        _startMoment(),
-        _audioStream(_startMoment.Time(), NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
+        _startTime(Clock::Instance().Now()),
+        _audioStream(_startTime, NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is
         _beatDuration(1),
         _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
@@ -47,148 +55,120 @@ namespace NowSound
         _audioFrameInputNode.QuantumStarted(FrameInputNode_QuantumStarted);
     }
     
-    TrackState NowSoundTrack::State() { return _state; }
+    TrackState NowSoundTrack::State() const { return _state; }
     
-    Duration<Beat> NowSoundTrack::BeatDuration() { return _beatDuration; }
+    Duration<Beat> NowSoundTrack::BeatDuration() const { return _beatDuration; }
     
-    ContinuousDuration<Beat> NowSoundTrack::BeatPositionUnityNow()
+    ContinuousDuration<Beat> NowSoundTrack::BeatPositionUnityNow() const
     {
-        Duration<AudioSample> sinceStart = Clock::UnityNow()::Time - _startMoment.Time;
-        Moment sinceStartMoment = Clock::Instance.DurationToMoment(sinceStart);
+        // TODO: determine whether we really need a time that only moves forward between Unity frames.
+        // For now, let time be determined solely by audio graph, and let Unity observe time increasing 
+        // during a single Unity frame.
+        Duration<AudioSample> sinceStart(Clock::Instance().Now() - _startTime);
+        Time<AudioSample> sinceStartTime(sinceStart.Value());
 
-        int completeBeatsSinceStart = (int)sinceStartMoment.CompleteBeats % (int)BeatDuration;
-        return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (float)sinceStartMoment.FractionalBeat);
+        int completeBeatsSinceStart = (int)sinceStartTime.CompleteBeats % (int)BeatDuration().Value();
+        return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (float)sinceStartTime.FractionalBeat);
     }
 
-            // 
-            // How long is this track?
-            // 
-            // 
-            // This is increased during recording.  It may in general have fractional numbers of samples.
-            // </remarks>
-        ContinuousDuration<AudioSample> NowSoundTrack::Duration = > (int)BeatDuration * Clock.Instance.BeatDuration;
+    ContinuousDuration<AudioSample> NowSoundTrack::ExactDuration() const
+    { return (int)BeatDuration().Value() * Clock::Instance().BeatDuration().Value(); }
 
-        // 
-        // The starting moment at which this Track was created.
-        // 
-        Moment NowSoundTrack::StartMoment = > _startMoment;
+    Time<AudioSample> NowSoundTrack::StartTime() const { return _startTime; }
 
-        // 
-        // True if this is muted.
-        // 
-        // 
-        // Note that something can be in FinishRecording state but still be muted, if the user is fast!
-        // Hence this is a separate flag, not represented as a TrackState.
-        // </remarks>
-        bool NowSoundTrack::IsMuted{ get; set; }
+    bool NowSoundTrack::IsMuted() const { return _isMuted; }
+    void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
 
-        DenseSampleFloatStream NowSoundTrack::Stream = > throw new NotImplementedException();
+    void NowSoundTrack::FinishRecording()
+    {
+        // TODO: ThreadContract.RequireUnity();
 
-            // 
-            // The user wishes the track to finish recording now.
-            // 
-            // 
-            // Contractually requires State == TrackState.Recording.
-            // </remarks>
-            void NowSoundTrack::FinishRecording()
+        // no need for any synchronization at all; the Record() logic will see this change.
+        // We have no memory fence here but this write does reliably get seen sufficiently quickly in practice.
+        _state = TrackState::FinishRecording;
+    }
+
+    void NowSoundTrack::Delete()
+    {
+        // TODO: ThreadContract.RequireUnity();
+
+        while (_audioFrameInputNode.OutgoingConnections.Count > 0)
         {
-            ThreadContract.RequireUnity();
+            _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections[0].Destination);
+        }
+        // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
+    }
 
-            // no need for any synchronization at all; the Record() logic will see this change
-            _state = TrackState.FinishRecording;
+    void NowSoundTrack::UnityUpdate()
+    {
+    }
+
+    void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
+    {
+        DateTime dateTimeNow = DateTime::clock::now();
+
+        if (IsMuted)
+        {
+            // copy nothing to anywhere
+            return;
         }
 
-        // 
-        // Delete this Track; after this, all methods become invalid to call (contract failure).
-        // 
-        void NowSoundTrack::Delete()
+        if (_state == TrackState::Looping)
         {
-            ThreadContract.RequireUnity();
+            // we are looping; let's play!
+            // TODO: why did we have this lock statement here?  lock(this)
+            Check(args.RequiredSamples() >= 0);
+            uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
 
-            while (_audioFrameInputNode.OutgoingConnections.Count > 0)
+            if (requiredSamples == 0)
             {
-                _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections[0].Destination);
-            }
-            _audioFrameInputNode.Dispose();
-        }
-
-        // 
-        // Update the track's state as applicable from Unity thread.
-        // 
-        // 
-        // If there is any coordination that is needed from outside the audio graph thread, this method implements it.
-        // </remarks>
-        void NowSoundTrack::UnityUpdate()
-        {
-        }
-
-        void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
-        {
-            DateTime dateTimeNow = DateTime::Now();
-
-            if (IsMuted)
-            {
-                // copy nothing to anywhere
+                s_zeroByteOutgoingFrameCount++;
                 return;
             }
 
-            if (_state == TrackState.Looping)
+            Windows::Media::AudioBuffer buffer(s_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            IMemoryBufferReference reference(buffer.CreateReference());
+
+            void* dataInBytes;
+            uint32_t capacityInBytes;
+
+            // OMG KENNY KERR WINS AGAIN:
+            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3e
+
+            winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
+            
+            // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
+            uint32_t bytesRemaining = capacityInBytes;
+            int samplesRemaining = (int)bytesRemaining / 8; // stereo float
+
+            s_audioFrame.Duration = TimeSpan.FromSeconds(samplesRemaining / Clock.SampleRateHz);
+
+            while (samplesRemaining > 0)
             {
-                // we are looping; let's play!
-                lock(this)
-                {
-                    uint requiredSamples = (uint)args.RequiredSamples;
+                // get up to one second or samplesRemaining, whichever is smaller
+                Slice<AudioSample, float> longest(
+                    _audioStream.GetNextSliceAt(new Interval<AudioSample>(_localTime, samplesRemaining)));
 
-                    if (requiredSamples == 0)
-                    {
-                        s_zeroByteOutgoingFrameCount++;
-                        return;
-                    }
+                longest.CopyTo(dataInBytes);
 
-                    using (AudioBuffer buffer = s_audioFrame.LockBuffer(AudioBufferAccessMode.Write))
-                        using (IMemoryBufferReference reference = buffer.CreateReference())
-                    {
-                        byte* dataInBytes;
-                        uint capacityInBytes;
+                Moment now = Clock.Instance.AudioNow;
 
-                        // Get the buffer from the AudioFrame
-                        ((IMemoryBufferByteAccess)reference).GetBuffer(out dataInBytes, out capacityInBytes);
+                TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
-                        // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
-                        uint bytesRemaining = capacityInBytes;
-                        int samplesRemaining = (int)bytesRemaining / 8; // stereo float
+                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+                //HoloDebug.Log(line);
+                //Spam.Audio.WriteLine(line);
 
-                        s_audioFrame.Duration = TimeSpan.FromSeconds(samplesRemaining / Clock.SampleRateHz);
-
-                        while (samplesRemaining > 0)
-                        {
-                            // get up to one second or samplesRemaining, whichever is smaller
-                            Slice<AudioSample, float> longest = _audioStream.GetNextSliceAt(new Interval<AudioSample>(_localTime, samplesRemaining));
-
-                            longest.CopyToIntPtr(new IntPtr(dataInBytes));
-
-                            Moment now = Clock.Instance.AudioNow;
-
-                            TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
-
-
-                            //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-                            //HoloDebug.Log(line);
-                            //Spam.Audio.WriteLine(line);
-
-
-                            dataInBytes += longest.Duration * sizeof(float) * longest.SliverSize;
-                            _localTime += longest.Duration;
-                            samplesRemaining -= (int)longest.Duration;
-                        }
-                    }
-
-                    _audioFrameInputNode.AddFrame(s_audioFrame);
-                }
-
-                _lastQuantumTime = dateTimeNow;
+                dataInBytes += longest.Duration * sizeof(float) * longest.SliverSize;
+                _localTime += longest.Duration;
+                samplesRemaining -= (int)longest.Duration;
             }
+
+            _audioFrameInputNode.AddFrame(s_audioFrame);
+
+            _lastQuantumTime = dateTimeNow;
         }
+    }
 
         // 
         // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
