@@ -132,5 +132,8 @@ namespace NowSound
 
         // The quantum has started; consume input audio for this recording.
         void FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args);
+
+        // Record from (that is, copy from) the source data.
+        virtual bool Record(Time<AudioSample> time, Duration<AudioSample> duration, float* source);
     };
 }

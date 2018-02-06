@@ -172,81 +172,78 @@ namespace NowSound
         }
     }
 
-        // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
-        bool NowSoundTrack::Record(Time<AudioSample> now, Duration<AudioSample> duration, IntPtr data)
+    // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
+    bool NowSoundTrack::Record(Time<AudioSample> now, Duration<AudioSample> duration, float* data)
+    {
+        // TODO: ThreadContract.RequireAudioGraph();
+
+        bool continueRecording = true;
+        // TODO: what was this for? lock(this)
+        switch (_state)
         {
-            ThreadContract.RequireAudioGraph();
+        case TrackState::Recording:
+        {
+            // How many complete beats after we record this data?
+            Duration<Beat> completeBeats = Time<AudioSample>(_audioStream.DiscreteDuration + duration).CompleteBeats;
 
-            bool continueRecording = true;
-            lock(this)
+            // If it's more than our _beatDuration, bump our _beatDuration
+            // TODO: implement other quantization policies here
+            if (completeBeats >= _beatDuration)
             {
-                switch (_state)
-                {
-                case TrackState.Recording:
-                {
-                    // How many complete beats after we record this data?
-                    Duration<Beat> completeBeats = Clock.Instance.DurationToTime<AudioSample>(_audioStream.DiscreteDuration + duration).CompleteBeats;
-
-                    // If it's more than our _beatDuration, bump our _beatDuration
-                    // TODO: implement other quantization policies here
-                    if (completeBeats >= _beatDuration)
-                    {
-                        _beatDuration = completeBeats + 1;
-                        // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
-                        Check(completeBeats < BeatDuration, "completeBeats < BeatDuration");
-                    }
-
-                    // and actually record the full amount of available data
-                    _audioStream.Append(duration, data);
-
-                    break;
-                }
-
-                case TrackState.FinishRecording:
-                {
-                    // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
-                    Duration<AudioSample> roundedUpDuration = (long)Math.Ceiling((float)Duration);
-
-                    // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-                    Check(_audioStream.DiscreteDuration <= roundedUpDuration, "_localTime <= roundedUpDuration");
-
-                    if (_audioStream.DiscreteDuration + duration >= roundedUpDuration)
-                    {
-                        // reduce duration so we only capture the exact right number of samples
-                        duration = roundedUpDuration - _audioStream.DiscreteDuration;
-
-                        // we are done recording altogether
-                        _state = TrackState.Looping;
-                        continueRecording = false;
-
-                        _audioStream.Append(duration, data);
-
-                        // now that we have done our final append, shut the stream at the current duration
-                        _audioStream.Shut(Duration);
-
-                        // and initialize _localTime
-                        _localTime = now.Time;
-                    }
-                    else
-                    {
-                        // capture the full duration
-                        _audioStream.Append(duration, data);
-                    }
-
-                    break;
-                }
-
-                case TrackState.Looping:
-                {
-                    Contract.Fail("Should never still be recording once in looping state");
-                    return false;
-                }
-                }
+                _beatDuration = completeBeats + Duration<Beat>(1);
+                // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
+                Check(completeBeats < BeatDuration());
             }
 
-            return continueRecording;
+            // and actually record the full amount of available data
+            _audioStream.Append(duration, data);
+
+            break;
         }
-    };
+
+        case TrackState::FinishRecording:
+        {
+            // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
+            Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
+
+            // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
+            Check(_audioStream.DiscreteDuration <= roundedUpDuration);
+
+            if (_audioStream.DiscreteDuration + duration >= roundedUpDuration)
+            {
+                // reduce duration so we only capture the exact right number of samples
+                duration = roundedUpDuration - _audioStream.DiscreteDuration;
+
+                // we are done recording altogether
+                _state = TrackState::Looping;
+                continueRecording = false;
+
+                _audioStream.Append(duration, data);
+
+                // now that we have done our final append, shut the stream at the current duration
+                _audioStream.Shut(ExactDuration());
+
+                // and initialize _localTime
+                _localTime = now;
+            }
+            else
+            {
+                // capture the full duration
+                _audioStream.Append(duration, data);
+            }
+
+            break;
+        }
+
+        case TrackState::Looping:
+        {
+            Check(false); // Should never still be recording once in looping state
+            return false;
+        }
+        }
+
+        return continueRecording;
+    }
 
     Windows::Media::AudioFrame NowSoundTrack::s_audioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 

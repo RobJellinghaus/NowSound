@@ -13,10 +13,10 @@ namespace NowSound
     {
     public:
         // Record the given data; return true if this recorder is done after recording that data.
-        virtual bool Record(Time<AudioSample> now, Duration<TTime> duration, IntPtr data) = 0;
+        virtual bool Record(Time<TTime> now, Duration<TTime> duration, TValue* data) = 0;
 
         // Get the underlying stream, so it can be directly appended.
-        virtual DenseSampleFloatStream Stream() = 0;
+        virtual BufferedSliceStream<TTime, TValue> Stream() = 0;
     };
 
     // 
