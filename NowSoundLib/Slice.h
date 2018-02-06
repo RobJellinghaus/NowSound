@@ -83,13 +83,17 @@ namespace NowSound
             return Subslice(0, duration);
         }
 
+        // Copy 'length' slivers from src at srcOffset to dest at destOffset, where the offsets are in slivers.
         void ArrayCopy(TValue* src, int srcOffset, TValue* dest, int destOffset, int length)
         {
             std::memcpy(
-                (void*)dest + (destOffset * _sliverSize * sizeof(TValue)),
-                (void*)src + (srcOffset * _sliverSize * sizeof(TValue)),
-                length * _sliverSize * sizeof(TValue));
+                (void*)dest + (destOffset * WidthInBytes()),
+                (void*)src + (srcOffset * WidthInBytes()),
+                length * WidthInBytes());
         }
+
+        size_t WidthInBytes() { return sizeof(TValue) * _sliverSize; }
+        size_t SizeInBytes() { return WidthInBytes() * _duration.Value(); }
 
         // Copy this slice's data into destination; destination must be long enough.
         void CopyTo(Slice<TTime, TValue>& destination)
@@ -97,27 +101,26 @@ namespace NowSound
             Check(destination._duration >= _duration);
             Check(destination._sliverSize == _sliverSize);
 
-            // TODO: support backwards copies etc.
-            ArrayCopy(
-                _buffer.Data,
-                (int)_offset * _sliverSize,
-                destination._buffer.Data,
-                (int)destination._offset * destination._sliverSize,
-                (int)_duration * _sliverSize);
+            // TODO: support reversed copies etc.
+            ArrayCopy(_buffer.Data(),
+                _offset.Value(),
+                destination._buffer.Data(),
+                destination._offset.Value(),
+                _duration.Value());
         }
 
-        void CopyFrom(TValue* source, int sourceOffset, int destinationSubIndex, int subWidth)
+        void CopyTo(TValue* dest)
         {
-            Check((int)(sourceOffset + subWidth) <= source.Length);
+            ArrayCopy(_buffer->Data(), _offset.Value(), dest, 0, _duration.Value());
+        }
+
+        void CopyFrom(TValue* source, int sourceOffset, int sourceLength, int destinationSubIndex, int subWidth)
+        {
+            Check((int)(sourceOffset + subWidth) <= sourceLength);
             int destinationOffset = (int)(_offset * _sliverSize + destinationSubIndex);
             Check(destinationOffset + subWidth <= _buffer.Data.Length);
 
-            ArrayCopy(
-                source,
-                (int)sourceOffset,
-                _buffer.Data,
-                destinationOffset,
-                subWidth);
+            ArrayCopy(source, (int)sourceOffset, _buffer.Data, destinationOffset, subWidth);
         }
 
         // Are these samples adjacent in their underlying storage?
@@ -133,7 +136,7 @@ namespace NowSound
             return Slice<TTime, TValue>(_buffer, _offset, _duration + next._duration, _sliverSize);
         }
 
-        // Equality comparison; deliberately does not implement Equals(object) as this would cause slice boxing.
+        // Equality comparison.
         bool Equals(const Slice<TTime, TValue>& other)
         {
             return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other._duration;
@@ -142,8 +145,7 @@ namespace NowSound
 
     // A slice with an absolute initial time associated with it.
     // 
-    // In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime
-    // of the stream itself.
+    // In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime of the stream itself.
     template<typename TTime, typename TValue>
     struct TimedSlice
     {

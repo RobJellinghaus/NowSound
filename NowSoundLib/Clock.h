@@ -18,7 +18,7 @@ namespace NowSound
     {
         // Since the audio thread is fundamentally driving the time, the current clock
         // reading is subject to change out from under the UI thread.  So the Clock hands out immutable
-        // Moment instances, which represent the time at the moment the clock was asked.  Moments in
+        // Time<AudioSample> instances, which represent the time at the moment the clock was asked.  Time<AudioSample>s in
         // turn can be converted to timepoint-counts,  seconds, and beats, consistently and without racing.
 
         static std::unique_ptr<Clock> s_instance;
@@ -61,13 +61,14 @@ namespace NowSound
         // This will be a non-integer value if the BPM does not exactly divide the sample rate.
         ContinuousDuration<AudioSample> _beatDuration;
 
-        const double TicksPerSecond = 10 * 1000 * 1000;
-
         // Calculate the _beatDuration based on _beatsPerMinute.
         // TODO: this doesn't seem like a good way to do this -- why not do this at construction?
         void CalculateBeatDuration();
 
     public:
+        // Number of 100ns units in one second; useful for constructing Windows::Foundation::TimeSpans.
+        static const long TicksPerSecond;
+
         // Advance this clock from an AudioGraph thread.
         void AdvanceFromAudioGraph(Duration<AudioSample> duration);
 

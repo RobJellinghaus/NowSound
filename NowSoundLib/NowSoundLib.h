@@ -195,7 +195,7 @@ namespace NowSound
             static __declspec(dllexport) ContinuousDuration<AudioSample> NowSoundTrack_Duration(TrackId trackId);
 
             // The starting moment at which this Track was created.
-            static __declspec(dllexport) int64_t /*Moment aka Time<AudioSample>*/ NowSoundTrack_StartMoment(TrackId trackId);
+            static __declspec(dllexport) int64_t /*Time<AudioSample>*/ NowSoundTrack_StartTime(TrackId trackId);
 
             // The user wishes the track to finish recording now.
             // Contractually requires State == TrackState.Recording.

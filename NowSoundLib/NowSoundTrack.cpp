@@ -129,29 +129,31 @@ namespace NowSound
             Windows::Media::AudioBuffer buffer(s_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
             IMemoryBufferReference reference(buffer.CreateReference());
 
-            void* dataInBytes;
-            uint32_t capacityInBytes;
+            uint8_t* dataInBytes{};
+            uint32_t capacityInBytes{};
 
             // OMG KENNY KERR WINS AGAIN:
             // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3e
 
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-            
+            check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
+
             // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
             uint32_t bytesRemaining = capacityInBytes;
             int samplesRemaining = (int)bytesRemaining / 8; // stereo float
 
-            s_audioFrame.Duration = TimeSpan.FromSeconds(samplesRemaining / Clock.SampleRateHz);
+            
+            s_audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
             while (samplesRemaining > 0)
             {
                 // get up to one second or samplesRemaining, whichever is smaller
                 Slice<AudioSample, float> longest(
-                    _audioStream.GetNextSliceAt(new Interval<AudioSample>(_localTime, samplesRemaining)));
+                    _audioStream.GetNextSliceAt(Interval<AudioSample>(_localTime, samplesRemaining)));
 
-                longest.CopyTo(dataInBytes);
+                longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 
-                Moment now = Clock.Instance.AudioNow;
+                Time<AudioSample> now();
 
                 TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
@@ -159,9 +161,9 @@ namespace NowSound
                 //HoloDebug.Log(line);
                 //Spam.Audio.WriteLine(line);
 
-                dataInBytes += longest.Duration * sizeof(float) * longest.SliverSize;
-                _localTime += longest.Duration;
-                samplesRemaining -= (int)longest.Duration;
+                dataInBytes += longest.SizeInBytes();
+                _localTime = _localTime + longest._duration;
+                samplesRemaining -= (int)longest._duration.Value();
             }
 
             _audioFrameInputNode.AddFrame(s_audioFrame);
@@ -170,10 +172,8 @@ namespace NowSound
         }
     }
 
-        // 
         // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
-        // 
-        bool NowSoundTrack::Record(Moment now, Duration<AudioSample> duration, IntPtr data)
+        bool NowSoundTrack::Record(Time<AudioSample> now, Duration<AudioSample> duration, IntPtr data)
         {
             ThreadContract.RequireAudioGraph();
 
@@ -185,7 +185,7 @@ namespace NowSound
                 case TrackState.Recording:
                 {
                     // How many complete beats after we record this data?
-                    Duration<Beat> completeBeats = Clock.Instance.DurationToMoment(_audioStream.DiscreteDuration + duration).CompleteBeats;
+                    Duration<Beat> completeBeats = Clock.Instance.DurationToTime<AudioSample>(_audioStream.DiscreteDuration + duration).CompleteBeats;
 
                     // If it's more than our _beatDuration, bump our _beatDuration
                     // TODO: implement other quantization policies here

@@ -39,6 +39,8 @@ void NowSound::Clock::BPM(float value)
     CalculateBeatDuration();
 }
 
+long NowSound::Clock::TicksPerSecond() { return 10 * 1000 * 1000; }
+
 void NowSound::Clock::AdvanceFromAudioGraph(Duration<AudioSample> duration)
 {
     // TODO: += operator
