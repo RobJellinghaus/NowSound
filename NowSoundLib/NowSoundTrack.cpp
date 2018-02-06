@@ -133,8 +133,7 @@ namespace NowSound
             uint32_t capacityInBytes{};
 
             // OMG KENNY KERR WINS AGAIN:
-            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3e
-
+            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
