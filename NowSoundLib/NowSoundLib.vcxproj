@@ -307,6 +307,7 @@
   <ItemGroup>
     <ClInclude Include="BufferAllocator.h" />
     <ClInclude Include="Check.h" />
+    <ClInclude Include="Buf.h" />
     <ClInclude Include="NowSoundLibTypes.h" />
     <ClInclude Include="NowSoundTrack.h" />
     <ClInclude Include="Recorder.h" />

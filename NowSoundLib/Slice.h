@@ -50,7 +50,7 @@ namespace NowSound
         bool IsEmpty() { return Duration == 0; }
 
         // For use by extension methods only
-        Buf<TValue>* Buffer() { return _buffer; }
+        const Buf<TValue>* Buffer() { return _buffer; }
 
         TValue& Get(Duration<TTime> offset, int subindex)
         {
@@ -84,7 +84,7 @@ namespace NowSound
         }
 
         // Copy 'length' slivers from src at srcOffset to dest at destOffset, where the offsets are in slivers.
-        void ArrayCopy(TValue* src, int srcOffset, TValue* dest, int destOffset, int length)
+        static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t length)
         {
             std::memcpy(
                 (void*)dest + (destOffset * WidthInBytes()),
@@ -96,22 +96,22 @@ namespace NowSound
         size_t SizeInBytes() { return WidthInBytes() * _duration.Value(); }
 
         // Copy this slice's data into destination; destination must be long enough.
-        void CopyTo(Slice<TTime, TValue>& destination)
+        void CopyTo(Slice<TTime, TValue>& destination) const
         {
             Check(destination._duration >= _duration);
             Check(destination._sliverSize == _sliverSize);
 
             // TODO: support reversed copies etc.
-            ArrayCopy(_buffer.Data(),
+            ArrayCopy(_buffer.Data,
                 _offset.Value(),
-                destination._buffer.Data(),
+                destination._buffer.Data,
                 destination._offset.Value(),
                 _duration.Value());
         }
 
-        void CopyTo(TValue* dest)
+        void CopyTo(TValue* dest) const
         {
-            ArrayCopy(_buffer->Data(), _offset.Value(), dest, 0, _duration.Value());
+            ArrayCopy(_buffer->Data, _offset.Value(), dest, 0, _duration.Value());
         }
 
         void CopyFrom(TValue* source, int sourceOffset, int sourceLength, int destinationSubIndex, int subWidth)
@@ -141,6 +141,12 @@ namespace NowSound
         {
             return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other._duration;
         }
+
+        // Freeing.
+        void Free(IBufAllocator<TValue>* allocator)
+        {
+            allocator->Free(std::move(*_buffer));
+        }
     };
 
     // A slice with an absolute initial time associated with it.
@@ -149,15 +155,18 @@ namespace NowSound
     template<typename TTime, typename TValue>
     struct TimedSlice
     {
-        const Time<TTime> InitialTime;
-        const Slice<TTime, TValue> Value;
+    private:
+        const Slice<TTime, TValue> _value;
 
-        TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : InitialTime(startTime), Value(slice)
+    public:
+        const Time<TTime> InitialTime;
+
+        const Slice<TTime, TValue>& Value() { return _value; }
+
+        TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : InitialTime(startTime), _value(slice)
         {
-            InitialTime = startTime;
-            Value = slice;
         }
 
-        Interval<TTime> SliceInterval() { return new Interval<TTime>(InitialTime, Value._duration); }
+        Interval<TTime> SliceInterval() { return new Interval<TTime>(InitialTime, _value._duration); }
     };
 }

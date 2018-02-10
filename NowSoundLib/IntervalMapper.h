@@ -13,8 +13,9 @@ namespace NowSound
     template<typename TTime>
     class IStream
     {
-        virtual Time<TTime> InitialTime() = 0;
-        virtual Duration<TTime> Duration() = 0;
+    public:
+        virtual Time<TTime> InitialTime() const = 0;
+        virtual Duration<TTime> DiscreteDuration() const = 0;
     };
 
     // Handle converting time intervals from absolute time (relative to start of app) to relative time
@@ -37,7 +38,7 @@ namespace NowSound
         // it is mapping to.
         // </remarks>
     public:
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) = 0;
+        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const = 0;
     };
 
     // Identity mapping.
@@ -53,9 +54,9 @@ namespace NowSound
             _stream = stream;
         }
 
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input)
+        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const
         {
-            return input.Intersect(_stream.DiscreteInterval);
+            return input.Intersect(_stream.DiscreteInterval());
         }
     };
 

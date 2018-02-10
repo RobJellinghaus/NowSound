@@ -113,7 +113,10 @@ namespace NowSound
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
         _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::GetAudioDeviceOutputNode());
-        _audioFrameInputNode.QuantumStarted(FrameInputNode_QuantumStarted);
+        _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
+        {
+            FrameInputNode_QuantumStarted(sender, args);
+        });
     }
     
     NowSoundTrack_State NowSoundTrack::State() const { return _state; }
@@ -128,8 +131,9 @@ namespace NowSound
         Duration<AudioSample> sinceStart(Clock::Instance().Now() - _startTime);
         Time<AudioSample> sinceStartTime(sinceStart.Value());
 
-        int completeBeatsSinceStart = (int)sinceStartTime.CompleteBeats % (int)BeatDuration().Value();
-        return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (float)sinceStartTime.FractionalBeat);
+        ContinuousDuration<Beat> beats = Clock::Instance().TimeToBeats(sinceStartTime);
+        int completeBeatsSinceStart = (int)beats.Value() % (int)BeatDuration().Value();
+        return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (beats.Value() - (int)beats.Value()));
     }
 
     ContinuousDuration<AudioSample> NowSoundTrack::ExactDuration() const
@@ -153,9 +157,9 @@ namespace NowSound
     {
         // TODO: ThreadContract.RequireUnity();
 
-        while (_audioFrameInputNode.OutgoingConnections.Count > 0)
+        while (_audioFrameInputNode.OutgoingConnections().Size() > 0)
         {
-            _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections[0].Destination);
+            _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections().GetAt(0).Destination());
         }
         // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
     }
@@ -168,7 +172,7 @@ namespace NowSound
     {
         DateTime dateTimeNow = DateTime::clock::now();
 
-        if (IsMuted)
+        if (IsMuted())
         {
             // copy nothing to anywhere
             return;
@@ -244,7 +248,8 @@ namespace NowSound
         case NowSoundTrack_State::Recording:
         {
             // How many complete beats after we record this data?
-            Duration<Beat> completeBeats = Time<AudioSample>(_audioStream.DiscreteDuration + duration).CompleteBeats;
+            Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
+            Duration<Beat> completeBeats = Clock::Instance().TimeToCompleteBeats(durationAsTime);
 
             // If it's more than our _beatDuration, bump our _beatDuration
             // TODO: implement other quantization policies here
@@ -267,12 +272,12 @@ namespace NowSound
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
 
             // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-            Check(_audioStream.DiscreteDuration <= roundedUpDuration);
+            Check(_audioStream.DiscreteDuration() <= roundedUpDuration);
 
-            if (_audioStream.DiscreteDuration + duration >= roundedUpDuration)
+            if (_audioStream.DiscreteDuration() + duration >= roundedUpDuration)
             {
                 // reduce duration so we only capture the exact right number of samples
-                duration = roundedUpDuration - _audioStream.DiscreteDuration;
+                duration = roundedUpDuration - _audioStream.DiscreteDuration();
 
                 // we are done recording altogether
                 _state = NowSoundTrack_State::Looping;

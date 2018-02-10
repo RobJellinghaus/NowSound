@@ -57,15 +57,15 @@ namespace NowSound
         }
 
     public:
-        bool IsShut() { return _isShut; }
+        bool IsShut() const { return _isShut; }
 
         // The starting time of this Stream.
-        virtual Time<TTime> InitialTime() { return _initialTime; }
+        virtual Time<TTime> InitialTime() const { return _initialTime; }
 
         // The floating-point-accurate duration of this stream; only valid once shut.
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
         // the sample rate.
-        ContinuousDuration<AudioSample> PreciseDuration() { return _continuousDuration; }
+        ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -73,7 +73,7 @@ namespace NowSound
         // must be strictly equal to, or less than one sample smaller than, the discrete duration.
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
         {
-            Check(!IsShut);
+            Check(!IsShut());
             _isShut = true;
             _continuousDuration = finalDuration;
         }
@@ -92,14 +92,15 @@ namespace NowSound
     // generically implemented.
     // </remarks>
     template<typename TTime, typename TValue>
-    class DenseSliceStream : SliceStream<TTime, TValue>
+    class DenseSliceStream : public SliceStream<TTime, TValue>
     {
         // The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices.
     protected:
         Duration<TTime> _discreteDuration;
 
         // The mapper that converts absolute time into relative time for this stream.
-        IntervalMapper<TTime> _intervalMapper;
+        // This is held by a unique_ptr to allow for polymorphism.
+        std::unique_ptr<IntervalMapper<TTime>> _intervalMapper;
 
         DenseSliceStream(Time<TTime> initialTime, int sliverSize)
             : base(initialTime, sliverSize)
@@ -108,12 +109,12 @@ namespace NowSound
 
     public:
         // The discrete duration of this stream; always exactly equal to the number of timepoints appended.
-        Duration<TTime> DiscreteDuration() { return _discreteDuration; }
+        virtual Duration<TTime> DiscreteDuration() const { return _discreteDuration; }
 
-        Interval<TTime> DiscreteInterval() { return new Interval<TTime>(InitialTime(), DiscreteDuration()); }
+        Interval<TTime> DiscreteInterval() const { return new Interval<TTime>(InitialTime(), DiscreteDuration()); }
 
-        IntervalMapper<TTime> Mapper() { return _intervalMapper; }
-        void Mapper(IntervalMapper<TTime> value) { _intervalMapper = value; }
+        const IntervalMapper<TTime>& Mapper() const { return _intervalMapper; }
+        void Mapper(IntervalMapper<TTime>&& value) { _intervalMapper = std::move(value); }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -121,43 +122,42 @@ namespace NowSound
         // must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
         {
-            Check(!IsShut);
+            Check(!this->IsShut());
             // Should always have as many samples as the rounded-up finalDuration.
             // The precise time matching behavior is that a loop will play either Math.Floor(finalDuration)
             // or Math.Ceiling(finalDuration) samples on each iteration, such that it remains perfectly in
             // time with finalDuration's fractional value.  So, a shut loop should have DiscreteDuration
             // equal to rounded-up ContinuousDuration.
-            Check((int)Math.Ceiling((double)finalDuration) == (int)DiscreteDuration);
-            base.Shut(finalDuration);
+            Check((int)std::ceil(finalDuration.Value()) == DiscreteDuration().Value());
+            SliceStream<TTime, TValue>::Shut(finalDuration);
         }
 
         // Get a reference to the next slice at the given time, up to the given duration if possible, or the
         // largest available slice if not.
         // 
         // If the interval IsEmpty, return an empty slice.
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) = 0;
+        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
 
-        // Append contiguous data; this must not be shut yet.
+        // Append contiguous data.
+        // This must not be shut yet.
         virtual void Append(Slice<TTime, TValue> source) = 0;
 
-        // Append a rectangular, strided region of the source array.
-        // 
-        // The width * height must together equal the sliverSize.
-        virtual void AppendSliver(TValue* source, int startOffset, int width, int stride, int height) = 0;
-
         // Append the given duration's worth of slices from the given pointer.
+        // This must not be shut yet.
         virtual void Append(Duration<TTime> duration, TValue* p) = 0;
 
         // Copy the given interval of this stream to the destination.
-        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destination) = 0;
+        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* destination) const = 0;
 
+        /*
         // Copy the given interval of this stream to the destination.
-        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* destination) = 0;
+        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destination) const = 0;
+        */
     };
 
     // A stream that buffers some amount of data in memory.
     template<typename TTime, typename TValue>
-    class BufferedSliceStream : DenseSliceStream<TTime, TValue>
+    class BufferedSliceStream : public DenseSliceStream<TTime, TValue>
     {
     private:
         // Allocator for buffer management.
@@ -177,9 +177,6 @@ namespace NowSound
 
         // This stream holds onto an entire buffer and copies data into it when appending.
         Slice<TTime, TValue> _remainingFreeBuffer;
-
-        // The mapper that converts absolute time into relative time for this stream.
-        IntervalMapper<TTime> _intervalMapper;
 
         bool _useContinuousLoopingMapper; // = false;
 
@@ -206,11 +203,10 @@ namespace NowSound
             : base(initialTime, sliverSize),
             _allocator(allocator),
             _maxBufferedDuration(maxBufferedDuration),
-            _useContinuousLoopingMapper(useContinuousLoopingMapper)
+            _useContinuousLoopingMapper(useContinuousLoopingMapper),
+            // when appending, we always start out with identity mapping
+            _intervalMapper(new IdentityIntervalMapper<TTime>(this))
         {
-            // as long as we are appending, we use the identity mapping
-            // TODO: support delay mapping
-            _intervalMapper = new IdentityIntervalMapper<TTime>(this);
         }
 
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
@@ -234,7 +230,7 @@ namespace NowSound
         }
 
         // Return a temporary buffer slice of the given duration or the max temp buffer size, whichever is lower.
-        Slice<TTime, TValue> TempSlice(Duration<TTime> duration)
+        Slice<TTime, TValue> TempSlice(Duration<TTime> duration) const
         {
             Duration<TTime> maxDuration = _tempBuffer.Data.Length / SliverSize;
             return Slice<TTime, TValue>(
@@ -330,7 +326,7 @@ namespace NowSound
         }
 
         // Copy strided data from a source array into a single destination sliver.
-        virtual void AppendSliver(TValue* source, int startOffset, int width, int stride, int height)
+        void AppendSliver(TValue* source, int startOffset, int width, int stride, int height)
         {
             Check(source != null);
             int neededLength = startOffset + stride * (height - 1) + width;
@@ -399,17 +395,17 @@ namespace NowSound
             }
         }
 
-        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* p)
+        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* p) const
         {
             while (!sourceInterval.IsEmpty)
             {
-                Slice<TTime, TValue> source = GetNextSliceAt(sourceInterval);
-                _copySliceToIntPtrAction(source, p);
+                Slice<TTime, TValue> source(GetNextSliceAt(sourceInterval));
+                source.CopyTo(p);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.Duration);
             }
         }
 
-        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destinationStream)
+        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue>* destinationStream) const
         {
             while (!sourceInterval.IsEmpty)
             {
@@ -424,7 +420,7 @@ namespace NowSound
         // 
         // <param name="interval"></param>
         // <returns></returns>
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval)
+        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval) const
         {
             Interval<TTime> firstMappedInterval = _intervalMapper.MapNextSubInterval(interval);
 
@@ -447,7 +443,7 @@ namespace NowSound
             return ret;
         }
 
-        TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval)
+        TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
         {
             // we must overlap somewhere
             Check(!firstMappedInterval.Intersect(new Interval<TTime>(InitialTime, DiscreteDuration)).IsEmpty,
@@ -480,8 +476,9 @@ namespace NowSound
                 // this requires that Free be idempotent; in general we don't expect
                 // many slices per buffer, since each Stream allocates from a private
                 // buffer and coalesces aggressively
-                _allocator->Free(slice.Slice.Buffer);
+                slice.Value().Free(_allocator);
             }
+            _data.clear();
         }
     };
 }

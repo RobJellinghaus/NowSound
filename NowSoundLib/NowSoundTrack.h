@@ -98,7 +98,7 @@ namespace NowSound
         NowSoundTrack(AudioInputId inputId);
 
         // In what state is this track?
-        TrackState State() const;
+        NowSoundTrack_State State() const;
 
         // Duration in beats of current Clock.
         // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.

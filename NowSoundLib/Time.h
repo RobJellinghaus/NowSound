@@ -212,11 +212,10 @@ namespace NowSound
         Interval() = delete;
 
         Interval(Time<TTime> initialTime, Duration<TTime> duration)
+            : _initialTime(initialTime), _duration(duration)
         {
+            Check(initialTime >= 0);
             Check(duration >= 0);
-
-            _initialTime = initialTime;
-            _duration = duration;
         }
 
         static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
@@ -238,7 +237,7 @@ namespace NowSound
             return new Interval<TTime>(_initialTime, duration);
         }
 
-        Interval<TTime> Intersect(Interval<TTime> other) const
+        Interval<TTime> Intersect(const Interval<TTime>& other) const
         {
             Time<TTime> intersectionStart = Time<TTime>.Max(_initialTime, other._initialTime);
             Time<TTime> intersectionEnd = Time<TTime>.Min(_initialTime + _duration, other._initialTime + other._duration);

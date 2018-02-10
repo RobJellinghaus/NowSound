@@ -5,40 +5,11 @@
 
 #include "pch.h"
 
+#include "Buf.h"
+
 namespace NowSound
 {
-    // Buffer of data; owns the data contained within it.
-    template<typename T>
-    struct Buf
-    {
-        const int Id;
-        const T* Data;
-        const int Length;
-
-        Buf(int id, T*&& data, int length)
-        {
-            Id = id;
-            Data = std::move(data);
-            Length = length;
-        }
-
-        // move constructor
-        Buf(Buf&& other)
-        {
-            Id = std::move(other.Id);
-            Data = std::move(other.Data);
-            Length = other.Length;
-        }
-
-        bool Equals(const Buf<T>& other)
-        {
-            return Id == other.Id && Data == other.Data && Length == other.Length;
-        }
-    };
-
-    // 
     // Allocate T[] of a predetermined size, and support returning such T[] to a free list.
-    // 
     template<typename T>
     class BufferAllocator
     {
@@ -60,16 +31,15 @@ namespace NowSound
     public:
         // bufferCount is the number of values in each buffer; initialNumberOfBuffers is the number of buffers to pre-allocate
         BufferAllocator(int bufferLength, int initialNumberOfBuffers)
+            : BufferLength(bufferLength)
         {
             Check(bufferLength > 0);
             Check(initialNumberOfBuffers > 0);
 
-            BufferLength = bufferLength;
-
             // Prepopulate the free list as a way of preallocating.
             for (int i = 0; i < initialNumberOfBuffers; i++)
             {
-                _freeList.emplace(std::move(Buf<T>(_latestBufferId++, new T[BufferLength], bufferLength)));
+                _freeList.emplace(std::move(Buf<T>(_latestBufferId++, new T[bufferLength], bufferLength)));
             }
             _totalBufferCount = initialNumberOfBuffers;
         }
@@ -101,7 +71,7 @@ namespace NowSound
         }
 
         // Free the given buffer back to the pool.
-        void Free(Buf<T>&& buffer)
+        virtual void Free(Buf<T>&& buffer)
         {
             for (const Buf<T>& t : _freeList)
             {
@@ -110,7 +80,7 @@ namespace NowSound
                     return;
                 }
             }
-            _freeList.append(std::move(buffer));
+            _freeList.emplace(std::move(buffer));
         }
     };
 }
