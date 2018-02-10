@@ -13,8 +13,8 @@ namespace NowSound
     template<typename TTime>
     class IStream
     {
-        Time<TTime> InitialTime() = 0;
-        Duration<TTime> Duration() = 0;
+        virtual Time<TTime> InitialTime() = 0;
+        virtual Duration<TTime> Duration() = 0;
     };
 
     // Handle converting time intervals from absolute time (relative to start of app) to relative time

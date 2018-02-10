@@ -16,7 +16,6 @@ using namespace Windows::Foundation;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 using namespace Windows::Media::Audio;
-using namespace Windows::Media::Ren;
 using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
@@ -24,7 +23,7 @@ using namespace Windows::Storage::Pickers;
 TimeSpan timeSpanFromSeconds(int seconds)
 {
     // TimeSpan is in 100ns units
-    return TimeSpan(seconds * 10000000);
+    return TimeSpan(seconds * Clock::TicksPerSecond);
 }
 
 static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized };

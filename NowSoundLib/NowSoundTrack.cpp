@@ -33,9 +33,70 @@ struct __declspec(uuid("5b0d3235-4dba-4d44-865e-8f1d0e4fd04d")) __declspec(novta
 
 namespace NowSound
 {
+    __declspec(dllexport) NowSoundTrack_State NowSoundTrackAPI::NowSoundTrack_State(TrackId trackId)
+    {
+        return Track(trackId)->State();
+    }
+
+    __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrackAPI::NowSoundTrack_BeatDuration(TrackId trackId)
+    {
+        return Track(trackId)->BeatDuration().Value();
+    }
+
+    __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrackAPI::NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
+    {
+        return Track(trackId)->BeatPositionUnityNow().Value();
+    }
+
+    __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrackAPI::NowSoundTrack_ExactDuration(TrackId trackId)
+    {
+        return Track(trackId)->ExactDuration().Value();
+    }
+
+    __declspec(dllexport) int64_t /*Time<AudioSample>*/ NowSoundTrackAPI::NowSoundTrack_StartTime(TrackId trackId)
+    {
+        return Track(trackId)->StartTime().Value();
+    }
+
+    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_FinishRecording(TrackId trackId)
+    {
+        Track(trackId)->FinishRecording();
+    }
+
+    __declspec(dllexport) bool NowSoundTrackAPI::NowSoundTrack_IsMuted(TrackId trackId)
+    {
+        return Track(trackId)->IsMuted();
+    }
+
+    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
+    {
+        Track(trackId)->SetIsMuted(isMuted);
+    }
+
+    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_Delete(TrackId trackId)
+    {
+        Track(trackId)->Delete();
+        // emplace a null pointer
+        _tracks[static_cast<int>(trackId)] = std::unique_ptr<NowSoundTrack>{};
+    }
+
+    void __declspec(dllexport) NowSoundTrackAPI::NowSoundTrack_UnityUpdate(TrackId trackId)
+    {
+        Track(trackId)->UnityUpdate();
+    }
+
+    std::vector<std::unique_ptr<NowSoundTrack>> NowSoundTrackAPI::_tracks{};
+
+    NowSoundTrack* NowSoundTrackAPI::Track(TrackId id)
+    {
+        NowSoundTrack* value = _tracks.at(static_cast<int>(id)).get();
+        Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
+        return value;
+    }
+
     NowSoundTrack::NowSoundTrack(AudioInputId inputId)
         : _sequenceNumber(s_sequenceNumber++),
-        _state(TrackState::Recording),
+        _state(NowSoundTrack_State::Recording),
         _startTime(Clock::Instance().Now()),
         _audioStream(_startTime, NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is
@@ -55,7 +116,7 @@ namespace NowSound
         _audioFrameInputNode.QuantumStarted(FrameInputNode_QuantumStarted);
     }
     
-    TrackState NowSoundTrack::State() const { return _state; }
+    NowSoundTrack_State NowSoundTrack::State() const { return _state; }
     
     Duration<Beat> NowSoundTrack::BeatDuration() const { return _beatDuration; }
     
@@ -85,7 +146,7 @@ namespace NowSound
 
         // no need for any synchronization at all; the Record() logic will see this change.
         // We have no memory fence here but this write does reliably get seen sufficiently quickly in practice.
-        _state = TrackState::FinishRecording;
+        _state = NowSoundTrack_State::FinishRecording;
     }
 
     void NowSoundTrack::Delete()
@@ -113,7 +174,7 @@ namespace NowSound
             return;
         }
 
-        if (_state == TrackState::Looping)
+        if (_state == NowSoundTrack_State::Looping)
         {
             // we are looping; let's play!
             // TODO: why did we have this lock statement here?  lock(this)
@@ -180,7 +241,7 @@ namespace NowSound
         // TODO: what was this for? lock(this)
         switch (_state)
         {
-        case TrackState::Recording:
+        case NowSoundTrack_State::Recording:
         {
             // How many complete beats after we record this data?
             Duration<Beat> completeBeats = Time<AudioSample>(_audioStream.DiscreteDuration + duration).CompleteBeats;
@@ -200,7 +261,7 @@ namespace NowSound
             break;
         }
 
-        case TrackState::FinishRecording:
+        case NowSoundTrack_State::FinishRecording:
         {
             // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
@@ -214,7 +275,7 @@ namespace NowSound
                 duration = roundedUpDuration - _audioStream.DiscreteDuration;
 
                 // we are done recording altogether
-                _state = TrackState::Looping;
+                _state = NowSoundTrack_State::Looping;
                 continueRecording = false;
 
                 _audioStream.Append(duration, data);
@@ -234,7 +295,7 @@ namespace NowSound
             break;
         }
 
-        case TrackState::Looping:
+        case NowSoundTrack_State::Looping:
         {
             Check(false); // Should never still be recording once in looping state
             return false;

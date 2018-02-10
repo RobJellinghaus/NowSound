@@ -1,6 +1,8 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+#pragma once
+
 #include "pch.h"
 
 #include <future>
@@ -9,6 +11,8 @@
 
 #include "BufferAllocator.h"
 #include "Check.h"
+#include "NowSoundLibTypes.h"
+#include "NowSoundTrack.h"
 #include "SliceStream.h"
 
 using namespace std::chrono;
@@ -29,92 +33,6 @@ namespace NowSound
     // together with callback IDs.
     extern "C"
     {
-        // Information about an audio device.
-        struct NowSound_DeviceInfo
-        {
-            LPWSTR Id;
-            LPWSTR Name;
-
-            // Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
-            // Note that this does *not* own the strings; these must be owned elsewhere.
-            NowSound_DeviceInfo(LPWSTR id, LPWSTR name)
-            {
-                Id = id;
-                Name = name;
-            }
-        };
-
-        // Information about an audio graph.
-        struct NowSound_GraphInfo
-        {
-            int32_t LatencyInSamples;
-            int32_t SamplesPerQuantum;
-
-            NowSound_GraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
-            {
-                LatencyInSamples = latencyInSamples;
-                SamplesPerQuantum = samplesPerQuantum;
-            }
-        };
-
-        enum NowSoundGraph_State
-        {
-            // InitializeAsync() has not yet been called.
-            Uninitialized,
-
-            // Some error has occurred; GetLastError() will have details.
-            InError,
-
-            // A gap in incoming audio data was detected; this should ideally never happen.
-            // NOTYET: Discontinuity,
-
-            // InitializeAsync() has completed; devices can now be queried.
-            Initialized,
-
-            // CreateAudioGraphAsync() has completed; other methods can now be called.
-            Created,
-
-            // The audio graph has been started and is running.
-            Running,
-
-            // The audio graph has been stopped.
-            // NOTYET: Stopped,
-        };
-
-        // The state of a particular IHolofunkAudioTrack.
-        enum TrackState
-        {
-            // The track is being recorded and it is not known when it will finish.
-            Recording,
-
-            // The track is finishing off its now-known recording time.
-            FinishRecording,
-
-            // The track is playing back, looping.
-            Looping,
-        };
-
-        // The audio inputs known to the app.
-        /// Prevents confusing an audio input with some other int value.
-        // 
-        // The predefined values are really irrelevant; it can be cast to and from int as necessary.
-        // But, used in parameters, the type helps with making the code self-documenting.
-        enum AudioInputId
-        {
-            Input0,
-            Input1,
-            Input2,
-            Input3,
-            Input4,
-            Input5,
-            Input6,
-            Input7,
-        };
-
-        // The ID of a NowSound track; avoids issues with marshaling object references.
-        // Note that 0 is a valid value.
-        typedef int32_t TrackId;
-
         // Operations on the audio graph as a whole.
         // There is a single "static" audio graph defined here; multiple audio graphs are not supported.
         // All async methods document the state the graph must be in when called, and the state the graph
@@ -178,11 +96,11 @@ namespace NowSound
         {
         public:
             // In what state is this track?
-            static __declspec(dllexport) TrackState NowSoundTrack_State(TrackId trackId);
+            static __declspec(dllexport) NowSoundTrack_State NowSoundTrack_State(TrackId trackId);
 
             // Duration in beats of current Clock.
             // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-            static __declspec(dllexport) int32_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId);
+            static __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId);
 
             // What beat position is playing right now?
             // This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
@@ -192,19 +110,19 @@ namespace NowSound
             // How long is this track, in samples?
             // This is increased during recording.  It may in general have fractional numbers of samples if 
             // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
-            static __declspec(dllexport) ContinuousDuration<AudioSample> NowSoundTrack_Duration(TrackId trackId);
+            static __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId);
 
             // The starting moment at which this Track was created.
             static __declspec(dllexport) int64_t /*Time<AudioSample>*/ NowSoundTrack_StartTime(TrackId trackId);
 
             // The user wishes the track to finish recording now.
-            // Contractually requires State == TrackState.Recording.
+            // Contractually requires State == NowSoundTrack_State.Recording.
             static __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 
             // True if this is muted.
             // 
             // Note that something can be in FinishRecording state but still be muted, if the user is fast!
-            // Hence this is a separate flag, not represented as a TrackState.
+            // Hence this is a separate flag, not represented as a NowSoundTrack_State.
             static __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId);
             static __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
 
@@ -213,6 +131,10 @@ namespace NowSound
 
             // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
             static void __declspec(dllexport) NowSoundTrack_UnityUpdate(TrackId trackId);
+
+        private:
+            static std::vector<std::unique_ptr<NowSoundTrack>> _tracks;
+            static NowSoundTrack* Track(TrackId id);
         };
     };
 }

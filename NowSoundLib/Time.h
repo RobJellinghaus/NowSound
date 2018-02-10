@@ -1,9 +1,12 @@
-#pragma once
-
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+#pragma once
+
 #include "pch.h"
+
+#include "stdint.h" // for int64_t
+
 #include "math.h"
 
 namespace NowSound
@@ -35,16 +38,16 @@ namespace NowSound
     {
     private:
         // The number of TTime units represented by this time.
-        long _value;
+        int64_t _value;
 
     public:
         Time() = delete;
 
-        Time(long value) : _value(value)
+        Time(int64_t value) : _value(value)
         {
         }
 
-        long Value() const { return _value; }
+        int64_t Value() const { return _value; }
 
         static Time<TTime> Min(const Time<TTime>& first, const Time<TTime>& second)
         {
@@ -92,20 +95,7 @@ namespace NowSound
             return _value >= second.Value();
         }
 
-
         double Seconds() const { return ((double)_value.Value()) / Clock::SampleRateHz; }
-
-        // Approximately how many beats?
-        ContinuousDuration<Beat> Beats() const { return ContinuousDuration<Beat>((float)_value.Value() / Clock::Instance().BeatDuration().Value()); }
-
-        // Exactly how many complete beats?
-        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-        Duration<Beat> CompleteBeats() const { return Duration<Beat>((int)Beats().Value()); }
-
-        const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
-
-                                       // What fraction of a beat?
-        ContinuousDuration<Beat> FractionalBeat() const { return ContinuousDuration<Beat>(Beats().Value() - CompleteBeats().Value()); }
     };
 
     // A distance between two Times.
@@ -113,7 +103,7 @@ namespace NowSound
     class Duration
     {
     private:
-        const long _value;
+        const int64_t _value;
 
     public:
         Duration() = delete;
@@ -122,7 +112,7 @@ namespace NowSound
         {
         }
 
-        long Value() const { return _value; }
+        int64_t Value() const { return _value; }
 
         static Duration<TTime> Min(Duration<TTime> first, Duration<TTime> second)
         {

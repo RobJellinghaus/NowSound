@@ -1,9 +1,13 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+#pragma once
+
 #include "pch.h"
+
 #include "Clock.h"
-#include "NowSoundLib.h"
+#include "NowSoundLibTypes.h"
+#include "Recorder.h"
 #include "Time.h"
 
 using namespace NowSound;
@@ -24,7 +28,7 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-    class NowSoundTrack : Recorder<AudioSample, float>
+    class NowSoundTrack : IRecorder<AudioSample, float>
     {
         // Sequence number of next Track; purely diagnostic, never exposed to outside.
         // 
@@ -46,7 +50,7 @@ namespace NowSound
         // HolofunkAudioGraph _audioGraph; // TODO: do we want to have graph objects? Might we want multiple graphs for different output devices?
 
         // The current state of the track.
-        TrackState _state;
+        NowSoundTrack_State _state;
 
         // The number of complete beats thaat measures the duration of this track.
         // Increases steadily while Recording; sets a time limit to further recording during FinishRecording;
@@ -114,13 +118,13 @@ namespace NowSound
         Time<AudioSample> StartTime() const;
 
         // The user wishes the track to finish recording now.
-        // Contractually requires State == TrackState::Recording.
+        // Contractually requires State == NowSoundTrack_State::Recording.
         void FinishRecording();
 
         // True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
-        // Hence this is a separate flag, not represented as a TrackState.
+        // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         bool IsMuted() const;
         void SetIsMuted(bool isMuted);
 

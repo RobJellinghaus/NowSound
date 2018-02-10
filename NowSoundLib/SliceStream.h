@@ -1,9 +1,10 @@
-#pragma once
-
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+#pragma once
+
 #include "pch.h"
+
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "IntervalMapper.h"

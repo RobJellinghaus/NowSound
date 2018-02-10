@@ -88,5 +88,30 @@ namespace NowSound
         int BeatsPerMeasure() { return _beatsPerMeasure; }
 
         Time<AudioSample> Now() { return _audioTime; }
+
+        // Approximately how many beats?
+        ContinuousDuration<Beat> TimeToBeats(Time<AudioSample> time) const
+        {
+            return ContinuousDuration<Beat>(
+                (float)time.Value() /
+                Clock::Instance().BeatDuration().Value());
+        }
+
+        // Exactly how many complete beats?
+        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
+        Duration<Beat> TimeToCompleteBeats(Time<AudioSample> time) const
+        {
+            return Duration<Beat>((int)TimeToBeats(time).Value());
+        }
+
+        const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
+
+                                       // What fraction of a beat?
+        ContinuousDuration<Beat> TimeToFractionalBeat(Time<AudioSample> time) const
+        {
+            return ContinuousDuration<Beat>((int)TimeToBeats(time).Value());
+        }
+
+
     };
 }
