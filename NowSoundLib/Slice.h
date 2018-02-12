@@ -19,8 +19,17 @@ namespace NowSound
     {
     private:
         // The backing store; logically divided into slivers.
-        // This is a borrowed reference; the Buf's BufferAllocator owns it.
+        // This is borrowed from this slice's containing stream.
         const Buf<TValue>* _buffer;
+
+        // Copy memory from src to dest, using byte offsets.
+        static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t length)
+        {
+            std::memcpy(
+                (void*)dest + destOffset,
+                (void*)src + srcOffset,
+                length);
+        }
 
     public:
         // The number of slivers contained.
@@ -42,7 +51,7 @@ namespace NowSound
             Check((offset * sliverSize) + (duration * sliverSize) <= buffer.Data.Length);
         }
 
-        Slice(Buf<TValue> buffer, int sliverSize)
+        Slice(Buf<TValue>* buffer, int sliverSize)
             : _buffer(buffer), _offset(0), _duration(buffer.Data.Length / sliverSize), _sliverSize(sliverSize)
         {
         }
@@ -52,6 +61,7 @@ namespace NowSound
         // For use by extension methods only
         const Buf<TValue>* Buffer() { return _buffer; }
 
+        // Get a single value out of the slice at the given offset, sub-indexed in the slice by the given sub-index.
         TValue& Get(Duration<TTime> offset, int subindex)
         {
             Duration<TTime> totalOffset = _offset + offset;
@@ -83,17 +93,8 @@ namespace NowSound
             return Subslice(0, duration);
         }
 
-        // Copy 'length' slivers from src at srcOffset to dest at destOffset, where the offsets are in slivers.
-        static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t length)
-        {
-            std::memcpy(
-                (void*)dest + (destOffset * WidthInBytes()),
-                (void*)src + (srcOffset * WidthInBytes()),
-                length * WidthInBytes());
-        }
-
-        size_t WidthInBytes() { return sizeof(TValue) * _sliverSize; }
-        size_t SizeInBytes() { return WidthInBytes() * _duration.Value(); }
+        size_t SliverSizeInBytes() { return sizeof(TValue) * _sliverSize; }
+        size_t SizeInBytes() { return SliverSizeInBytes() * _duration.Value(); }
 
         // Copy this slice's data into destination; destination must be long enough.
         void CopyTo(Slice<TTime, TValue>& destination) const
@@ -103,24 +104,21 @@ namespace NowSound
 
             // TODO: support reversed copies etc.
             ArrayCopy(_buffer.Data,
-                _offset.Value(),
+                _offset.Value() * _sliverSize,
                 destination._buffer.Data,
-                destination._offset.Value(),
-                _duration.Value());
+                destination._offset.Value() * _sliverSize,
+                SizeInBytes());
         }
 
         void CopyTo(TValue* dest) const
         {
-            ArrayCopy(_buffer->Data, _offset.Value(), dest, 0, _duration.Value());
+            ArrayCopy(_buffer->Data, _offset.Value() * _sliverSize, dest, 0, SizeInBytes());
         }
 
-        void CopyFrom(TValue* source, int sourceOffset, int sourceLength, int destinationSubIndex, int subWidth)
+        // Copy data from the source, replacing all data in this slice.
+        void CopyFrom(TValue* source)
         {
-            Check((int)(sourceOffset + subWidth) <= sourceLength);
-            int destinationOffset = (int)(_offset * _sliverSize + destinationSubIndex);
-            Check(destinationOffset + subWidth <= _buffer.Data.Length);
-
-            ArrayCopy(source, (int)sourceOffset, _buffer.Data, destinationOffset, subWidth);
+            ArrayCopy(source, 0, _buffer.Data, _offset * _sliverSize, SizeInBytes());
         }
 
         // Are these samples adjacent in their underlying storage?
@@ -130,6 +128,7 @@ namespace NowSound
         }
 
         // Merge two adjacent samples into a single sample.
+        // Precedes(next) must be true.
         Slice<TTime, TValue> UnionWith(const Slice<TTime, TValue>& next) const
         {
             Check(Precedes(next));
@@ -140,12 +139,6 @@ namespace NowSound
         bool Equals(const Slice<TTime, TValue>& other)
         {
             return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other._duration;
-        }
-
-        // Freeing.
-        void Free(IBufAllocator<TValue>* allocator)
-        {
-            allocator->Free(std::move(*_buffer));
         }
     };
 

@@ -85,12 +85,6 @@ namespace NowSound
     };
 
     // A stream of data, accessed through consecutive, densely sequenced Slices.
-    // 
-    // The methods which take IntPtr arguments cannot be implemented generically in .NET; it is not possible to
-    // take the address of a generic T[] array.  The type must be specialized to some known primitive type such
-    // as float or byte.  This is done in the leaf subclasses in the Stream hierarchy.  All other operations are
-    // generically implemented.
-    // </remarks>
     template<typename TTime, typename TValue>
     class DenseSliceStream : public SliceStream<TTime, TValue>
     {
@@ -160,12 +154,13 @@ namespace NowSound
     class BufferedSliceStream : public DenseSliceStream<TTime, TValue>
     {
     private:
-        // Allocator for buffer management.
+        // Allocator for obtaining buffers; borrowed from application.
         const BufferAllocator<TValue>* _allocator;
 
         // The slices making up the buffered data itself.
         // The InitialTime of each entry in this list must exactly equal the InitialTime + Duration of the
         // previous entry; in other words, these are densely arranged in time.
+        // Note that slices borrow buffer references from their containing stream.
         std::vector<TimedSlice<TTime, TValue>> _data{};
 
         // The maximum amount that this stream will buffer while it is open; more appends will cause
@@ -173,22 +168,33 @@ namespace NowSound
         Duration<TTime> _maxBufferedDuration;
 
         // Temporary space for, e.g., the IntPtr Append method.
+        // This buffer is owned by this stream.
         Buf<TValue> _tempBuffer; // = new Buf<TValue>(-1, new TValue[1024]); // -1 id = temp buf
 
-        // This stream holds onto an entire buffer and copies data into it when appending.
-        Slice<TTime, TValue> _remainingFreeBuffer;
+        // This is the vector of buffers appended in the stream thus far; the last one is the current append buffer.
+        // This vector owns the buffers within it; ownership is transferred from allocator to stream whenever a
+        // new append buffer is needed.
+        std::vector<Buf<TValue>> _buffers;
 
-        bool _useContinuousLoopingMapper; // = false;
+        // This is the remaining not-yet-allocated portion of the current append buffer (the last in _buffers).
+        Slice<TTime, TValue> _remainingFreeSlice;
+
+        bool _useContinuousLoopingMapper;
 
         void EnsureFreeBuffer()
         {
-            if (_remainingFreeBuffer.IsEmpty())
+            if (_remainingFreeSlice.IsEmpty())
             {
-                Buf<TValue> chunk = _allocator->Allocate();
-                _remainingFreeBuffer = new Slice<TTime, TValue>(
-                    chunk,
+                // allocate a new buffer and transfer ownership of it to _buffers
+                _buffers.emplace_back(std::move(_allocator->Allocate()));
+
+                // get a borrowed pointer to the current append buffer
+                Buf<TValue>* appendBuffer = &_buffers.at(_buffers.size() - 1);
+
+                _remainingFreeSlice = new Slice<TTime, TValue>(
+                    appendBuffer,
                     0,
-                    (chunk.Data.Length / SliverSize),
+                    appendBuffer->Data.Length / SliverSize,
                     SliverSize);
             }
         }
@@ -202,11 +208,24 @@ namespace NowSound
             bool useContinuousLoopingMapper)
             : base(initialTime, sliverSize),
             _allocator(allocator),
+            _buffers{},
+            _remainingFreeSlice{},
             _maxBufferedDuration(maxBufferedDuration),
             _useContinuousLoopingMapper(useContinuousLoopingMapper),
             // when appending, we always start out with identity mapping
             _intervalMapper(new IdentityIntervalMapper<TTime>(this))
         {
+        }
+
+        // On destruction, return all buffers to free list
+        // TODO: does this need locking and/or thread checks?
+        ~BufferedSliceStream()
+        {
+            for (int i = 0; i < _buffers.size(); i++)
+            {
+                // transfer ownership of each buffer back to allocator
+                _allocator->Free(std::move(_buffers.at(i)));
+            }
         }
 
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
@@ -240,24 +259,36 @@ namespace NowSound
                 SliverSize);
         }
 
-        // Append the given amount of data marshalled from the pointer P.
+        // Append the given amount of data.
         virtual void Append(Duration<TTime> duration, TValue* p)
         {
             Check(!IsShut);
 
             while (duration > 0)
             {
-                Slice<TTime, TValue> tempSlice = TempSlice(duration);
+                EnsureFreeBuffer();
 
-                TValue* src = p;
-                TValue* dest = tempSlice.OffsetPointer();
-                for (int i = 0; i < tempSlice._duration.Value() * _sliverSize; i++)
+                // if source is larger than available free buffer, then we'll iterate
+                Duration<TTime> durationToCopy(duration);
+                if (durationToCopy > _remainingFreeSlice._duration)
                 {
-                    *dest++ = *src++;
+                    durationToCopy = _remainingFreeSlice._duration;
                 }
-                Append(tempSlice);
-                duration = duration - tempSlice.Duration;
+
+                // now we know source can fit
+                Slice<TTime, TValue> dest = _remainingFreeSlice.SubsliceOfDuration(source.Duration);
+                dest.CopyFrom(p);
+
+                // dest may well be adjacent to the previous slice, if there is one, since we may
+                // be appending onto an open chunk.  So here is where we coalesce this, if so.
+                dest = InternalAppend(dest);
+
+                // and update our loop variables
+                duration = duration - durationToCopy;
+
+                Trim();
             }
+
             _discreteDuration = _discreteDuration + duration;
         }
 
@@ -266,20 +297,20 @@ namespace NowSound
         {
             Check(!IsShut);
 
-            // Try to keep copying source into _remainingFreeBuffer
+            // Try to keep copying source into _remainingFreeSlice
             while (!source.IsEmpty())
             {
                 EnsureFreeBuffer();
 
                 // if source is larger than available free buffer, then we'll iterate
                 Slice<TTime, TValue> originalSource = source;
-                if (source.Duration > _remainingFreeBuffer.Duration)
+                if (source.Duration > _remainingFreeSlice.Duration)
                 {
-                    source = source.Subslice(0, _remainingFreeBuffer.Duration);
+                    source = source.Subslice(0, _remainingFreeSlice.Duration);
                 }
 
                 // now we know source can fit
-                Slice<TTime, TValue> dest = _remainingFreeBuffer.SubsliceOfDuration(source.Duration);
+                Slice<TTime, TValue> dest = _remainingFreeSlice.SubsliceOfDuration(source.Duration);
                 source.CopyTo(dest);
 
                 // dest may well be adjacent to the previous slice, if there is one, since we may
@@ -293,13 +324,11 @@ namespace NowSound
             }
         }
 
-        // 
         // Internally append this slice (which must be allocated from our free buffer); this does the work
         // of coalescing, updating _data and other fields, etc.
-        // 
         Slice<TTime, TValue> InternalAppend(Slice<TTime, TValue> dest)
         {
-            Check(dest.Buffer.Data == _remainingFreeBuffer.Buffer.Data); // dest must be from our free buffer
+            Check(dest.Buffer.Data == _remainingFreeSlice.Buffer.Data); // dest must be from our free buffer
 
             if (_data.Count == 0)
             {
@@ -320,7 +349,7 @@ namespace NowSound
             }
 
             _discreteDuration += _discreteDuration + dest.Duration;
-            _remainingFreeBuffer = _remainingFreeBuffer.SubsliceStartingAt(dest.Duration);
+            _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(dest.Duration);
 
             return dest;
         }
@@ -336,7 +365,7 @@ namespace NowSound
 
             EnsureFreeBuffer();
 
-            Slice<TTime, TValue> destination = _remainingFreeBuffer.SubsliceOfDuration(1);
+            Slice<TTime, TValue> destination = _remainingFreeSlice.SubsliceOfDuration(1);
 
             int sourceOffset = startOffset;
             int destinationOffset = 0;
@@ -465,20 +494,6 @@ namespace NowSound
 
             TimedSlice<TTime, TValue> foundTimedSlice = _data[index];
             return foundTimedSlice;
-        }
-
-        // TODO: make this 1) actually work, 2) be a destructor, 3) become unnecessary because the slices share pointers to the bufs
-        void Dispose()
-        {
-            // release each T[] back to the buffer
-            for (TimedSlice<TTime, TValue> slice : _data)
-            {
-                // this requires that Free be idempotent; in general we don't expect
-                // many slices per buffer, since each Stream allocates from a private
-                // buffer and coalesces aggressively
-                slice.Value().Free(_allocator);
-            }
-            _data.clear();
         }
     };
 }
