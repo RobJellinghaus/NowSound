@@ -31,7 +31,6 @@ namespace NowSound
                 length);
         }
 
-    public:
         // The number of slivers contained.
         const Duration<TTime> _duration;
 
@@ -41,6 +40,10 @@ namespace NowSound
         // The size of each sliver in this slice; a count of T.
         // Slices are composed of multiple Slivers, one per unit of Duration.
         const int _sliverSize;
+
+    public:
+        // Default slice is empty
+        Slice() : _duration{}, _offset{}, _sliverSize{}, _buffer{} {}
 
         Slice(Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
             : _buffer(buffer), _offset(offset), _duration(duration), _sliverSize(sliverSize)
@@ -53,25 +56,48 @@ namespace NowSound
 
         Slice(Buf<TValue>* buffer, int sliverSize)
             : _buffer(buffer), _offset(0), _duration(buffer.Data.Length / sliverSize), _sliverSize(sliverSize)
+        {}
+
+        Slice(const Slice& other)
+            : _buffer(other._buffer), _offset(other._offset), _duration(other.SliceDuration()), _sliverSize(other._sliverSize)
+        {}
+
+        const Slice& operator=(const Slice& other)
         {
+            _buffer = other._buffer;
+            _offset = other._offset;
+            _duration = other.SliceDuration();
+            _sliverSize = other._sliverSize;
         }
 
-        bool IsEmpty() { return Duration == 0; }
+        // The number of slivers contained.
+        const Duration<TTime> SliceDuration() const { return _duration; }
+
+        // The index to the sliver at which this slice actually begins.
+        const Duration<TTime> Offset() const { return _offset; }
+
+        // The size of each sliver in this slice; a count of T.
+        // Slices are composed of multiple Slivers, one per unit of Duration.
+        int SliverSize() const { return _sliverSize; }
+
+        bool IsEmpty() const { return Duration == 0; }
 
         // For use by extension methods only
-        const Buf<TValue>* Buffer() { return _buffer; }
+        const Buf<TValue>* Buffer() const { return _buffer; }
 
         // Get a single value out of the slice at the given offset, sub-indexed in the slice by the given sub-index.
-        TValue& Get(Duration<TTime> offset, int subindex)
+        // Can't get from an empty slice.
+        TValue& Get(Duration<TTime> offset, int subindex) const
         {
-            Duration<TTime> totalOffset = _offset + offset;
+            Check(!IsEmpty());
             Check(totalOffset * _sliverSize < Buffer.Data.Length);
+            Duration<TTime> totalOffset = _offset + offset;
             long finalOffset = totalOffset * _sliverSize + subindex;
             return _buffer.Data[finalOffset];
         }
 
         // Get a portion of this Slice, starting at the given offset, for the given duration.
-        Slice<TTime, TValue> Subslice(Duration<TTime> initialOffset, Duration<TTime> duration)
+        Slice<TTime, TValue> Subslice(Duration<TTime> initialOffset, Duration<TTime> duration) const
         {
             Check(initialOffset >= 0); // can't slice before the beginning of this slice
             Check(_duration >= 0); // must be nonnegative count
@@ -80,7 +106,7 @@ namespace NowSound
         }
 
         // Get the rest of this Slice starting at the given offset.
-        Slice<TTime, TValue> SubsliceStartingAt(Duration<TTime> initialOffset)
+        Slice<TTime, TValue> SubsliceStartingAt(Duration<TTime> initialOffset) const
         {
             return Subslice(initialOffset, _duration - initialOffset);
         }
@@ -88,18 +114,18 @@ namespace NowSound
         TValue* OffsetPointer() { return Buffer()->Data + (_offset * _sliverSize); }
 
         // Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
-        Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration)
+        Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration) const
         {
             return Subslice(0, duration);
         }
 
-        size_t SliverSizeInBytes() { return sizeof(TValue) * _sliverSize; }
-        size_t SizeInBytes() { return SliverSizeInBytes() * _duration.Value(); }
+        size_t SliverSizeInBytes() const { return sizeof(TValue) * _sliverSize; }
+        size_t SizeInBytes() const { return SliverSizeInBytes() * _duration.Value(); }
 
         // Copy this slice's data into destination; destination must be long enough.
         void CopyTo(Slice<TTime, TValue>& destination) const
         {
-            Check(destination._duration >= _duration);
+            Check(destination.SliceDuration() >= _duration);
             Check(destination._sliverSize == _sliverSize);
 
             // TODO: support reversed copies etc.
@@ -122,7 +148,7 @@ namespace NowSound
         }
 
         // Are these samples adjacent in their underlying storage?
-        bool Precedes(const Slice<TTime, TValue>& next)
+        bool Precedes(const Slice<TTime, TValue>& next) const
         {
             return _buffer.Data == next._buffer.Data && _offset + _duration == next._offset;
         }
@@ -132,34 +158,35 @@ namespace NowSound
         Slice<TTime, TValue> UnionWith(const Slice<TTime, TValue>& next) const
         {
             Check(Precedes(next));
-            return Slice<TTime, TValue>(_buffer, _offset, _duration + next._duration, _sliverSize);
+            return Slice<TTime, TValue>(_buffer, _offset, _duration + next.SliceDuration(), _sliverSize);
         }
 
         // Equality comparison.
-        bool Equals(const Slice<TTime, TValue>& other)
+        bool Equals(const Slice<TTime, TValue>& other) const
         {
-            return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other._duration;
+            return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other.SliceDuration();
         }
     };
 
     // A slice with an absolute initial time associated with it.
-    // 
     // In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime of the stream itself.
+    // TODO: double-check that that still makes sense in the BufferedSliceStream implementation (it probably does).
     template<typename TTime, typename TValue>
     struct TimedSlice
     {
     private:
+        const Time<TTime> _time;
         const Slice<TTime, TValue> _value;
 
     public:
-        const Time<TTime> InitialTime;
+        const Time<TTime> InitialTime() { return _time; }
 
         const Slice<TTime, TValue>& Value() { return _value; }
 
-        TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : InitialTime(startTime), _value(slice)
+        TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : _time(startTime), _value(slice)
         {
         }
 
-        Interval<TTime> SliceInterval() { return new Interval<TTime>(InitialTime, _value._duration); }
+        Interval<TTime> SliceInterval() const { return new Interval<TTime>(_time, _value.SliceDuration()); }
     };
 }

@@ -65,10 +65,10 @@ namespace NowSound
     class SimpleLoopingIntervalMapper : IntervalMapper<TTime>
     {
     private:
-        IStream<TTime> _stream;
+        IStream<TTime>* _stream;
     
     public:
-        SimpleLoopingIntervalMapper(IStream<TTime> stream)
+        SimpleLoopingIntervalMapper(IStream<TTime>* stream)
         {
             // Should only use this mapper on shut streams with a fixed ContinuousDuration.
             Check(stream.IsShut);
@@ -77,12 +77,12 @@ namespace NowSound
 
         virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input)
         {
-            Check(input._initialTime >= _stream.InitialTime());
+            Check(input._initialTime >= _stream->InitialTime());
 
-            Duration<TTime> inputDelayDuration = input._initialTime - _stream.InitialTime();
+            Duration<TTime> inputDelayDuration = input._initialTime - _stream->InitialTime();
             // now we want to take that modulo the *discrete* duration
-            inputDelayDuration %= _stream.DiscreteDuration();
-            Duration<TTime> mappedDuration = Math.Min((long)input._duration, (long)(_stream.DiscreteDuration() - inputDelayDuration));
+            inputDelayDuration %= _stream->DiscreteDuration();
+            Duration<TTime> mappedDuration = Math.Min((long)input.SliceDuration(), (long)(_stream->DiscreteDuration() - inputDelayDuration));
             Interval<TTime> ret = new Interval<TTime>(_stream.InitialTime() + inputDelayDuration, mappedDuration);
 
             // Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: _stream " + _stream + ", input " + input + ", ret " + ret);
@@ -97,9 +97,9 @@ namespace NowSound
     template<typename TTime>
     class LoopingIntervalMapper : IntervalMapper<TTime>
     {
-        IStream<TTime> _stream;
+        IStream<TTime>* _stream;
 
-        LoopingIntervalMapper(IStream<TTime> stream)
+        LoopingIntervalMapper(IStream<TTime>* stream)
         {
             // Should only use this mapper on shut streams with a fixed ContinuousDuration.
             Check(stream.IsShut);
@@ -140,8 +140,8 @@ namespace NowSound
             */
 
             // First thing we do is, subtract our initial time from the initial time of the input.
-            Duration<TTime> loopRelativeInitialTime = input.InitialTime() - _stream.InitialTime;
-            float continuousDuration = (float)_stream.ContinuousDuration;
+            Duration<TTime> loopRelativeInitialTime = input.InitialTime() - _stream->InitialTime();
+            float continuousDuration = (float)_stream->ContinuousDuration;
 
             // Now, we need to figure out how many multiples of the stream's CONTINUOUS length this is.
             // In other words, we want adjustedInitialTime modulo the real-valued length of this stream.
@@ -155,7 +155,7 @@ namespace NowSound
 
             int duration = (int)Math.Ceiling((loopIndex + 1) * continuousDuration - loopRelativeInitialTime);
 
-            return new Interval<TTime>(_stream.InitialTime + adjustedLoopRelativeInitialTime, duration);
+            return new Interval<TTime>(_stream->InitialTime() + adjustedLoopRelativeInitialTime, duration);
         }
     };
 }

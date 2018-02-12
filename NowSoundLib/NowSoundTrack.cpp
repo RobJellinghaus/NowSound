@@ -217,7 +217,7 @@ namespace NowSound
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 
-                Time<AudioSample> now();
+                Time<AudioSample> now(Clock::Instance().Now());
 
                 TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
@@ -226,8 +226,8 @@ namespace NowSound
                 //Spam.Audio.WriteLine(line);
 
                 dataInBytes += longest.SizeInBytes();
-                _localTime = _localTime + longest._duration;
-                samplesRemaining -= (int)longest._duration.Value();
+                _localTime = _localTime + longest.SliceDuration();
+                samplesRemaining -= (int)longest.SliceDuration().Value();
             }
 
             _audioFrameInputNode.AddFrame(s_audioFrame);

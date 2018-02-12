@@ -240,7 +240,7 @@ namespace NowSound
         Interval<TTime> Intersect(const Interval<TTime>& other) const
         {
             Time<TTime> intersectionStart = Time<TTime>.Max(_initialTime, other._initialTime);
-            Time<TTime> intersectionEnd = Time<TTime>.Min(_initialTime + _duration, other._initialTime + other._duration);
+            Time<TTime> intersectionEnd = Time<TTime>.Min(_initialTime + _duration, other._initialTime + other.SliceDuration());
 
             if (intersectionEnd < intersectionStart)
             {
