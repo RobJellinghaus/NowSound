@@ -23,7 +23,7 @@ namespace NowSound
     private:
         // Free list; we recycle from here if possible.
         // This allocator owns all these buffers.
-        const std::vector<Buf<T>> _freeList;
+        std::vector<Buf<T>> _freeList;
 
         // Total number of buffers we have ever allocated.
         int _totalBufferCount;
@@ -39,7 +39,7 @@ namespace NowSound
             // Prepopulate the free list as a way of preallocating.
             for (int i = 0; i < initialNumberOfBuffers; i++)
             {
-                _freeList.emplace(std::move(Buf<T>(_latestBufferId++, new T[bufferLength], bufferLength)));
+                _freeList.push_back(std::move(Buf<T>(_latestBufferId++, new T[bufferLength], bufferLength)));
             }
             _totalBufferCount = initialNumberOfBuffers;
         }
@@ -80,7 +80,7 @@ namespace NowSound
                     return;
                 }
             }
-            _freeList.emplace(std::move(buffer));
+            _freeList.push_back(std::move(buffer));
         }
     };
 }

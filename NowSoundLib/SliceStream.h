@@ -57,7 +57,7 @@ namespace NowSound
         }
 
     public:
-        bool IsShut() const { return _isShut; }
+        virtual bool IsShut() const { return _isShut; }
 
         // The starting time of this Stream.
         virtual Time<TTime> InitialTime() const { return _initialTime; }
@@ -65,7 +65,7 @@ namespace NowSound
         // The floating-point-accurate duration of this stream; only valid once shut.
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
         // the sample rate.
-        ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
+        virtual ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -97,7 +97,9 @@ namespace NowSound
         std::unique_ptr<IntervalMapper<TTime>> _intervalMapper;
 
         DenseSliceStream(Time<TTime> initialTime, int sliverSize)
-            : base(initialTime, sliverSize)
+            : SliceStream<TTime, TValue>(initialTime, sliverSize),
+            // when appending, we always start out with identity mapping
+            _intervalMapper(new IdentityIntervalMapper<TTime>(this))
         {
         }
 
@@ -155,7 +157,7 @@ namespace NowSound
     {
     private:
         // Allocator for obtaining buffers; borrowed from application.
-        const BufferAllocator<TValue>* _allocator;
+        BufferAllocator<TValue>* _allocator;
 
         // The slices making up the buffered data itself.
         // The InitialTime of each entry in this list must exactly equal the InitialTime + Duration of the
@@ -166,10 +168,6 @@ namespace NowSound
         // The maximum amount that this stream will buffer while it is open; more appends will cause
         // earlier data to be dropped.  If 0, no buffering limit will be enforced.
         Duration<TTime> _maxBufferedDuration;
-
-        // Temporary space for, e.g., the IntPtr Append method.
-        // This buffer is owned by this stream.
-        Buf<TValue> _tempBuffer; // = new Buf<TValue>(-1, new TValue[1024]); // -1 id = temp buf
 
         // This is the vector of buffers appended in the stream thus far; the last one is the current append buffer.
         // This vector owns the buffers within it; ownership is transferred from allocator to stream whenever a
@@ -236,14 +234,12 @@ namespace NowSound
             int sliverSize,
             Duration<TTime> maxBufferedDuration,
             bool useContinuousLoopingMapper)
-            : base(initialTime, sliverSize),
+            : DenseSliceStream<TTime, TValue>(initialTime, sliverSize),
             _allocator(allocator),
             _buffers{},
             _remainingFreeSlice{},
             _maxBufferedDuration(maxBufferedDuration),
-            _useContinuousLoopingMapper(useContinuousLoopingMapper),
-            // when appending, we always start out with identity mapping
-            _intervalMapper(new IdentityIntervalMapper<TTime>(this))
+            _useContinuousLoopingMapper(useContinuousLoopingMapper)
         {
         }
 
@@ -264,11 +260,11 @@ namespace NowSound
             // swap out our mappers, we're looping now
             if (_useContinuousLoopingMapper)
             {
-                this->_intervalMapper = new LoopingIntervalMapper<TTime>(this);
+                this->_intervalMapper.reset(new LoopingIntervalMapper<TTime>(this));
             }
             else
             {
-                this->_intervalMapper = new SimpleLoopingIntervalMapper<TTime>(this);
+                this->_intervalMapper.reset(new SimpleLoopingIntervalMapper<TTime>(this));
             }
 
 #if SPAMAUDIO

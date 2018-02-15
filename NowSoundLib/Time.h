@@ -103,12 +103,12 @@ namespace NowSound
     class Duration
     {
     private:
-        const int64_t _value;
+        int64_t _value;
 
     public:
         Duration() = delete;
 
-        Duration(long duration) : _value(duration)
+        Duration(int64_t duration) : _value(duration)
         {
         }
 
