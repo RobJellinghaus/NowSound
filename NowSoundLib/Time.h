@@ -41,11 +41,10 @@ namespace NowSound
         int64_t _value;
 
     public:
-        Time() = delete;
+        Time() {};
 
         Time(int64_t value) : _value(value)
-        {
-        }
+        { }
 
         int64_t Value() const { return _value; }
 
@@ -106,11 +105,10 @@ namespace NowSound
         int64_t _value;
 
     public:
-        Duration() = delete;
+        Duration() {};
 
         Duration(int64_t duration) : _value(duration)
-        {
-        }
+        { }
 
         int64_t Value() const { return _value; }
 
@@ -125,9 +123,14 @@ namespace NowSound
             return *this;
         }
 
-        Duration<TTime> operator /(int second) const
+        Duration<TTime> operator /(float second) const
         {
             return new Duration<TTime>(_value / second);
+        }
+
+        Duration<TTime> operator *(float second) const
+        {
+            return new Duration<TTime>(_value * second);
         }
 
         bool operator <(Duration<TTime> second) const
@@ -220,35 +223,36 @@ namespace NowSound
 
         static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
 
-        Time<TTime> InitialTime() { return _initialTime; }
-        Duration<TTime> IntervalDuration() { return _duration;  }
+        Time<TTime> InitialTime() const { return _initialTime; }
+        Duration<TTime> IntervalDuration() const { return _duration; }
 
         bool IsEmpty() const { return _duration.Value() == 0; }
 
         Interval<TTime> SubintervalStartingAt(Duration<TTime> offset) const
         {
             Check(offset <= _duration);
-            return new Interval<TTime>(_initialTime + offset, _duration - offset);
+            return Interval<TTime>(_initialTime + offset, _duration - offset);
         }
 
         Interval<TTime> SubintervalOfDuration(Duration<TTime> duration) const
         {
             Check(duration <= _duration);
-            return new Interval<TTime>(_initialTime, duration);
+            return Interval<TTime>(_initialTime, duration);
         }
 
         Interval<TTime> Intersect(const Interval<TTime>& other) const
         {
-            Time<TTime> intersectionStart = Time<TTime>.Max(_initialTime, other._initialTime);
-            Time<TTime> intersectionEnd = Time<TTime>.Min(_initialTime + _duration, other._initialTime + other.SliceDuration());
+            Time<TTime> intersectionStart = Time<TTime>::Max(_initialTime, other._initialTime);
+            Time<TTime> intersectionEnd = Time<TTime>::Min(_initialTime + _duration, other.InitialTime() + other.IntervalDuration());
 
             if (intersectionEnd < intersectionStart)
             {
-                return Interval<TTime>.Empty;
+                return Interval<TTime>::Empty();
             }
             else
             {
-                return new Interval<TTime>(intersectionStart, intersectionEnd - intersectionStart);
+                Interval<TTime> result(intersectionStart, intersectionEnd - intersectionStart);
+                return result;
             }
         }
 

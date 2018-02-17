@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include "pch.h"
 
 #include "BufferAllocator.h"
@@ -18,56 +20,56 @@ namespace NowSound
     class Slice
     {
     private:
-        // The backing store; logically divided into slivers.
-        // This is borrowed from this slice's containing stream.
-        const Buf<TValue>* _buffer;
-
         // Copy memory from src to dest, using byte offsets.
         static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t length)
         {
             std::memcpy(
-                (void*)dest + destOffset,
-                (void*)src + srcOffset,
+                (uint8_t*)dest + destOffset,
+                (uint8_t*)src + srcOffset,
                 length);
         }
 
+        // The backing store; logically divided into slivers.
+        // This is borrowed from this slice's containing stream.
+        Buf<TValue>* _buffer;
+
         // The number of slivers contained.
-        const Duration<TTime> _duration;
+        Duration<TTime> _duration;
 
         // The index to the sliver at which this slice actually begins.
-        const Duration<TTime> _offset;
+        Duration<TTime> _offset;
 
-        // The size of each sliver in this slice; a count of T.
+        // The count of T values in each sliver in this slice.
         // Slices are composed of multiple Slivers, one per unit of Duration.
-        const int _sliverSize;
+        int _sliverCount;
 
     public:
         // Default slice is empty
-        Slice() : _duration{}, _offset{}, _sliverSize{}, _buffer{} {}
+        Slice() : _duration{}, _offset{}, _sliverCount{}, _buffer{} {}
 
-        Slice(Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
-            : _buffer(buffer), _offset(offset), _duration(duration), _sliverSize(sliverSize)
+        Slice(const Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
+            : _buffer(buffer), _offset(offset), _duration(duration), _sliverCount(sliverSize)
         {
-            Check(buffer.Data != null);
+            Check(buffer->Data() != null);
             Check(offset >= 0);
             Check(duration >= 0);
-            Check((offset * sliverSize) + (duration * sliverSize) <= buffer.Data.Length);
+            Check((offset * sliverSize) + (duration * sliverSize) <= buffer->Data().Length);
         }
 
-        Slice(Buf<TValue>* buffer, int sliverSize)
-            : _buffer(buffer), _offset(0), _duration(buffer.Data.Length / sliverSize), _sliverSize(sliverSize)
+        Slice(const Buf<TValue>* buffer, int sliverSize)
+            : _buffer(buffer), _offset(0), _duration(buffer->Data().Length / sliverSize), _sliverCount(sliverSize)
         {}
 
         Slice(const Slice& other)
-            : _buffer(other._buffer), _offset(other._offset), _duration(other.SliceDuration()), _sliverSize(other._sliverSize)
+            : _buffer(other._buffer), _offset(other._offset), _duration(other.SliceDuration()), _sliverCount(other._sliverCount)
         {}
 
-        const Slice& operator=(const Slice& other)
+        Slice& operator=(const Slice& other)
         {
             _buffer = other._buffer;
             _offset = other._offset;
             _duration = other.SliceDuration();
-            _sliverSize = other._sliverSize;
+            _sliverCount = other._sliverCount;
         }
 
         // The number of slivers contained.
@@ -78,9 +80,9 @@ namespace NowSound
 
         // The size of each sliver in this slice; a count of T.
         // Slices are composed of multiple Slivers, one per unit of Duration.
-        int SliverSize() const { return _sliverSize; }
+        int SliverCount() const { return _sliverCount; }
 
-        bool IsEmpty() const { return Duration == 0; }
+        bool IsEmpty() const { return SliceDuration() == 0; }
 
         // For use by extension methods only
         const Buf<TValue>* Buffer() const { return _buffer; }
@@ -90,10 +92,10 @@ namespace NowSound
         TValue& Get(Duration<TTime> offset, int subindex) const
         {
             Check(!IsEmpty());
-            Check(totalOffset * _sliverSize < Buffer.Data.Length);
+            Check(totalOffset * _sliverCount < Buffer->Data().Length);
             Duration<TTime> totalOffset = _offset + offset;
-            long finalOffset = totalOffset * _sliverSize + subindex;
-            return _buffer.Data[finalOffset];
+            long finalOffset = totalOffset * _sliverCount + subindex;
+            return _buffer->Data()[finalOffset];
         }
 
         // Get a portion of this Slice, starting at the given offset, for the given duration.
@@ -102,7 +104,7 @@ namespace NowSound
             Check(initialOffset >= 0); // can't slice before the beginning of this slice
             Check(_duration >= 0); // must be nonnegative count
             Check(initialOffset + duration <= _duration); // can't slice beyond the end
-            return new Slice<TTime, TValue>(_buffer, Offset + initialOffset, duration, _sliverSize);
+            return Slice<TTime, TValue>(_buffer, Offset() + initialOffset, duration, _sliverCount);
         }
 
         // Get the rest of this Slice starting at the given offset.
@@ -111,7 +113,7 @@ namespace NowSound
             return Subslice(initialOffset, _duration - initialOffset);
         }
 
-        TValue* OffsetPointer() { return Buffer()->Data + (_offset * _sliverSize); }
+        TValue* OffsetPointer() { return Buffer()->Data + (_offset * _sliverCount); }
 
         // Get the prefix of this Slice starting at offset 0 and extending for the requested duration.
         Slice<TTime, TValue> SubsliceOfDuration(Duration<TTime> duration) const
@@ -119,38 +121,38 @@ namespace NowSound
             return Subslice(0, duration);
         }
 
-        size_t SliverSizeInBytes() const { return sizeof(TValue) * _sliverSize; }
+        size_t SliverSizeInBytes() const { return sizeof(TValue) * _sliverCount; }
         size_t SizeInBytes() const { return SliverSizeInBytes() * _duration.Value(); }
 
         // Copy this slice's data into destination; destination must be long enough.
         void CopyTo(Slice<TTime, TValue>& destination) const
         {
             Check(destination.SliceDuration() >= _duration);
-            Check(destination._sliverSize == _sliverSize);
+            Check(destination._sliverCount == _sliverCount);
 
             // TODO: support reversed copies etc.
-            ArrayCopy(_buffer.Data,
-                _offset.Value() * _sliverSize,
-                destination._buffer.Data,
-                destination._offset.Value() * _sliverSize,
+            ArrayCopy(_buffer->Data(),
+                _offset.Value() * _sliverCount,
+                destination._buffer->Data(),
+                destination._offset.Value() * _sliverCount,
                 SizeInBytes());
         }
 
         void CopyTo(TValue* dest) const
         {
-            ArrayCopy(_buffer->Data, _offset.Value() * _sliverSize, dest, 0, SizeInBytes());
+            ArrayCopy(_buffer->Data(), _offset.Value() * _sliverCount, dest, 0, SizeInBytes());
         }
 
         // Copy data from the source, replacing all data in this slice.
         void CopyFrom(TValue* source)
         {
-            ArrayCopy(source, 0, _buffer.Data, _offset * _sliverSize, SizeInBytes());
+            ArrayCopy(source, 0, _buffer->Data(), _offset.Value() * _sliverCount, SizeInBytes());
         }
 
         // Are these samples adjacent in their underlying storage?
         bool Precedes(const Slice<TTime, TValue>& next) const
         {
-            return _buffer.Data == next._buffer.Data && _offset + _duration == next._offset;
+            return _buffer->Data() == next._buffer->Data() && _offset + _duration == next._offset;
         }
 
         // Merge two adjacent samples into a single sample.
@@ -158,7 +160,7 @@ namespace NowSound
         Slice<TTime, TValue> UnionWith(const Slice<TTime, TValue>& next) const
         {
             Check(Precedes(next));
-            return Slice<TTime, TValue>(_buffer, _offset, _duration + next.SliceDuration(), _sliverSize);
+            return Slice<TTime, TValue>(_buffer, _offset, _duration + next.SliceDuration(), _sliverCount);
         }
 
         // Equality comparison.
@@ -187,6 +189,6 @@ namespace NowSound
         {
         }
 
-        Interval<TTime> SliceInterval() const { return new Interval<TTime>(_time, _value.SliceDuration()); }
+        Interval<TTime> SliceInterval() const { return Interval<TTime>(_time, _value.SliceDuration()); }
     };
 }

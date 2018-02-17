@@ -51,7 +51,7 @@ namespace NowSound
 
     // Identity mapping.
     template<typename TTime>
-    class IdentityIntervalMapper : IntervalMapper<TTime>
+    class IdentityIntervalMapper : public IntervalMapper<TTime>
     {
     private:
         IStream<TTime>* _stream;

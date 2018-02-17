@@ -39,7 +39,10 @@ namespace NowSound
             // Prepopulate the free list as a way of preallocating.
             for (int i = 0; i < initialNumberOfBuffers; i++)
             {
-                _freeList.push_back(std::move(Buf<T>(_latestBufferId++, new T[bufferLength], bufferLength)));
+                T* bufferArray = new T[bufferLength];
+                std::unique_ptr<T> bufferPtr(bufferArray);
+                Buf<T> buf(_latestBufferId++, std::move(bufferPtr), bufferLength);
+                _freeList.push_back(std::move(buf));
             }
             _totalBufferCount = initialNumberOfBuffers;
         }
@@ -73,12 +76,10 @@ namespace NowSound
         // Free the given buffer back to the pool.
         virtual void Free(Buf<T>&& buffer)
         {
+            // must not already be on free list or we have a bug
             for (const Buf<T>& t : _freeList)
             {
-                if (t.Data == buffer.Data)
-                {
-                    return;
-                }
+                Check(!(t == buffer)); // TODO: Buf<T>::operator!=
             }
             _freeList.push_back(std::move(buffer));
         }

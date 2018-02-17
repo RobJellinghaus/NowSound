@@ -10,30 +10,33 @@ namespace NowSound
 {
     // Buffer of data; owns the data contained within it.
     template<typename T>
-    struct Buf
+    class Buf
     {
-        const int Id;
-        const T* Data;
-        const int Length;
+        const int _id;
+        const std::unique_ptr<T> _data;
+        const int _length;
 
-        Buf(int id, T*&& data, int length)
+    public:
+        Buf(int id, std::unique_ptr<T>&& data, int length)
+            : _id(id), _data(std::move(data)), _length(length)
         {
-            Id = id;
-            Data = std::move(data);
-            Length = length;
+            Check(_data != nullptr);
         }
 
         // move constructor
         Buf(Buf&& other)
+            : _id(other.Id), _data(std::move(other._data)), _length(other.Length)
         {
-            Id = std::move(other.Id);
-            Data = std::move(other.Data);
-            Length = other.Length;
+            Check(_data != nullptr);
         }
 
-        bool Equals(const Buf<T>& other)
+        int Id() const { return _id; }
+        T* Data() const { return _data.get(); }
+        int Length() const { return _length; }
+
+        bool operator==(const Buf<T>& other) const
         {
-            return Id == other.Id && Data == other.Data && Length == other.Length;
+            return _id == other._id && _data == other._data && _length == other._length;
         }
     };
 

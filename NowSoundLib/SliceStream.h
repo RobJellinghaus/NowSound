@@ -21,8 +21,8 @@ namespace NowSound
     // Streams may have varying internal policies for mapping time to underlying data, and may form hierarchies
     // internally.
     // 
-    // Streams have a SliverSize which denotes a larger granularity within the Stream's data.
-    // A SliverSize of N represents that each element in the Stream logically consists of N contiguous
+    // Streams have a SliverCount which denotes a larger granularity within the Stream's data.
+    // A SliverCount of N represents that each element in the Stream logically consists of N contiguous
     // TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
     // A Stream with duration 1 has exactly one sliver of data. 
     template<typename TTime, typename TValue>
@@ -109,7 +109,7 @@ namespace NowSound
 
         Interval<TTime> DiscreteInterval() const { return new Interval<TTime>(InitialTime(), DiscreteDuration()); }
 
-        const IntervalMapper<TTime>* Mapper() const { return _intervalMapper->get(); }
+        const IntervalMapper<TTime>* Mapper() const { return _intervalMapper.get(); }
         void Mapper(IntervalMapper<TTime>&& value) { _intervalMapper = std::move(value); }
 
         // Shut the stream; no further appends may be accepted.
@@ -192,8 +192,8 @@ namespace NowSound
                 _remainingFreeSlice = new Slice<TTime, TValue>(
                     appendBuffer,
                     0,
-                    appendBuffer->Data.Length / SliverSize,
-                    SliverSize);
+                    appendBuffer->Data.Length / SliverCount,
+                    SliverCount);
             }
         }
 
@@ -345,7 +345,7 @@ namespace NowSound
             Check(source != null);
             int neededLength = startOffset + stride * (height - 1) + width;
             Check(source.Length >= neededLength);
-            Check(SliverSize == width * height);
+            Check(SliverCount == width * height);
             Check(stride >= width);
 
             EnsureFreeBuffer();
@@ -401,7 +401,7 @@ namespace NowSound
                             firstSlice.Slice.Buffer,
                             firstSlice.Slice.Offset + toTrim,
                             firstSlice.Slice.Duration - toTrim,
-                            SliverSize));
+                            SliverCount));
                     _data[0] = newFirstSlice;
                     _discreteDuration -= toTrim;
                     _initialTime += toTrim;
@@ -458,12 +458,12 @@ namespace NowSound
         TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
         {
             // we must overlap somewhere
-            Check(!firstMappedInterval.Intersect(Interval<TTime>(InitialTime(), DiscreteDuration())).IsEmpty());
+            Check(!firstMappedInterval.Intersect(DiscreteInterval()).IsEmpty());
 
             // Get the biggest available slice at firstMappedInterval.InitialTime.
             // First, get the index of the slice just after the one we want.
-            TimedSlice<TTime, TValue> target = new TimedSlice<TTime, TValue>(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
-            int originalIndex = _data.BinarySearch(target, TimedSlice<TTime, TValue>.Comparer.Instance);
+            TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
+            int originalIndex = std::find(_data.begin(), data.end(), target, TimedSlice<TTime, TValue>.Comparer.Instance);
             int index = originalIndex;
 
             if (index < 0)
