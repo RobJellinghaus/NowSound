@@ -60,15 +60,17 @@ namespace NowSound
         // TODO: needs thread safety or contractual thread affinity
         Buf<T>&& Allocate()
         {
-            if (_freeList.Count == 0)
+            if (_freeList.size() == 0)
             {
                 _totalBufferCount++;
-                return std::move(Buf<T>(_latestBufferId++, new T[BufferLength], BufferLength));
+                std::unique_ptr<T> bufStorage(new T[BufferLength]);
+                Buf<T> result(_latestBufferId++, std::move(bufStorage), BufferLength);
+                return std::move(result);
             }
             else
             {
-                Buf<T> ret = std::move(_freeList[_freeList.Count - 1]);
-                _freeList.RemoveAt(_freeList.Count - 1);
+                Buf<T> ret = std::move(_freeList[_freeList.size() - 1]);
+                _freeList.erase(_freeList.end());
                 return std::move(ret);
             }
         }

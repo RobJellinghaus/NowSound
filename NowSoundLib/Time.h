@@ -50,12 +50,12 @@ namespace NowSound
 
         static Time<TTime> Min(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__min(_value, second.Value()));
+            return Time<TTime>(__min(first.Value(), second.Value()));
         }
 
         static Time<TTime> Max(const Time<TTime>& first, const Time<TTime>& second)
         {
-            return new Time<TTime>(__max(_value, second.Value()));
+            return Time<TTime>(__max(first.Value(), second.Value()));
         }
 
         Time<TTime>& operator=(const Time<TTime>& other)
@@ -64,32 +64,32 @@ namespace NowSound
             return *this;
         }
 
-        bool operator <(const Time<TTime>& second)
+        bool operator <(const Time<TTime>& second) const
         {
             return _value < second.Value();
         }
 
-        bool operator >(const Time<TTime>& second)
+        bool operator >(const Time<TTime>& second) const
         {
             return _value > second.Value();
         }
 
-        bool operator ==(const Time<TTime>& second)
+        bool operator ==(const Time<TTime>& second) const
         {
             return _value == second.Value();
         }
 
-        bool operator !=(const Time<TTime>& second)
+        bool operator !=(const Time<TTime>& second) const
         {
             return _value != second.Value();
         }
 
-        bool operator <=(const Time<TTime>& second)
+        bool operator <=(const Time<TTime>& second) const
         {
             return _value <= second.Value();
         }
 
-        bool operator >=(const Time<TTime>& second)
+        bool operator >=(const Time<TTime>& second) const
         {
             return _value >= second.Value();
         }
@@ -125,40 +125,40 @@ namespace NowSound
 
         Duration<TTime> operator /(float second) const
         {
-            return new Duration<TTime>(_value / second);
+            return Duration<TTime>(_value / second);
         }
 
         Duration<TTime> operator *(float second) const
         {
-            return new Duration<TTime>(_value * second);
+            return Duration<TTime>(_value * second);
         }
 
-        bool operator <(Duration<TTime> second) const
+        bool operator <(const Duration<TTime>& second) const
         {
             return _value < second.Value();
         }
 
-        bool operator >(Duration<TTime> second) const
+        bool operator >(const Duration<TTime>& second) const
         {
             return _value > second.Value();
         }
 
-        bool operator <=(Duration<TTime> second) const
+        bool operator <=(const Duration<TTime>& second) const
         {
             return _value <= second.Value();
         }
 
-        bool operator >=(Duration<TTime> second) const
+        bool operator >=(const Duration<TTime>& second) const
         {
             return _value >= second.Value();
         }
 
-        bool operator ==(Duration<TTime> second) const
+        bool operator ==(const Duration<TTime>& second) const
         {
             return _value == second.Value();
         }
 
-        bool operator !=(Duration<TTime> second) const
+        bool operator !=(const Duration<TTime>& second) const
         {
             return _value != second.Value();
         }
@@ -167,13 +167,13 @@ namespace NowSound
     template<typename TTime>
     Duration<TTime> operator -(Time<TTime> first, Time<TTime> second)
     {
-        return new Duration<TTime>(first.Value() - second.Value());
+        return Duration<TTime>(first.Value() - second.Value());
     }
 
     template<typename TTime>
     Time<TTime> operator -(Time<TTime> first, Duration<TTime> second)
     {
-        return new Time<TTime>(first.Value() - second.Value());
+        return Time<TTime>(first.Value() - second.Value());
     }
 
     template<typename TTime>
@@ -221,7 +221,7 @@ namespace NowSound
             Check(duration >= 0);
         }
 
-        static Interval<TTime> Empty() { return new Interval<TTime>(0, 0); }
+        static Interval<TTime> Empty() { return Interval<TTime>(0, 0); }
 
         Time<TTime> InitialTime() const { return _initialTime; }
         Duration<TTime> IntervalDuration() const { return _duration; }

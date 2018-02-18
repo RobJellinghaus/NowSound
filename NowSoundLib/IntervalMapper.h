@@ -21,7 +21,7 @@ namespace NowSound
         // Continuous duration of stream; cannot be called until IsShut().
         virtual ContinuousDuration<TTime> ExactDuration() const = 0;
         // Interval of stream.
-        Interval<TTime> DiscreteInterval() const { return DiscreteInterval<TTime>(InitialTime(), DiscreteDuration()); }
+        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(InitialTime(), DiscreteDuration()); }
         // Is the stream shut (that is, no longer accepting appends, and has begun looping)?
         virtual bool IsShut() const = 0;
     };

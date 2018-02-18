@@ -45,15 +45,14 @@ namespace NowSound
 
         // As with Slice<typeparam name="TValue"></typeparam>, this defines the number of T values in an
         // individual slice.
-        int _sliverSize;
+        int _sliverCount;
 
         // Is this stream shut?
         bool _isShut;
 
-        SliceStream(Time<TTime> initialTime, int sliverSize)
+        SliceStream(Time<TTime> initialTime, int sliverCount)
+            : _initialTime(initialTime), _sliverCount(sliverCount), _continuousDuration{0}, _isShut{ false }
         {
-            _initialTime = initialTime;
-            _sliverSize = sliverSize;
         }
 
     public:
@@ -66,6 +65,8 @@ namespace NowSound
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
         // the sample rate.
         virtual ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
+
+        int SliverCount() const { return _sliverCount; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -107,7 +108,7 @@ namespace NowSound
         // The discrete duration of this stream; always exactly equal to the number of timepoints appended.
         virtual Duration<TTime> DiscreteDuration() const { return _discreteDuration; }
 
-        Interval<TTime> DiscreteInterval() const { return new Interval<TTime>(InitialTime(), DiscreteDuration()); }
+        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(this->InitialTime(), this->DiscreteDuration()); }
 
         const IntervalMapper<TTime>* Mapper() const { return _intervalMapper.get(); }
         void Mapper(IntervalMapper<TTime>&& value) { _intervalMapper = std::move(value); }
@@ -186,14 +187,17 @@ namespace NowSound
                 // allocate a new buffer and transfer ownership of it to _buffers
                 _buffers.emplace_back(std::move(_allocator->Allocate()));
 
+                // if _buffers every grows, all the un-owning Buf<T>* pointers in the stream's slices could break
+                Check(_buffers.capacity() == DefaultBufferCount);
+
                 // get a borrowed pointer to the current append buffer
                 Buf<TValue>* appendBuffer = &_buffers.at(_buffers.size() - 1);
 
-                _remainingFreeSlice = new Slice<TTime, TValue>(
+                _remainingFreeSlice = Slice<TTime, TValue>(
                     appendBuffer,
                     0,
-                    appendBuffer->Data.Length / SliverCount,
-                    SliverCount);
+                    appendBuffer->Length() / this->SliverCount(),
+                    this->SliverCount());
             }
         }
 
@@ -201,31 +205,36 @@ namespace NowSound
         // of coalescing, updating _data and other fields, etc.
         Slice<TTime, TValue> InternalAppend(Slice<TTime, TValue> dest)
         {
-            Check(dest.Buffer.Data == _remainingFreeSlice.Buffer.Data); // dest must be from our free buffer
+            Check(dest.Buffer() == _remainingFreeSlice.Buffer()); // dest must be from our free buffer
 
-            if (_data.Count == 0)
+            if (_data.size() == 0)
             {
-                _data.Add(new TimedSlice<TTime, TValue>(InitialTime, dest));
+                _data.push_back(TimedSlice<TTime, TValue>(this->InitialTime(), dest));
             }
             else
             {
-                TimedSlice<TTime, TValue> last = _data[_data.Count - 1];
-                if (last.Slice.Precedes(dest))
+                TimedSlice<TTime, TValue> last = _data[_data.size() - 1];
+                if (last.Value().Precedes(dest))
                 {
-                    _data[_data.Count - 1] = new TimedSlice<TTime, TValue>(last.InitialTime, last.Slice.UnionWith(dest));
+                    _data[_data.size() - 1] = TimedSlice<TTime, TValue>(last.InitialTime(), last.Value().UnionWith(dest));
                 }
                 else
                 {
                     //Spam.Audio.WriteLine("BufferedSliceStream.InternalAppend: last did not precede; last slice is " + last.Slice + ", last slice time " + last.InitialTime + ", dest is " + dest);
-                    _data.Add(new TimedSlice<TTime, TValue>(last.InitialTime + last.Slice.Duration, dest));
+                    _data.push_back(TimedSlice<TTime, TValue>(last.InitialTime() + last.Value().SliceDuration(), dest));
                 }
             }
 
-            _discreteDuration += _discreteDuration + dest.Duration;
-            _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(dest.Duration);
+            this->_discreteDuration = this->_discreteDuration + dest.SliceDuration();
+            _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(dest.SliceDuration());
 
             return dest;
         }
+
+        // 256 1-second buffers is over a four-minute stream (assuming 1-second buffers).
+        // TODO: really need a way for Slices to refer to their Bufs in a non-owning but stable-against-
+        // backing-store-mutation way.
+        static const int DefaultBufferCount = 256;
 
     public:
         BufferedSliceStream(
@@ -236,7 +245,7 @@ namespace NowSound
             bool useContinuousLoopingMapper)
             : DenseSliceStream<TTime, TValue>(initialTime, sliverSize),
             _allocator(allocator),
-            _buffers{},
+            _buffers(DefaultBufferCount),
             _remainingFreeSlice{},
             _maxBufferedDuration(maxBufferedDuration),
             _useContinuousLoopingMapper(useContinuousLoopingMapper)
@@ -370,41 +379,44 @@ namespace NowSound
         // Trim off any content from the earliest part of the stream beyond _maxBufferedDuration.
         void Trim()
         {
-            if (_maxBufferedDuration == 0 || _discreteDuration <= _maxBufferedDuration)
+            if (_maxBufferedDuration == 0 || this->DiscreteDuration() <= _maxBufferedDuration)
             {
                 return;
             }
 
-            while (DiscreteDuration > _maxBufferedDuration)
+            while (this->DiscreteDuration() > _maxBufferedDuration)
             {
-                Duration<TTime> toTrim = DiscreteDuration - _maxBufferedDuration;
+                Duration<TTime> toTrim = this->DiscreteDuration() - _maxBufferedDuration;
                 // get the first slice
-                TimedSlice<TTime, TValue> firstSlice = _data[0];
-                if (firstSlice.Slice.Duration <= toTrim)
+                TimedSlice<TTime, TValue>& firstSlice = _data[0];
+                if (firstSlice.Value().SliceDuration() <= toTrim)
                 {
-                    _data.RemoveAt(0);
+                    _data.erase(_data.begin());
 #if DEBUG
                     for (TimedSlice<TTime, TValue> slice : _data) {
                         Check(slice.Slice.Buffer.Data != firstSlice.Slice.Buffer.Data,
                             "make sure our later stream data doesn't reference this one we're about to free");
                     }
 #endif
-                    _allocator->Free(firstSlice.Slice.Buffer);
-                    _discreteDuration -= firstSlice.Slice.Duration;
-                    _initialTime += firstSlice.Slice.Duration;
+                    Check(*(firstSlice.Value().Buffer()) == _buffers[0]);
+                    _allocator->Free(std::move(_buffers.at(0)));
+                    _buffers.erase(_buffers.begin());
+                    this->_discreteDuration = this->_discreteDuration - firstSlice.Value().SliceDuration();
+                    this->_initialTime = this->_initialTime + firstSlice.Value().SliceDuration();
                 }
                 else
                 {
-                    TimedSlice<TTime, TValue> newFirstSlice = new TimedSlice<TTime, TValue>(
-                        firstSlice.InitialTime + toTrim,
-                        new Slice<TTime, TValue>(
-                            firstSlice.Slice.Buffer,
-                            firstSlice.Slice.Offset + toTrim,
-                            firstSlice.Slice.Duration - toTrim,
-                            SliverCount));
+                    Slice<TTime, TValue> newSlice(
+                        firstSlice.Value().Buffer(),
+                        firstSlice.Value().Offset() + toTrim,
+                        firstSlice.Value().SliceDuration() - toTrim,
+                        this->SliverCount());
+                    TimedSlice<TTime, TValue> newFirstSlice(
+                        firstSlice.InitialTime() + toTrim,
+                        newSlice);
                     _data[0] = newFirstSlice;
-                    _discreteDuration -= toTrim;
-                    _initialTime += toTrim;
+                    this->_discreteDuration = this->_discreteDuration - toTrim;
+                    this->_initialTime = this->_initialTime - toTrim;
                 }
             }
         }
@@ -458,12 +470,12 @@ namespace NowSound
         TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
         {
             // we must overlap somewhere
-            Check(!firstMappedInterval.Intersect(DiscreteInterval()).IsEmpty());
+            Check(!firstMappedInterval.Intersect(this->DiscreteInterval()).IsEmpty());
 
             // Get the biggest available slice at firstMappedInterval.InitialTime.
             // First, get the index of the slice just after the one we want.
             TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
-            int originalIndex = std::find(_data.begin(), data.end(), target, TimedSlice<TTime, TValue>.Comparer.Instance);
+            int originalIndex = std::binary_search(_data.begin(), _data.end(), TimedSlice<TTime, TValue>::Compare);
             int index = originalIndex;
 
             if (index < 0)
@@ -471,7 +483,7 @@ namespace NowSound
                 // index is then the index of the next larger element
                 // -- we know there is a smaller element because we know firstMappedInterval fits inside stream interval
                 index = (~index) - 1;
-                Check(index >= 0, "index >= 0");
+                Check(index >= 0);
             }
 
             TimedSlice<TTime, TValue> foundTimedSlice = _data[index];

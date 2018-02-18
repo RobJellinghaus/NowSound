@@ -12,9 +12,9 @@ namespace NowSound
     template<typename T>
     class Buf
     {
-        const int _id;
-        const std::unique_ptr<T> _data;
-        const int _length;
+        int _id;
+        std::unique_ptr<T> _data;
+        int _length;
 
     public:
         Buf(int id, std::unique_ptr<T>&& data, int length)
@@ -25,7 +25,7 @@ namespace NowSound
 
         // move constructor
         Buf(Buf&& other)
-            : _id(other.Id), _data(std::move(other._data)), _length(other.Length)
+            : _id(other._id), _data(std::move(other._data)), _length(other._length)
         {
             Check(_data != nullptr);
         }

@@ -47,13 +47,13 @@ namespace NowSound
         // Default slice is empty
         Slice() : _duration{}, _offset{}, _sliverCount{}, _buffer{} {}
 
-        Slice(const Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverSize)
-            : _buffer(buffer), _offset(offset), _duration(duration), _sliverCount(sliverSize)
+        Slice(Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverCount)
+            : _buffer(buffer), _offset(offset), _duration(duration), _sliverCount(sliverCount)
         {
-            Check(buffer->Data() != null);
+            Check(buffer->Data() != nullptr);
             Check(offset >= 0);
             Check(duration >= 0);
-            Check((offset * sliverSize) + (duration * sliverSize) <= buffer->Data().Length);
+            Check((offset * sliverCount) + (duration * sliverCount) <= buffer->Length()); // TODO: this looks wrong... use GSL std::byte
         }
 
         Slice(const Buf<TValue>* buffer, int sliverSize)
@@ -84,8 +84,8 @@ namespace NowSound
 
         bool IsEmpty() const { return SliceDuration() == 0; }
 
-        // For use by extension methods only
-        const Buf<TValue>* Buffer() const { return _buffer; }
+        // TODO: make this private
+        Buf<TValue>* Buffer() const { return _buffer; }
 
         // Get a single value out of the slice at the given offset, sub-indexed in the slice by the given sub-index.
         // Can't get from an empty slice.
@@ -177,8 +177,8 @@ namespace NowSound
     struct TimedSlice
     {
     private:
-        const Time<TTime> _time;
-        const Slice<TTime, TValue> _value;
+        Time<TTime> _time;
+        Slice<TTime, TValue> _value;
 
     public:
         const Time<TTime> InitialTime() { return _time; }
@@ -189,6 +189,17 @@ namespace NowSound
         {
         }
 
+        TimedSlice& operator=(const TimedSlice& other)
+        {
+            _time = other._time;
+            _value = other._value;
+        }
+
         Interval<TTime> SliceInterval() const { return Interval<TTime>(_time, _value.SliceDuration()); }
+
+        static bool Compare(TimedSlice<TTime, TValue> left, TimedSlice<TTime, TValue> right)
+        {
+            return left._time < right._time ? -1 : left._time > right._time ? 1 : 0;
+        }
     };
 }
