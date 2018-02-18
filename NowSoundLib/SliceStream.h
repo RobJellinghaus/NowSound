@@ -84,7 +84,7 @@ namespace NowSound
         // Drop this stream and all its owned data.
         // 
         // This MAY need to become a ref counting structure if we want stream dependencies.
-        virtual ~SliceStream() = 0;
+        virtual ~SliceStream() {};
     };
 
     // A stream of data, accessed through consecutive, densely sequenced Slices.

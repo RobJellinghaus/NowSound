@@ -312,4 +312,7 @@ namespace NowSound
 
     Windows::Media::AudioFrame NowSoundTrack::s_audioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
+    int NowSoundTrack::s_sequenceNumber{};
+
+    int NowSoundTrack::s_zeroByteOutgoingFrameCount{};
 }
