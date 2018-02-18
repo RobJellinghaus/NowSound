@@ -135,7 +135,7 @@ namespace NowSound
         // largest available slice if not.
         // 
         // If the interval IsEmpty, return an empty slice.
-        virtual const Slice<TTime, TValue>& GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
+        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
 
         // Append contiguous data.
         // This must not be shut yet.
@@ -443,21 +443,21 @@ namespace NowSound
         {
             while (!sourceInterval.IsEmpty())
             {
-                Slice<TTime, TValue> source = GetNextSliceAt(sourceInterval);
+                Slice<TTime, TValue> source(GetNextSliceAt(sourceInterval));
                 destinationStream->Append(source);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.SliceDuration());
             }
         }
 
         // Map the interval time to stream local time, and get the next slice of it.
-        virtual const Slice<TTime, TValue>& GetNextSliceAt(Interval<TTime> interval) const
+        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval) const
         {
             Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(interval);
 
             if (firstMappedInterval.IsEmpty())
             {
                 // default slice is empty (but has no backing buf at all)
-                return Slice<TTime, TValue>();
+                return Slice<TTime, TValue>::Empty();
             }
 
             Check(firstMappedInterval.InitialTime() >= this->InitialTime());

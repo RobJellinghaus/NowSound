@@ -87,7 +87,7 @@ struct App : ApplicationT<App>
         _button1 = Button();
         _button1.Content(IReference<hstring>(L"Play Something"));
 
-        _button1.Click([&](IInspectable const& sender, RoutedEventArgs const&)
+        _button1.Click([&](IInspectable const&, RoutedEventArgs const&)
         {
             NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync();
         });

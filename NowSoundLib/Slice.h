@@ -29,6 +29,8 @@ namespace NowSound
                 length);
         }
 
+        static Slice<TTime, TValue> s_emptySlice;
+
         // The backing store; logically divided into slivers.
         // This is borrowed from this slice's containing stream.
         Buf<TValue>* _buffer;
@@ -44,6 +46,8 @@ namespace NowSound
         int _sliverCount;
 
     public:
+        static const Slice<TTime, TValue>& Empty() { return s_emptySlice; }
+
         // Default slice is empty
         Slice() : _duration{}, _offset{}, _sliverCount{}, _buffer{} {}
 
@@ -170,6 +174,9 @@ namespace NowSound
             return Buffer.Equals(other.Buffer) && Offset == other.Offset && _duration == other.SliceDuration();
         }
     };
+
+    template<typename TTime, typename TValue>
+    Slice<TTime, TValue> Slice<TTime, TValue>::s_emptySlice{};
 
     // A slice with an absolute initial time associated with it.
     // In the case of BufferedStreams, the first TimedSlice's InitialTime will be the InitialTime of the stream itself.

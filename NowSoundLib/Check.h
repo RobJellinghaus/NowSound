@@ -8,5 +8,5 @@
 namespace NowSound
 {
     // Unconditional check that runs whether in debug mode or not.
-    void Check(bool condition);
+    void __declspec(dllexport) Check(bool condition);
 }

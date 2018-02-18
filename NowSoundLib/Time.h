@@ -125,10 +125,15 @@ namespace NowSound
 
         Duration<TTime> operator /(float second) const
         {
-            return Duration<TTime>(_value / second);
+            return Duration<TTime>((int64_t)(_value / second));
         }
 
         Duration<TTime> operator *(float second) const
+        {
+            return Duration<TTime>((int64_t)(_value * second));
+        }
+
+        Duration<TTime> operator *(int second) const
         {
             return Duration<TTime>(_value * second);
         }

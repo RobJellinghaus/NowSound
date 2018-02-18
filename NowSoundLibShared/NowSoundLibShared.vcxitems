@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{074254a5-9e44-4721-82b3-7c1179461f0c}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Buf.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\BufferAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Check.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Clock.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\IntervalMapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Recorder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Slice.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\SliceStream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Time.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Check.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Clock.cpp" />
+  </ItemGroup>
+</Project>

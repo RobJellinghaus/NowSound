@@ -80,6 +80,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
+  <ImportGroup Label="Shared">
+    <Import Project="..\NowSoundLibShared\NowSoundLibShared.vcxitems" Label="Shared" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -305,19 +308,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BufferAllocator.h" />
-    <ClInclude Include="Check.h" />
-    <ClInclude Include="Buf.h" />
-    <ClInclude Include="NowSoundLibTypes.h" />
     <ClInclude Include="NowSoundTrack.h" />
-    <ClInclude Include="Recorder.h" />
-    <ClInclude Include="SliceStream.h" />
-    <ClInclude Include="Clock.h" />
-    <ClInclude Include="IntervalMapper.h" />
     <ClInclude Include="NowSoundLib.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Slice.h" />
-    <ClInclude Include="Time.h" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -325,8 +318,6 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Check.cpp" />
-    <ClCompile Include="Clock.cpp" />
     <ClCompile Include="NowSoundGraph.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

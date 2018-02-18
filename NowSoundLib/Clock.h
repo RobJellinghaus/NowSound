@@ -109,7 +109,8 @@ namespace NowSound
                                        // What fraction of a beat?
         ContinuousDuration<Beat> TimeToFractionalBeat(Time<AudioSample> time) const
         {
-            return ContinuousDuration<Beat>((int)TimeToBeats(time).Value());
+            float beatValue = TimeToBeats(time).Value();
+            return ContinuousDuration<Beat>(beatValue - std::floor(beatValue));
         }
 
 
