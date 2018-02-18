@@ -5,6 +5,8 @@
 
 #include "pch.h"
 
+#include <algorithm>
+
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "IntervalMapper.h"
@@ -133,18 +135,18 @@ namespace NowSound
         // largest available slice if not.
         // 
         // If the interval IsEmpty, return an empty slice.
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
+        virtual const Slice<TTime, TValue>& GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
 
         // Append contiguous data.
         // This must not be shut yet.
-        virtual void Append(Slice<TTime, TValue> source) = 0;
+        virtual void Append(const Slice<TTime, TValue>& source) = 0;
 
         // Append the given duration's worth of slices from the given pointer.
         // This must not be shut yet.
         virtual void Append(Duration<TTime> duration, TValue* p) = 0;
 
         // Copy the given interval of this stream to the destination.
-        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* destination) const = 0;
+        virtual void CopyTo(const Interval<TTime>& sourceInterval, TValue* destination) const = 0;
 
         /*
         // Copy the given interval of this stream to the destination.
@@ -203,32 +205,32 @@ namespace NowSound
 
         // Internally append this slice (which must be allocated from our free buffer); this does the work
         // of coalescing, updating _data and other fields, etc.
-        Slice<TTime, TValue> InternalAppend(Slice<TTime, TValue> dest)
+        Slice<TTime, TValue> InternalAppend(const Slice<TTime, TValue>& source)
         {
-            Check(dest.Buffer() == _remainingFreeSlice.Buffer()); // dest must be from our free buffer
+            Check(source.Buffer() == _remainingFreeSlice.Buffer()); // dest must be from our free buffer
 
             if (_data.size() == 0)
             {
-                _data.push_back(TimedSlice<TTime, TValue>(this->InitialTime(), dest));
+                _data.push_back(TimedSlice<TTime, TValue>(this->InitialTime(), source));
             }
             else
             {
                 TimedSlice<TTime, TValue> last = _data[_data.size() - 1];
-                if (last.Value().Precedes(dest))
+                if (last.Value().Precedes(source))
                 {
-                    _data[_data.size() - 1] = TimedSlice<TTime, TValue>(last.InitialTime(), last.Value().UnionWith(dest));
+                    _data[_data.size() - 1] = TimedSlice<TTime, TValue>(last.InitialTime(), last.Value().UnionWith(source));
                 }
                 else
                 {
                     //Spam.Audio.WriteLine("BufferedSliceStream.InternalAppend: last did not precede; last slice is " + last.Slice + ", last slice time " + last.InitialTime + ", dest is " + dest);
-                    _data.push_back(TimedSlice<TTime, TValue>(last.InitialTime() + last.Value().SliceDuration(), dest));
+                    _data.push_back(TimedSlice<TTime, TValue>(last.InitialTime() + last.Value().SliceDuration(), source));
                 }
             }
 
-            this->_discreteDuration = this->_discreteDuration + dest.SliceDuration();
-            _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(dest.SliceDuration());
+            this->_discreteDuration = this->_discreteDuration + source.SliceDuration();
+            _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(source.SliceDuration());
 
-            return dest;
+            return source;
         }
 
         // 256 1-second buffers is over a four-minute stream (assuming 1-second buffers).
@@ -317,9 +319,11 @@ namespace NowSound
         }
 
         // Append this slice's data, by copying it into this stream's private buffers.
-        virtual void Append(Slice<TTime, TValue> source)
+        virtual void Append(const Slice<TTime, TValue>& sourceArgument)
         {
             Check(!this->IsShut());
+
+            Slice<TTime, TValue> source = sourceArgument; // so it can be updated in the loop
 
             // Try to keep copying source into _remainingFreeSlice
             while (!source.IsEmpty())
@@ -421,8 +425,11 @@ namespace NowSound
             }
         }
 
-        virtual void CopyTo(Interval<TTime> sourceInterval, TValue* p) const
+        // Copy the given interval's worth of data to the destination pointer.
+        virtual void CopyTo(const Interval<TTime>& sourceIntervalArgument, TValue* p) const
         {
+            // so we can update it in the loop
+            Interval<TTime> sourceInterval = sourceIntervalArgument;
             while (!sourceInterval.IsEmpty())
             {
                 Slice<TTime, TValue> source(GetNextSliceAt(sourceInterval));
@@ -443,7 +450,7 @@ namespace NowSound
         }
 
         // Map the interval time to stream local time, and get the next slice of it.
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval) const
+        virtual const Slice<TTime, TValue>& GetNextSliceAt(Interval<TTime> interval) const
         {
             Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(interval);
 
@@ -456,7 +463,7 @@ namespace NowSound
             Check(firstMappedInterval.InitialTime() >= this->InitialTime());
             Check(firstMappedInterval.InitialTime() + firstMappedInterval.IntervalDuration() <= this->InitialTime() + this->DiscreteDuration());
 
-            TimedSlice<TTime, TValue> foundTimedSlice = GetInitialTimedSlice(firstMappedInterval);
+            const TimedSlice<TTime, TValue>& foundTimedSlice = GetInitialTimedSlice(firstMappedInterval);
             Interval<TTime> intersection = foundTimedSlice.SliceInterval().Intersect(firstMappedInterval);
             Check(!intersection.IsEmpty());
             Slice<TTime, TValue> ret(foundTimedSlice.Value().Subslice(
@@ -467,7 +474,7 @@ namespace NowSound
         }
 
         // Get the first slice that intersects the given interval.
-        TimedSlice<TTime, TValue> GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
+        const TimedSlice<TTime, TValue>& GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
         {
             // we must overlap somewhere
             Check(!firstMappedInterval.Intersect(this->DiscreteInterval()).IsEmpty());
@@ -475,19 +482,9 @@ namespace NowSound
             // Get the biggest available slice at firstMappedInterval.InitialTime.
             // First, get the index of the slice just after the one we want.
             TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
-            int originalIndex = std::binary_search(_data.begin(), _data.end(), TimedSlice<TTime, TValue>::Compare);
-            int index = originalIndex;
+            auto firstSliceNotLessThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
 
-            if (index < 0)
-            {
-                // index is then the index of the next larger element
-                // -- we know there is a smaller element because we know firstMappedInterval fits inside stream interval
-                index = (~index) - 1;
-                Check(index >= 0);
-            }
-
-            TimedSlice<TTime, TValue> foundTimedSlice = _data[index];
-            return foundTimedSlice;
+            return *firstSliceNotLessThanTarget;
         }
     };
 }

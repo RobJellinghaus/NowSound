@@ -17,6 +17,8 @@ namespace NowSound
         int _length;
 
     public:
+        Buf() : _id{}, _data{}, _length{} {}
+
         Buf(int id, std::unique_ptr<T>&& data, int length)
             : _id(id), _data(std::move(data)), _length(length)
         {
@@ -37,6 +39,14 @@ namespace NowSound
         bool operator==(const Buf<T>& other) const
         {
             return _id == other._id && _data == other._data && _length == other._length;
+        }
+
+        Buf<T>& operator=(Buf<T>&& other)
+        {
+            _id = other._id;
+            _data = std::move(other._data);
+            _length = other._length;
+            return *this;
         }
     };
 

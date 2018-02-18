@@ -265,6 +265,13 @@ namespace NowSound
 
             return _initialTime <= time && (_initialTime + _duration) > time;
         }
+
+        Interval<TTime>& operator=(const Interval<TTime>& other)
+        {
+            _initialTime = other._initialTime;
+            _duration = other._duration;
+            return *this;
+        }
     };
 
     // A continous distance between two Times.

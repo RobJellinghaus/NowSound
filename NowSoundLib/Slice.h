@@ -70,6 +70,7 @@ namespace NowSound
             _offset = other._offset;
             _duration = other.SliceDuration();
             _sliverCount = other._sliverCount;
+            return *this;
         }
 
         // The number of slivers contained.
@@ -181,9 +182,9 @@ namespace NowSound
         Slice<TTime, TValue> _value;
 
     public:
-        const Time<TTime> InitialTime() { return _time; }
+        const Time<TTime> InitialTime() const { return _time; }
 
-        const Slice<TTime, TValue>& Value() { return _value; }
+        const Slice<TTime, TValue>& Value() const { return _value; }
 
         TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : _time(startTime), _value(slice)
         {
@@ -193,13 +194,14 @@ namespace NowSound
         {
             _time = other._time;
             _value = other._value;
+            return *this;
         }
 
         Interval<TTime> SliceInterval() const { return Interval<TTime>(_time, _value.SliceDuration()); }
 
-        static bool Compare(TimedSlice<TTime, TValue> left, TimedSlice<TTime, TValue> right)
+        bool operator<(const TimedSlice<TTime, TValue>& other) const
         {
-            return left._time < right._time ? -1 : left._time > right._time ? 1 : 0;
+            return _time < other._time;
         }
     };
 }
