@@ -78,12 +78,14 @@ namespace UnitTestsDesktop
             Check(prefixSlice2.Precedes(suffixSlice2));
 
             PopulateFloatSlice(slice);
+            VerifySlice(slice);
 
-            Buf<float> buffer2 = bufferAllocator.Allocate();
-            Slice<AudioSample, float> slice2(buffer2, 0, FloatNumSlices, FloatSliverCount);
+            OwningBuf<float> buffer2(bufferAllocator.Allocate());
+            Slice<AudioSample, float> slice2(Buf<float>(buffer2), 0, FloatNumSlices, FloatSliverCount);
 
             slice.CopyTo(slice2);
 
+            VerifySlice(slice);
             VerifySlice(slice2);
         }
 

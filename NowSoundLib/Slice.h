@@ -21,13 +21,13 @@ namespace NowSound
     class Slice
     {
     private:
-        // Copy memory from src to dest, using byte offsets.
-        static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t length)
+        // Copy memory from src to dest, using counts of T.
+        static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t count)
         {
             std::memcpy(
                 (uint8_t*)dest + destOffset,
                 (uint8_t*)src + srcOffset,
-                length);
+                count * sizeof(TValue));
         }
 
         static Slice<TTime, TValue> s_emptySlice;
@@ -127,9 +127,6 @@ namespace NowSound
             return Subslice(0, duration);
         }
 
-        size_t SliverSizeInBytes() const { return sizeof(TValue) * _sliverCount; }
-        size_t SizeInBytes() const { return SliverSizeInBytes() * _duration.Value(); }
-
         // Copy this slice's data into destination; destination must be long enough.
         void CopyTo(Slice<TTime, TValue>& destination) const
         {
@@ -141,18 +138,18 @@ namespace NowSound
                 _offset.Value() * _sliverCount,
                 destination._buffer.Data(),
                 destination._offset.Value() * _sliverCount,
-                SizeInBytes());
+                _duration.Value() * _sliverCount);
         }
 
         void CopyTo(TValue* dest) const
         {
-            ArrayCopy(_buffer.Data(), _offset.Value() * _sliverCount, dest, 0, SizeInBytes());
+            ArrayCopy(_buffer.Data(), _offset.Value() * _sliverCount, dest, 0, _duration.Value() * _sliverCount);
         }
 
         // Copy data from the source, replacing all data in this slice.
         void CopyFrom(TValue* source)
         {
-            ArrayCopy(source, 0, _buffer.Data(), _offset.Value() * _sliverCount, SizeInBytes());
+            ArrayCopy(source, 0, _buffer.Data(), _offset.Value() * _sliverCount, _duration.Value() * _sliverCount);
         }
 
         // Are these samples adjacent in their underlying storage?
