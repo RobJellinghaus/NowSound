@@ -24,18 +24,16 @@ namespace UnitTestsDesktop
         TEST_METHOD(TestBufferAllocator)
         {
             BufferAllocator<float> bufferAllocator(FloatNumSlices * 2048, 1);
-            Buf<float> f(bufferAllocator.Allocate());
+            OwningBuf<float> f(bufferAllocator.Allocate());
             Check(f.Length() == FloatSliverSize * 1024 * FloatNumSlices);
 
-            /*
-            Buf<float> f2(std::move(bufferAllocator.Allocate()));
+            OwningBuf<float> f2(bufferAllocator.Allocate());
             Check(f.Length() == f2.Length());
             // this is technically unsafe but we want to check free list reuse
             float* f2ptr = f2.Data();
             bufferAllocator.Free(std::move(f2));
-            Buf<float> f3 = bufferAllocator.Allocate();
+            OwningBuf<float> f3 = bufferAllocator.Allocate();
             Check(f2ptr == f3.Data()); // need to pull from free list first
-            */
         }
 
         /*

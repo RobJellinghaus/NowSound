@@ -15,7 +15,8 @@ namespace NowSound
     // A reference to a sub-segment of an underlying buffer, indexed by the given TTime type.
     // A Slice is a contiguous segment of Slivers; think of each Sliver as a stereo pair of audio samples,
     // or a video frame, etc., with a Slice being a logically and physically continuous sequence
-    // thereof.
+    // thereof.  Slices do not own their data and are freely copyable, but can become dangling
+    // if their underlying stream is trimmed or freed.
     template<typename TTime, typename TValue>
     class Slice
     {
@@ -33,7 +34,7 @@ namespace NowSound
 
         // The backing store; logically divided into slivers.
         // This is borrowed from this slice's containing stream.
-        Buf<TValue>* _buffer;
+        Buf<TValue> _buffer;
 
         // The number of slivers contained.
         Duration<TTime> _duration;
@@ -51,17 +52,17 @@ namespace NowSound
         // Default slice is empty
         Slice() : _duration{}, _offset{}, _sliverCount{}, _buffer{} {}
 
-        Slice(Buf<TValue>* buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverCount)
+        Slice(Buf<TValue> buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverCount)
             : _buffer(buffer), _offset(offset), _duration(duration), _sliverCount(sliverCount)
         {
-            Check(buffer->Data() != nullptr);
+            Check(buffer.Data() != nullptr);
             Check(offset >= 0);
             Check(duration >= 0);
-            Check((offset * sliverCount) + (duration * sliverCount) <= buffer->Length()); // TODO: this looks wrong... use GSL std::byte
+            Check((offset * sliverCount) + (duration * sliverCount) <= buffer.Length()); // TODO: this looks wrong... use GSL std::byte
         }
 
-        Slice(const Buf<TValue>* buffer, int sliverSize)
-            : _buffer(buffer), _offset(0), _duration(buffer->Data().Length / sliverSize), _sliverCount(sliverSize)
+        Slice(const Buf<TValue> buffer, int sliverSize)
+            : _buffer(buffer), _offset(0), _duration(buffer.Data().Length / sliverSize), _sliverCount(sliverSize)
         {}
 
         Slice(const Slice& other)
@@ -90,17 +91,17 @@ namespace NowSound
         bool IsEmpty() const { return SliceDuration() == 0; }
 
         // TODO: make this private
-        Buf<TValue>* Buffer() const { return _buffer; }
+        Buf<TValue> Buffer() const { return _buffer; }
 
         // Get a single value out of the slice at the given offset, sub-indexed in the slice by the given sub-index.
         // Can't get from an empty slice.
         TValue& Get(Duration<TTime> offset, int subindex) const
         {
             Check(!IsEmpty());
-            Check(totalOffset * _sliverCount < Buffer->Data().Length);
+            Check(totalOffset * _sliverCount < _buffer.Data().Length);
             Duration<TTime> totalOffset = _offset + offset;
             long finalOffset = totalOffset * _sliverCount + subindex;
-            return _buffer->Data()[finalOffset];
+            return _buffer.Data()[finalOffset];
         }
 
         // Get a portion of this Slice, starting at the given offset, for the given duration.
@@ -136,28 +137,28 @@ namespace NowSound
             Check(destination._sliverCount == _sliverCount);
 
             // TODO: support reversed copies etc.
-            ArrayCopy(_buffer->Data(),
+            ArrayCopy(_buffer.Data(),
                 _offset.Value() * _sliverCount,
-                destination._buffer->Data(),
+                destination._buffer.Data(),
                 destination._offset.Value() * _sliverCount,
                 SizeInBytes());
         }
 
         void CopyTo(TValue* dest) const
         {
-            ArrayCopy(_buffer->Data(), _offset.Value() * _sliverCount, dest, 0, SizeInBytes());
+            ArrayCopy(_buffer.Data(), _offset.Value() * _sliverCount, dest, 0, SizeInBytes());
         }
 
         // Copy data from the source, replacing all data in this slice.
         void CopyFrom(TValue* source)
         {
-            ArrayCopy(source, 0, _buffer->Data(), _offset.Value() * _sliverCount, SizeInBytes());
+            ArrayCopy(source, 0, _buffer.Data(), _offset.Value() * _sliverCount, SizeInBytes());
         }
 
         // Are these samples adjacent in their underlying storage?
         bool Precedes(const Slice<TTime, TValue>& next) const
         {
-            return _buffer->Data() == next._buffer->Data() && _offset + _duration == next._offset;
+            return _buffer.Data() == next._buffer.Data() && _offset + _duration == next._offset;
         }
 
         // Merge two adjacent samples into a single sample.

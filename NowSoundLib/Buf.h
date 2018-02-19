@@ -10,38 +10,40 @@ namespace NowSound
 {
     // Buffer of data; owns the data contained within it.
     template<typename T>
-    class Buf
+    class OwningBuf
     {
         int _id;
         std::unique_ptr<T> _data;
         int _length;
 
     public:
-        Buf() : _id{}, _data{}, _length{} {}
+        OwningBuf() : _id{}, _data{}, _length{} {}
 
-        Buf(int id, std::unique_ptr<T>&& data, int length)
+        OwningBuf(int id, std::unique_ptr<T>&& data, int length)
             : _id(id), _data(std::move(data)), _length(length)
         {
             Check(_data != nullptr);
+            Check(length > 0);
         }
 
         // move constructor
-        Buf(Buf&& other)
+        OwningBuf(OwningBuf&& other)
             : _id(other._id), _data(std::move(other._data)), _length(other._length)
         {
             Check(_data != nullptr);
+            Check(_length > 0);
         }
 
         int Id() const { return _id; }
         T* Data() const { return _data.get(); }
         int Length() const { return _length; }
 
-        bool operator==(const Buf<T>& other) const
+        bool operator==(const OwningBuf<T>& other) const
         {
             return _id == other._id && _data == other._data && _length == other._length;
         }
 
-        Buf<T>& operator=(Buf<T>&& other)
+        OwningBuf<T>& operator=(OwningBuf<T>&& other)
         {
             _id = other._id;
             _data = std::move(other._data);
@@ -56,6 +58,28 @@ namespace NowSound
     class IBufAllocator
     {
     public:
-        virtual void Free(Buf<TValue>&& buf) = 0;
+        virtual void Free(OwningBuf<TValue>&& buf) = 0;
+    };
+
+    // Non-owning, copyable reference to the data owned by an OwningBuf<T>.
+    // TODO: consider converting this to span<T>.
+    template<typename T>
+    class Buf
+    {
+        T* _data;
+        int _length;
+
+    public:
+        Buf(OwningBuf<T>& owningBuf) : _data{owningBuf.Data()}, _length{owningBuf.Length()}
+        {
+            Check(_data != nullptr);
+            Check(_length > 0);
+        }
+
+        T* Data() const { return _data; }
+        int Length() const { return _length; }
+
+        // allow default copy (and hence assignment)
+        Buf(const Buf<T>& other) = default;
     };
 }

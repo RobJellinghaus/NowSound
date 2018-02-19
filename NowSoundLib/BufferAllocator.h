@@ -23,7 +23,7 @@ namespace NowSound
     private:
         // Free list; we recycle from here if possible.
         // This allocator owns all these buffers.
-        std::vector<Buf<T>> _freeList;
+        std::vector<OwningBuf<T>> _freeList;
 
         // Total number of buffers we have ever allocated.
         int _totalBufferCount;
@@ -41,7 +41,7 @@ namespace NowSound
             {
                 T* bufferArray = new T[bufferLength];
                 std::unique_ptr<T> bufferPtr(bufferArray);
-                Buf<T> buf(_latestBufferId++, std::move(bufferPtr), bufferLength);
+                OwningBuf<T> buf(_latestBufferId++, std::move(bufferPtr), bufferLength);
                 _freeList.push_back(std::move(buf));
             }
             _totalBufferCount = initialNumberOfBuffers;
@@ -58,30 +58,31 @@ namespace NowSound
 
         // Allocate a new Buf<T>; this is an owning Buf<T>.
         // TODO: needs thread safety or contractual thread affinity
-        Buf<T> Allocate()
+        OwningBuf<T> Allocate()
         {
             if (_freeList.size() == 0)
             {
                 _totalBufferCount++;
-                std::unique_ptr<T> bufStorage(new T[BufferLength]);
-                Buf<T> result(_latestBufferId++, std::move(bufStorage), BufferLength);
+                T* bufArray = new T[BufferLength];
+                std::unique_ptr<T> bufStorage(std::move(bufArray));
+                OwningBuf<T> result(_latestBufferId++, std::move(bufStorage), BufferLength);
                 return std::move(result);
             }
             else
             {
-                Buf<T> ret(std::move(_freeList[_freeList.size() - 1]));
+                OwningBuf<T> ret(std::move(_freeList[_freeList.size() - 1]));
                 _freeList.erase(_freeList.end() - 1);
                 return std::move(ret);
             }
         }
 
         // Free the given buffer back to the pool.
-        virtual void Free(Buf<T>&& buffer)
+        virtual void Free(OwningBuf<T>&& buffer)
         {
             // must not already be on free list or we have a bug
-            for (const Buf<T>& t : _freeList)
+            for (const OwningBuf<T>& t : _freeList)
             {
-                Check(!(t == buffer)); // TODO: Buf<T>::operator!=
+                Check(!(buffer == t)); // TODO: Buf<T>::operator!=
             }
             _freeList.push_back(std::move(buffer));
         }

@@ -175,30 +175,27 @@ namespace NowSound
         // This is the vector of buffers appended in the stream thus far; the last one is the current append buffer.
         // This vector owns the buffers within it; ownership is transferred from allocator to stream whenever a
         // new append buffer is needed.
-        std::vector<Buf<TValue>> _buffers;
+        std::vector<OwningBuf<TValue>> _buffers;
 
         // This is the remaining not-yet-allocated portion of the current append buffer (the last in _buffers).
         Slice<TTime, TValue> _remainingFreeSlice;
 
         bool _useContinuousLoopingMapper;
 
-        void EnsureFreeBuffer()
+        void EnsureFreeSlice()
         {
             if (_remainingFreeSlice.IsEmpty())
             {
                 // allocate a new buffer and transfer ownership of it to _buffers
                 _buffers.emplace_back(std::move(_allocator->Allocate()));
 
-                // if _buffers every grows, all the un-owning Buf<T>* pointers in the stream's slices could break
-                Check(_buffers.capacity() == DefaultBufferCount);
-
-                // get a borrowed pointer to the current append buffer
-                Buf<TValue>* appendBuffer = &_buffers.at(_buffers.size() - 1);
+                // get a reference to the current append buffer
+                OwningBuf<TValue>& appendBuffer = _buffers.at(_buffers.size() - 1);
 
                 _remainingFreeSlice = Slice<TTime, TValue>(
-                    appendBuffer,
+                    Buf<TValue>(appendBuffer),
                     0,
-                    appendBuffer->Length() / this->SliverCount(),
+                    appendBuffer.Length() / this->SliverCount(),
                     this->SliverCount());
             }
         }
@@ -207,7 +204,7 @@ namespace NowSound
         // of coalescing, updating _data and other fields, etc.
         Slice<TTime, TValue> InternalAppend(const Slice<TTime, TValue>& source)
         {
-            Check(source.Buffer() == _remainingFreeSlice.Buffer()); // dest must be from our free buffer
+            Check(source.Buffer().Data() == _remainingFreeSlice.Buffer().Data()); // dest must be from our free buffer
 
             if (_data.size() == 0)
             {
@@ -233,10 +230,14 @@ namespace NowSound
             return source;
         }
 
-        // 256 1-second buffers is over a four-minute stream (assuming 1-second buffers).
-        // TODO: really need a way for Slices to refer to their Bufs in a non-owning but stable-against-
-        // backing-store-mutation way.
-        static const int DefaultBufferCount = 256;
+        // We preallocate enough space in our buffer vector for 16 buffers, assuming they are
+        // 1 second each; most streams are not actually that long.  There is no problem with
+        // resizing/growing the vector if necessary; the vector contains OwningBuf<T> instances
+        // which own their T* backing stores, and the stream code deals in Buf<T> instances which
+        // have non-owning pointers to the T* backing stores.  And the backing stores are never
+        // relocated (stable pointers, modulo the stream being freed), so the OwningBuf<T>
+        // instances themselves can simply be managed by the vector.
+        static const int DefaultBufferCount = 16;
 
     public:
         BufferedSliceStream(
@@ -292,7 +293,7 @@ namespace NowSound
 
             while (duration > 0)
             {
-                EnsureFreeBuffer();
+                EnsureFreeSlice();
 
                 // if source is larger than available free buffer, then we'll iterate
                 Duration<TTime> durationToCopy(duration);
@@ -328,7 +329,7 @@ namespace NowSound
             // Try to keep copying source into _remainingFreeSlice
             while (!source.IsEmpty())
             {
-                EnsureFreeBuffer();
+                EnsureFreeSlice();
 
                 // if source is larger than available free buffer, then we'll iterate
                 Slice<TTime, TValue> originalSource = source;
@@ -361,7 +362,7 @@ namespace NowSound
             Check(SliverCount == width * height);
             Check(stride >= width);
 
-            EnsureFreeBuffer();
+            EnsureFreeSlice();
 
             Slice<TTime, TValue> destination = _remainingFreeSlice.SubsliceOfDuration(1);
 
@@ -402,7 +403,7 @@ namespace NowSound
                             "make sure our later stream data doesn't reference this one we're about to free");
                     }
 #endif
-                    Check(*(firstSlice.Value().Buffer()) == _buffers[0]);
+                    Check(firstSlice.Value().Buffer().Data() == _buffers[0].Data());
                     _allocator->Free(std::move(_buffers.at(0)));
                     _buffers.erase(_buffers.begin());
                     this->_discreteDuration = this->_discreteDuration - firstSlice.Value().SliceDuration();
