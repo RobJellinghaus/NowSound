@@ -40,7 +40,7 @@ struct App : ApplicationT<App>
         case NowSoundGraph_State::Created: return L"Created";
         case NowSoundGraph_State::Running: return L"Running";
         case NowSoundGraph_State::InError: return L"InError";
-        default: Check(false); // Unknown graph state; should be impossible
+        default: { Check(false); return L""; } // Unknown graph state; should be impossible
         }
     }
 
@@ -63,18 +63,20 @@ struct App : ApplicationT<App>
     {
         // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
         // so we use polling in this example -- and to determine how it actually works in modern C++.
-        bool stateIsSame;
+        NowSoundGraph_State currentState = NowSoundGraph::NowSoundGraph_GetGraphState();
         // While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
-        while (!(stateIsSame = expectedState == NowSoundGraph::NowSoundGraph_GetGraphState())
+        while (expectedState != NowSoundGraph::NowSoundGraph_GetGraphState()
             && winrt::clock::now() < timeoutTime)
         {
             // wait in intervals of 1/100 sec
             co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
+
+            currentState = NowSoundGraph::NowSoundGraph_GetGraphState();
         }
 
         UpdateStateLabel();
 
-        return stateIsSame;
+        return expectedState == currentState;
     }
 
     void OnLaunched(LaunchActivatedEventArgs const&)
@@ -149,7 +151,7 @@ struct App : ApplicationT<App>
         co_await resume_background();
         NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
 
-        NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(deviceInfo);
+        NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
         co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(1000));
 

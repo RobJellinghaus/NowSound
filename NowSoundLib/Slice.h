@@ -93,14 +93,14 @@ namespace NowSound
         // TODO: make this private
         Buf<TValue> Buffer() const { return _buffer; }
 
-        // Get a single value out of the slice at the given offset, sub-indexed in the slice by the given sub-index.
+        // Get a single value out of the slice at the given offset, selecting the given sliver by index.
         // Can't get from an empty slice.
-        TValue& Get(Duration<TTime> offset, int subindex) const
+        TValue& Get(Duration<TTime> offset, int sliverIndex) const
         {
             Check(!IsEmpty());
-            Check(totalOffset * _sliverCount < _buffer.Data().Length);
             Duration<TTime> totalOffset = _offset + offset;
-            long finalOffset = totalOffset * _sliverCount + subindex;
+            Check(totalOffset.Value() * _sliverCount < _buffer.Length());
+            int64_t finalOffset = totalOffset.Value() * _sliverCount + sliverIndex;
             return _buffer.Data()[finalOffset];
         }
 

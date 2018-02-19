@@ -55,7 +55,7 @@ namespace NowSound
 
             // Create the audio graph.
             // Graph must be Initialized.  On completion, graph becomes Created.
-            static __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice);
+            static __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();
 
             // Get the graph info for the created graph.
             // Graph must be Created or Running.

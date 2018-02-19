@@ -97,9 +97,10 @@ namespace NowSound
     NowSoundTrack::NowSoundTrack(AudioInputId inputId)
         : _sequenceNumber(s_sequenceNumber++),
         _state(NowSoundTrack_State::Recording),
+        _inputId(inputId),
         _startTime(Clock::Instance().Now()),
         _audioStream(_startTime, NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
-        // one beat is the shortest any track ever is
+        // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration(1),
         _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
         _localTime(0)

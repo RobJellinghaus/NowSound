@@ -76,7 +76,7 @@ NowSound_DeviceInfo NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo()
     return NowSound_DeviceInfo(nullptr, nullptr);
 }
 
-void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(NowSound_DeviceInfo outputDevice)
+void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
 {
     Check(s_audioGraphState == NowSoundGraph_State::Initialized);
 

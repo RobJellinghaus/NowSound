@@ -49,6 +49,9 @@ namespace NowSound
         // The audio graph which created this Track.
         // HolofunkAudioGraph _audioGraph; // TODO: do we want to have graph objects? Might we want multiple graphs for different output devices?
 
+        // The input the track is recording from, if recording.
+        AudioInputId _inputId;
+
         // The current state of the track.
         NowSoundTrack_State _state;
 
