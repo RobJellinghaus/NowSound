@@ -56,9 +56,9 @@ namespace NowSound
         // Number of bytes held in buffers on the free list.
         long TotalFreeListSpace() { return _freeList.Count * BufferLength * sizeof(T); }
 
-        // Allocate a new Buf<T>, returned by rvalue reference.
+        // Allocate a new Buf<T>; this is an owning Buf<T>.
         // TODO: needs thread safety or contractual thread affinity
-        Buf<T>&& Allocate()
+        Buf<T> Allocate()
         {
             if (_freeList.size() == 0)
             {
@@ -69,8 +69,8 @@ namespace NowSound
             }
             else
             {
-                Buf<T> ret = std::move(_freeList[_freeList.size() - 1]);
-                _freeList.erase(_freeList.end());
+                Buf<T> ret(std::move(_freeList[_freeList.size() - 1]));
+                _freeList.erase(_freeList.end() - 1);
                 return std::move(ret);
             }
         }
