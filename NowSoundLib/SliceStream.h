@@ -260,6 +260,23 @@ namespace NowSound
             _useExactLoopingMapper{ useExactLoopingMapper }
         { }
 
+        BufferedSliceStream(
+            int sliverCount,
+            BufferAllocator<TValue>* allocator)
+            : DenseSliceStream<TTime, TValue>(
+                Time<TTime>{},
+                sliverCount,
+                ContinuousDuration<TTime>{0},
+                false, // isShut
+                Duration<TTime>{},
+                std::move(std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>()))),
+            _allocator{ allocator },
+            _buffers{},
+            _remainingFreeSlice{},
+            _maxBufferedDuration{ Duration<TTime>{} },
+            _useExactLoopingMapper{ false }
+        { }
+
         BufferedSliceStream(BufferedSliceStream<TTime, TValue>&& other)
             : DenseSliceStream<TTime, TValue>(
                 other.InitialTime(),

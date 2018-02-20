@@ -39,9 +39,7 @@ namespace NowSound
             // Prepopulate the free list as a way of preallocating.
             for (int i = 0; i < initialNumberOfBuffers; i++)
             {
-                T* bufferArray = new T[bufferLength];
-                std::unique_ptr<T> bufferPtr(bufferArray);
-                OwningBuf<T> buf(_latestBufferId++, std::move(bufferPtr), bufferLength);
+                OwningBuf<T> buf(_latestBufferId++, bufferLength);
                 _freeList.push_back(std::move(buf));
             }
             _totalBufferCount = initialNumberOfBuffers;
@@ -63,16 +61,14 @@ namespace NowSound
             if (_freeList.size() == 0)
             {
                 _totalBufferCount++;
-                T* bufArray = new T[BufferLength];
-                std::unique_ptr<T> bufStorage(std::move(bufArray));
-                OwningBuf<T> result(_latestBufferId++, std::move(bufStorage), BufferLength);
-                return result;
+                OwningBuf<T> result(_latestBufferId++, BufferLength);
+                return std::move(result);
             }
             else
             {
                 OwningBuf<T> ret(std::move(_freeList[_freeList.size() - 1]));
                 _freeList.erase(_freeList.end() - 1);
-                return ret;
+                return std::move(ret);
             }
         }
 

@@ -19,11 +19,9 @@ namespace NowSound
     public:
         OwningBuf() = delete;
 
-        // Construct an OwningBuf on the given data, which must have at least one element.
-        OwningBuf(int id, std::unique_ptr<T>&& data, int length)
-            : _id(id), _data(std::move(data)), _length(length)
+        OwningBuf(int id, int length)
+            : _id(id), _data(std::move(std::unique_ptr<T>(new T[length]))), _length(length)
         {
-            Check(_data != nullptr);
             Check(length > 0);
         }
 
