@@ -239,15 +239,6 @@ namespace NowSound
             return source;
         }
 
-        // We preallocate enough space in our buffer vector for 16 buffers, assuming they are
-        // 1 second each; most streams are not actually that long.  There is no problem with
-        // resizing/growing the vector if necessary; the vector contains OwningBuf<T> instances
-        // which own their T* backing stores, and the stream code deals in Buf<T> instances which
-        // have non-owning pointers to the T* backing stores.  And the backing stores are never
-        // relocated (stable pointers, modulo the stream being freed), so the OwningBuf<T>
-        // instances themselves can simply be managed by the vector.
-        static const int DefaultBufferCount = 16;
-
     public:
         BufferedSliceStream(
             Time<TTime> initialTime,
@@ -263,7 +254,7 @@ namespace NowSound
                 Duration<TTime>{},
                 std::move(std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>()))),
             _allocator{ allocator },
-            _buffers{ DefaultBufferCount },
+            _buffers{ },
             _remainingFreeSlice{ },
             _maxBufferedDuration{ maxBufferedDuration },
             _useExactLoopingMapper{ useExactLoopingMapper }

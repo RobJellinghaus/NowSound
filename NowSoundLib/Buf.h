@@ -17,7 +17,7 @@ namespace NowSound
         int _length;
 
     public:
-        OwningBuf() : _id{}, _data{}, _length{} {}
+        OwningBuf() = delete;
 
         // Construct an OwningBuf on the given data, which must have at least one element.
         OwningBuf(int id, std::unique_ptr<T>&& data, int length)
