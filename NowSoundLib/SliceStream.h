@@ -52,8 +52,8 @@ namespace NowSound
         // Is this stream shut?
         bool _isShut;
 
-        SliceStream(Time<TTime> initialTime, int sliverCount)
-            : _initialTime(initialTime), _sliverCount(sliverCount), _continuousDuration{0}, _isShut{ false }
+        SliceStream(Time<TTime> initialTime, int sliverCount, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
+            : _initialTime{ initialTime }, _sliverCount{ sliverCount }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
         {
         }
 
@@ -68,6 +68,9 @@ namespace NowSound
         // the sample rate.
         virtual ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
 
+        // The number of T values in each sliver of this slice.
+        // SliceDuration.Value() is the number of slivers in the slice;
+        // the slice's size in bytes is SliceDuration.Value() * SliverCount() * sizeof(TValue).
         int SliverCount() const { return _sliverCount; }
 
         // Shut the stream; no further appends may be accepted.
@@ -99,12 +102,18 @@ namespace NowSound
         // This is held by a unique_ptr to allow for polymorphism.
         std::unique_ptr<IntervalMapper<TTime>> _intervalMapper;
 
-        DenseSliceStream(Time<TTime> initialTime, int sliverSize)
-            : SliceStream<TTime, TValue>(initialTime, sliverSize),
+        DenseSliceStream(
+            Time<TTime> initialTime,
+            int sliverCount,
+            ContinuousDuration<TTime> exactDuration,
+            bool isShut,
+            Duration<TTime> discreteDuration,
+            std::unique_ptr<IntervalMapper<TTime>>&& intervalMapper)
+            : SliceStream<TTime, TValue>(initialTime, sliverCount, exactDuration, isShut),
+            _discreteDuration{ discreteDuration },
             // when appending, we always start out with identity mapping
-            _intervalMapper(new IdentityIntervalMapper<TTime>(this))
-        {
-        }
+            _intervalMapper{ std::move(intervalMapper) }
+        { }
 
     public:
         // The discrete duration of this stream; always exactly equal to the number of timepoints appended.
@@ -112,7 +121,7 @@ namespace NowSound
 
         Interval<TTime> DiscreteInterval() const { return Interval<TTime>(this->InitialTime(), this->DiscreteDuration()); }
 
-        const IntervalMapper<TTime>* Mapper() const { return _intervalMapper.get(); }
+        IntervalMapper<TTime>* Mapper() const { return _intervalMapper.get(); }
         void Mapper(IntervalMapper<TTime>&& value) { _intervalMapper = std::move(value); }
 
         // Shut the stream; no further appends may be accepted.
@@ -180,7 +189,7 @@ namespace NowSound
         // This is the remaining not-yet-allocated portion of the current append buffer (the last in _buffers).
         Slice<TTime, TValue> _remainingFreeSlice;
 
-        bool _useContinuousLoopingMapper;
+        bool _useExactLoopingMapper;
 
         void EnsureFreeSlice()
         {
@@ -242,18 +251,45 @@ namespace NowSound
     public:
         BufferedSliceStream(
             Time<TTime> initialTime,
+            int sliverCount,
             BufferAllocator<TValue>* allocator,
-            int sliverSize,
             Duration<TTime> maxBufferedDuration,
-            bool useContinuousLoopingMapper)
-            : DenseSliceStream<TTime, TValue>(initialTime, sliverSize),
-            _allocator(allocator),
-            _buffers(DefaultBufferCount),
-            _remainingFreeSlice{},
-            _maxBufferedDuration(maxBufferedDuration),
-            _useContinuousLoopingMapper(useContinuousLoopingMapper)
+            bool useExactLoopingMapper)
+            : DenseSliceStream<TTime, TValue>(
+                initialTime,
+                sliverCount,
+                ContinuousDuration<TTime>{0},
+                false, // isShut
+                Duration<TTime>{},
+                std::move(std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>()))),
+            _allocator{ allocator },
+            _buffers{ DefaultBufferCount },
+            _remainingFreeSlice{ },
+            _maxBufferedDuration{ maxBufferedDuration },
+            _useExactLoopingMapper{ useExactLoopingMapper }
+        { }
+
+        BufferedSliceStream(BufferedSliceStream<TTime, TValue>&& other)
+            : DenseSliceStream<TTime, TValue>(
+                other.InitialTime(),
+                other.SliverCount(),
+                other.ExactDuration(),
+                other.IsShut(),
+                other.DiscreteDuration(),
+                std::move(other._intervalMapper)),
+            _allocator{ other._allocator },
+            _buffers{ std::move(other._buffers) },
+            _remainingFreeSlice{ other._remainingFreeSlice },
+            _maxBufferedDuration{ other._maxBufferedDuration },
+            _useExactLoopingMapper{ other._useExactLoopingMapper }
         {
+            Check(_allocator != nullptr);
+            Check(InitialTime() == other.InitialTime());
+            Time<TTime> finalTime = other.InitialTime() + other.DiscreteDuration();
+            Check(InitialTime() + DiscreteDuration() == finalTime);
         }
+
+        BufferedSliceStream(const BufferedSliceStream<TTime, TValue>& other) = delete;
 
         // On destruction, return all buffers to free list
         // TODO: does this need locking and/or thread checks?
@@ -270,13 +306,13 @@ namespace NowSound
         {
             this->DenseSliceStream<TTime, TValue>::Shut(finalDuration);
             // swap out our mappers, we're looping now
-            if (_useContinuousLoopingMapper)
+            if (_useExactLoopingMapper)
             {
-                this->_intervalMapper.reset(new LoopingIntervalMapper<TTime>(this));
+                this->_intervalMapper.reset(new ExactLoopingIntervalMapper<TTime>());
             }
             else
             {
-                this->_intervalMapper.reset(new SimpleLoopingIntervalMapper<TTime>(this));
+                this->_intervalMapper.reset(new SimpleLoopingIntervalMapper<TTime>());
             }
 
 #if SPAMAUDIO
@@ -453,7 +489,7 @@ namespace NowSound
         // Map the interval time to stream local time, and get the next slice of it.
         virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval) const
         {
-            Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(interval);
+            Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(this, interval);
 
             if (firstMappedInterval.IsEmpty())
             {

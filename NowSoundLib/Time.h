@@ -41,7 +41,7 @@ namespace NowSound
         int64_t _value;
 
     public:
-        Time() {};
+        Time() : _value{} {};
 
         Time(int64_t value) : _value(value)
         { }
@@ -105,7 +105,7 @@ namespace NowSound
         int64_t _value;
 
     public:
-        Duration() {};
+        Duration() : _value{} {};
 
         Duration(int64_t duration) : _value(duration)
         { }

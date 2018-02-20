@@ -61,8 +61,8 @@ namespace NowSound
             Check((offset * sliverCount) + (duration * sliverCount) <= buffer.Length()); // TODO: this looks wrong... use GSL std::byte
         }
 
-        Slice(const Buf<TValue> buffer, int sliverSize)
-            : _buffer(buffer), _offset(0), _duration(buffer.Data().Length / sliverSize), _sliverCount(sliverSize)
+        Slice(const Buf<TValue> buffer, int sliverCount)
+            : _buffer(buffer), _offset(0), _duration(buffer.Length() / sliverCount), _sliverCount(sliverCount)
         {}
 
         Slice(const Slice& other)

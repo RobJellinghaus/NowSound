@@ -61,7 +61,7 @@ namespace NowSound
         virtual void Free(OwningBuf<TValue>&& buf) = 0;
     };
 
-    // Non-owning, copyable reference to the data owned by an OwningBuf<T>.
+    // Non-owning, pass-by-copy reference to the data owned by an OwningBuf<T>.
     // TODO: consider converting this to span<T>.
     template<typename T>
     class Buf
@@ -70,6 +70,9 @@ namespace NowSound
         int _length;
 
     public:
+        // Default Buf is useful for zero-initializing an empty buffer; since this uses value semantics, this is reasonable
+        Buf() : _data{}, _length{} { }
+
         Buf(OwningBuf<T>& owningBuf) : _data{owningBuf.Data()}, _length{owningBuf.Length()}
         {
             Check(_data != nullptr);

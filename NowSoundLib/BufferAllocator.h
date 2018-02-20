@@ -29,7 +29,7 @@ namespace NowSound
         int _totalBufferCount;
 
     public:
-        // bufferCount is the number of values in each buffer; initialNumberOfBuffers is the number of buffers to pre-allocate
+        // bufferLength is the number of values in each buffer; initialNumberOfBuffers is the number of buffers to pre-allocate
         BufferAllocator(int bufferLength, int initialNumberOfBuffers)
             : BufferLength(bufferLength)
         {

@@ -99,7 +99,12 @@ namespace NowSound
         _state(NowSoundTrack_State::Recording),
         _inputId(inputId),
         _startTime(Clock::Instance().Now()),
-        _audioStream(_startTime, NowSoundGraph::GetAudioAllocator(), 2, /*maxBufferedDuration:*/ 0, /*useContinuousLoopingMapper*/ false),
+        _audioStream(
+            _startTime,
+            2,
+            NowSoundGraph::GetAudioAllocator(),
+            /*maxBufferedDuration:*/ 0,
+            /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration(1),
         _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
@@ -205,16 +210,15 @@ namespace NowSound
 
             // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
             uint32_t bytesRemaining = capacityInBytes;
-            int samplesRemaining = (int)bytesRemaining / 8; // stereo float
-
+            int slicesRemaining = (int)bytesRemaining / 8; // stereo float
             
-            s_audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            s_audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
-            while (samplesRemaining > 0)
+            while (slicesRemaining > 0)
             {
                 // get up to one second or samplesRemaining, whichever is smaller
                 Slice<AudioSample, float> longest(
-                    _audioStream.GetNextSliceAt(Interval<AudioSample>(_localTime, samplesRemaining)));
+                    _audioStream.GetNextSliceAt(Interval<AudioSample>(_localTime, slicesRemaining)));
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 
@@ -226,9 +230,9 @@ namespace NowSound
                 //HoloDebug.Log(line);
                 //Spam.Audio.WriteLine(line);
 
-                dataInBytes += longest.SizeInBytes();
+                dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
                 _localTime = _localTime + longest.SliceDuration();
-                samplesRemaining -= (int)longest.SliceDuration().Value();
+                slicesRemaining -= (int)longest.SliceDuration().Value();
             }
 
             _audioFrameInputNode.AddFrame(s_audioFrame);

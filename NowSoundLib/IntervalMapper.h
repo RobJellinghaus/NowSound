@@ -46,25 +46,21 @@ namespace NowSound
         // it is mapping to.
         // </remarks>
     public:
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const = 0;
+        virtual Interval<TTime> MapNextSubInterval(const IStream<TTime>* stream, Interval<TTime> input) const = 0;
     };
 
     // Identity mapping.
     template<typename TTime>
     class IdentityIntervalMapper : public IntervalMapper<TTime>
     {
-    private:
-        IStream<TTime>* _stream;
-
     public:
-        IdentityIntervalMapper(IStream<TTime>* stream)
+        IdentityIntervalMapper()
         {
-            _stream = stream;
         }
 
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const
+        virtual Interval<TTime> MapNextSubInterval(const IStream<TTime>* stream, Interval<TTime> input) const
         {
-            return input.Intersect(_stream->DiscreteInterval());
+            return input.Intersect(stream->DiscreteInterval());
         }
     };
 
@@ -72,31 +68,27 @@ namespace NowSound
     template<typename TTime>
     class SimpleLoopingIntervalMapper : public IntervalMapper<TTime>
     {
-    private:
-        IStream<TTime>* _stream;
-    
     public:
-        SimpleLoopingIntervalMapper(IStream<TTime>* stream)
+        SimpleLoopingIntervalMapper()
         {
-            // Should only use this mapper on shut streams with a fixed ContinuousDuration.
-            Check(stream->IsShut());
-            _stream = stream;
         }
 
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const
+        virtual Interval<TTime> MapNextSubInterval(const IStream<TTime>* stream, Interval<TTime> input) const
         {
-            Check(input.InitialTime() >= _stream->InitialTime());
+            Check(input.InitialTime() >= stream->InitialTime());
+            // Should only use this mapper on shut streams with a fixed ContinuousDuration.
+            Check(stream->IsShut());
 
-            Duration<TTime> inputDelayDuration = input.InitialTime() - _stream->InitialTime();
+            Duration<TTime> inputDelayDuration = input.InitialTime() - stream->InitialTime();
             // now we want to take that modulo the *discrete* duration
-            inputDelayDuration = inputDelayDuration.Value() % _stream->DiscreteDuration().Value();
+            inputDelayDuration = inputDelayDuration.Value() % stream->DiscreteDuration().Value();
 #undef min // whose bright idea was it to put a min macro in the Windows SDK???
             Duration<TTime> mappedDuration = std::min(
                 input.IntervalDuration().Value(),
-                (_stream->DiscreteDuration() - inputDelayDuration).Value());
-            Interval<TTime> ret(_stream->InitialTime() + inputDelayDuration, mappedDuration);
+                (stream->DiscreteDuration() - inputDelayDuration).Value());
+            Interval<TTime> ret(stream->InitialTime() + inputDelayDuration, mappedDuration);
 
-            // Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: _stream " + _stream + ", input " + input + ", ret " + ret);
+            // Spam.Audio.WriteLine("SimpleLoopingIntervalMapper.MapNextSubInterval: stream " + stream + ", input " + input + ", ret " + ret);
 
             return ret;
         }
@@ -106,20 +98,17 @@ namespace NowSound
     // for arbitrary durations.  (This may not matter as much as I think but it was a nice problem to get precise about...
     // without this, a one second loop at 48Khz would drift by 1/10 second after 160 minutes, which just seems wrong in principle.)
     template<typename TTime>
-    class LoopingIntervalMapper : public IntervalMapper<TTime>
+    class ExactLoopingIntervalMapper : public IntervalMapper<TTime>
     {
-        IStream<TTime>* _stream;
-
     public:
-        LoopingIntervalMapper(IStream<TTime>* stream)
+        ExactLoopingIntervalMapper()
         {
-            // Should only use this mapper on shut streams with a fixed ContinuousDuration.
-            Check(stream->IsShut());
-            _stream = stream;
         }
 
-        virtual Interval<TTime> MapNextSubInterval(Interval<TTime> input) const
+        virtual Interval<TTime> MapNextSubInterval(const IStream<TTime>* stream, Interval<TTime> input) const
         {
+            Check(stream->IsShut());
+
             // for example reference
             /*
             LoopMult=AbsoluteTiem/ContinuousDuration
@@ -152,8 +141,8 @@ namespace NowSound
             */
 
             // First thing we do is, subtract our initial time from the initial time of the input.
-            Duration<TTime> loopRelativeInitialTime = input.InitialTime() - _stream->InitialTime();
-            float exactDuration = _stream->ExactDuration().Value();
+            Duration<TTime> loopRelativeInitialTime = input.InitialTime() - stream->InitialTime();
+            float exactDuration = stream->ExactDuration().Value();
 
             // Now, we need to figure out how many multiples of the stream's CONTINUOUS length this is.
             // In other words, we want adjustedInitialTime modulo the real-valued length of this stream.
@@ -167,7 +156,7 @@ namespace NowSound
 
             int duration = (int)std::ceil((loopIndex + 1) * exactDuration - loopRelativeInitialTime.Value());
 
-            return Interval<TTime>(_stream->InitialTime() + adjustedLoopRelativeInitialTime, duration);
+            return Interval<TTime>(stream->InitialTime() + adjustedLoopRelativeInitialTime, duration);
         }
     };
 }

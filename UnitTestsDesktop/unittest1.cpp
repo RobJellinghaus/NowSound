@@ -4,6 +4,8 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Slice.h"
+#include "SliceStream.h"
+#include "Time.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace NowSound;
@@ -19,8 +21,8 @@ namespace UnitTestsDesktop
             Check(true);
 		}
 
-        const int FloatSliverCount = 2;
-        const int FloatNumSlices = 128;
+        static const int FloatSliverCount = 2;
+        static const int FloatNumSlices = 128;
 
         // Exercise minimal buffer allocation and free list reuse.
         TEST_METHOD(TestBufferAllocator)
@@ -88,43 +90,49 @@ namespace UnitTestsDesktop
             VerifySlice(slice);
             VerifySlice(slice2);
         }
-
-        /*
-        /// <summary>
-        /// Simple basic stream test: make one, append two slices to it, ensure they get merged.
-        /// </summary>
-        [TestMethod]
-        public void TestStream()
+        
+        template<typename TTime, typename TValue>
+        static BufferedSliceStream<TTime, TValue> CreateSampleStream(BufferAllocator<TValue>* bufferAllocator)
         {
-            BufferAllocator<float> bufferAllocator = new BufferAllocator<float>(FloatNumSlices * 2048, 1, sizeof(float));
+            return std::move(BufferedSliceStream<TTime, TValue>(Time<TTime>{}, FloatSliverCount, bufferAllocator, Duration<TTime>{}, false));
+        }
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, FloatSliverSize);
+        /// Simple basic stream test: make one, append two slices to it, ensure they get merged.
+        TEST_METHOD(TestStream)
+        {
+            BufferAllocator<float> bufferAllocator(FloatNumSlices * 2048, 1);
+            BufferAllocator<float>* bufferAllocatorPtr = &bufferAllocator;
 
-            Check(stream.DiscreteDuration == 0);
+            BufferedSliceStream<AudioSample, float> stream(CreateSampleStream<AudioSample, float>(bufferAllocatorPtr));
 
-            var interval = new Interval<Sample>(0, 10);
-            Slice<AudioSample, float> firstSlice = stream.GetNextSliceAt(interval);
+            Check(stream.DiscreteDuration() == 0);
+
+            Interval<AudioSample> interval(0, 10);
+            Slice<AudioSample, float> firstSlice(stream.GetNextSliceAt(interval));
             Check(firstSlice.IsEmpty());
 
             // Now let's fill a float array...
-            float[] buffer = new float[FloatNumSlices * FloatSliverSize];
-            Duration<Sample> floatNumSlicesDuration = FloatNumSlices;
-            Slice<AudioSample, float> tempSlice = new Slice<AudioSample, float>(new Buf<float>(-1, buffer), FloatSliverSize);
+            int length = FloatNumSlices * FloatSliverCount;
+            float* buffer = new float[length];
+            OwningBuf<float> owningBuf(-1, std::unique_ptr<float>(buffer), length);
+            Duration<AudioSample> floatNumSlicesDuration = FloatNumSlices;
+            Slice<AudioSample, float> tempSlice(Buf<float>(owningBuf), FloatSliverCount);
             PopulateFloatSlice(tempSlice);
 
             // now append in chunks
             stream.Append(tempSlice.SubsliceOfDuration(tempSlice.SliceDuration() / 2));
             stream.Append(tempSlice.SubsliceStartingAt(tempSlice.SliceDuration() / 2));
 
-            Check(stream.InitialTime == 0);
-            Check(stream.DiscreteDuration == FloatNumSlices);
+            Check(stream.InitialTime() == 0);
+            Check(stream.DiscreteDuration() == FloatNumSlices);
 
-            Slice<AudioSample, float> theSlice = stream.GetNextSliceAt(stream.DiscreteInterval);
+            Slice<AudioSample, float> theSlice = stream.GetNextSliceAt(stream.DiscreteInterval());
 
             VerifySlice(theSlice);
             Check(theSlice.SliceDuration() == floatNumSlicesDuration);
         }
 
+        /*
         [TestMethod]
         public void TestStreamChunky()
         {
@@ -133,7 +141,7 @@ namespace UnitTestsDesktop
             const int biggestChunk = 5; // max size of slice to copy in middle loop
             BufferAllocator<float> bufferAllocator = new BufferAllocator<float>(sliverCount * floatNumSlices, 1, sizeof(float));
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
 
             Check(stream.DiscreteDuration == 0);
 
@@ -156,22 +164,22 @@ namespace UnitTestsDesktop
 
             // Now after this we will need a verification loop.
             BufferAllocator<float> bigBufferAllocator = new BufferAllocator<float>(sliverCount * 1024, 1, sizeof(float));
-            DenseSampleFloatStream bigStream = new DenseSampleFloatStream(0, bigBufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> bigStream = new BufferedSliceStream<AudioSample, float>(0, bigBufferAllocator, sliverCount);
 
             stream.CopyTo(stream.DiscreteInterval, bigStream);
 
             Check(Verify4SliceFloatStream(stream, 0) == 1500);
             Check(Verify4SliceFloatStream(bigStream, 0) == 1500);
 
-            DenseSampleFloatStream stream2 = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream2 = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
             bigStream.CopyTo(bigStream.DiscreteInterval, stream2);
 
             Check(Verify4SliceFloatStream(stream2, 0) == 1500);
         }
 
-        static float Verify4SliceFloatStream(DenseSampleFloatStream stream, float f)
+        static float Verify4SliceFloatStream(BufferedSliceStream<AudioSample, float> stream, float f)
         {
-            Interval<Sample> interval = stream.DiscreteInterval;
+            Interval<AudioSample> interval = stream.DiscreteInterval;
             while (!interval.IsEmpty) {
                 Slice<AudioSample, float> nextSlice = stream.GetNextSliceAt(interval);
                 for (int i = 0; i < (int)nextSlice.SliceDuration(); i++) {
@@ -209,7 +217,7 @@ namespace UnitTestsDesktop
 
             float[] buffer = AllocateSmall4FloatArray(floatNumSlices, sliverCount);
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
 
             unsafe{
                 fixed(float* f = buffer) {
@@ -235,7 +243,7 @@ namespace UnitTestsDesktop
             }
             }
 
-            DenseSampleFloatStream stream2 = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream2 = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
             stream2.Append(new Slice<AudioSample, float>(new Buf<float>(-3, buffer), sliverCount));
 
             Check(Verify4SliceFloatStream(stream2, 0) == 11);
@@ -250,19 +258,19 @@ namespace UnitTestsDesktop
 
             float[] buffer = AllocateSmall4FloatArray(floatNumSlices * 2, sliverCount);
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
             stream.Append(new Slice<AudioSample, float>(new Buf<float>(-4, buffer), sliverCount));
 
             // test getting slices from existing stream
-            Slice<AudioSample, float> beforeFirst = stream.GetNextSliceAt(new Interval<Sample>((-2), 4));
+            Slice<AudioSample, float> beforeFirst = stream.GetNextSliceAt(new Interval<AudioSample>((-2), 4));
             // should return slice with duration 2
             Check(beforeFirst.SliceDuration() == 2);
 
-            Slice<AudioSample, float> afterLast = stream.GetNextSliceAt(new Interval<Sample>(19, 5));
+            Slice<AudioSample, float> afterLast = stream.GetNextSliceAt(new Interval<AudioSample>(19, 5));
             Check(afterLast.SliceDuration() == 3);
 
             // now get slice across the buffer boundary, verify it is split as expected
-            Interval<Sample> splitInterval = new Interval<Sample>(7, 8);
+            Interval<AudioSample> splitInterval = new Interval<AudioSample>(7, 8);
             Slice<AudioSample, float> beforeSplit = stream.GetNextSliceAt(splitInterval);
             Check(beforeSplit.SliceDuration() == 4);
 
@@ -279,14 +287,14 @@ namespace UnitTestsDesktop
 
             stream.AppendSliver(testStrideCopy, 2, 2, 6, 2);
 
-            Slice<AudioSample, float> lastSliver = stream.GetNextSliceAt(new Interval<Sample>(22, 1));
+            Slice<AudioSample, float> lastSliver = stream.GetNextSliceAt(new Interval<AudioSample>(22, 1));
             Check(lastSliver.SliceDuration() == 1);
             Check(lastSliver[0, 0] == 1f);
             Check(lastSliver[0, 1] == 1f);
             Check(lastSliver[0, 2] == 2f);
             Check(lastSliver[0, 3] == 2f);
 
-            Slice<AudioSample, float> firstSlice = stream.GetNextSliceAt(new Interval<Sample>(-2, 100));
+            Slice<AudioSample, float> firstSlice = stream.GetNextSliceAt(new Interval<AudioSample>(-2, 100));
             Check(firstSlice.SliceDuration() == 11);
         }
 
@@ -300,7 +308,7 @@ namespace UnitTestsDesktop
             float continuousDuration = 2.4f;
             int discreteDuration = (int)Math.Round(continuousDuration + 1);
             float[] buffer = AllocateSmall4FloatArray(discreteDuration, sliverCount);
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount, useContinuousLoopingMapper: true);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount, useContinuousLoopingMapper: true);
             stream.Append(new Slice<AudioSample, float>(new Buf<float>(-5, buffer), sliverCount));
 
             // OK, time to get this fractional business right.
@@ -308,7 +316,7 @@ namespace UnitTestsDesktop
             Check(stream.IsShut);
 
             // now test looping
-            Interval<Sample> interval = new Interval<Sample>(0, 10);
+            Interval<AudioSample> interval = new Interval<AudioSample>(0, 10);
             // we expect this to be [0, 1, 2, 0, 1, 0, 1, 2, 0, 1]
             // or rather, [0>3], [0>2], [0>3], [0>2]
             Slice<AudioSample, float> slice = stream.GetNextSliceAt(interval);
@@ -337,10 +345,10 @@ namespace UnitTestsDesktop
             interval = interval.SubintervalStartingAt(slice.SliceDuration());
             Check(interval.IsEmpty);
 
-            DenseSampleFloatStream stream2 = new DenseSampleFloatStream(0, bufferAllocator, sliverCount, useContinuousLoopingMapper: false);
+            BufferedSliceStream<AudioSample, float> stream2 = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount, useContinuousLoopingMapper: false);
             stream2.Append(new Slice<AudioSample, float>(new Buf<float>(-5, buffer), sliverCount));
             stream2.Shut((ContinuousDuration)continuousDuration);
-            interval = new Interval<Sample>(0, 10);
+            interval = new Interval<AudioSample>(0, 10);
             slice = stream2.GetNextSliceAt(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice[0, 0] == 0f);
@@ -384,7 +392,7 @@ namespace UnitTestsDesktop
             // free it again so stream can get it
             bufferAllocator.Free(buffer);
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
             stream.Append(new Slice<AudioSample, float>(new Buf<float>(-6, tempBuffer), sliverCount));
 
             Verify4SliceFloatStream(stream, 0);
@@ -406,7 +414,7 @@ namespace UnitTestsDesktop
 
             float[] tempBuffer = AllocateSmall4FloatArray(20, sliverCount);
 
-            DenseSampleFloatStream stream = new DenseSampleFloatStream(0, bufferAllocator, sliverCount, 5);
+            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount, 5);
             stream.Append(new Slice<AudioSample, float>(new Buf<float>(-7, tempBuffer), 0, 11, sliverCount));
             Check(stream.DiscreteDuration == 5);
             Slice<AudioSample, float> slice = stream.GetNextSliceAt(stream.DiscreteInterval);
