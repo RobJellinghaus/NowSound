@@ -66,13 +66,13 @@ namespace NowSound
                 T* bufArray = new T[BufferLength];
                 std::unique_ptr<T> bufStorage(std::move(bufArray));
                 OwningBuf<T> result(_latestBufferId++, std::move(bufStorage), BufferLength);
-                return std::move(result);
+                return result;
             }
             else
             {
                 OwningBuf<T> ret(std::move(_freeList[_freeList.size() - 1]));
                 _freeList.erase(_freeList.end() - 1);
-                return std::move(ret);
+                return ret;
             }
         }
 

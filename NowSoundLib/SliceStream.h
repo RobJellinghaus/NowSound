@@ -196,7 +196,7 @@ namespace NowSound
             if (_remainingFreeSlice.IsEmpty())
             {
                 // allocate a new buffer and transfer ownership of it to _buffers
-                _buffers.emplace_back(std::move(_allocator->Allocate()));
+                _buffers.push_back(std::move(_allocator->Allocate()));
 
                 // get a reference to the current append buffer
                 OwningBuf<TValue>& appendBuffer = _buffers.at(_buffers.size() - 1);

@@ -94,7 +94,7 @@ namespace UnitTestsDesktop
         template<typename TTime, typename TValue>
         static BufferedSliceStream<TTime, TValue> CreateSampleStream(BufferAllocator<TValue>* bufferAllocator)
         {
-            return std::move(BufferedSliceStream<TTime, TValue>(Time<TTime>{}, FloatSliverCount, bufferAllocator, Duration<TTime>{}, false));
+            return BufferedSliceStream<TTime, TValue>(Time<TTime>{}, FloatSliverCount, bufferAllocator, Duration<TTime>{}, false);
         }
 
         /// Simple basic stream test: make one, append two slices to it, ensure they get merged.

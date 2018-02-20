@@ -19,6 +19,7 @@ namespace NowSound
     public:
         OwningBuf() : _id{}, _data{}, _length{} {}
 
+        // Construct an OwningBuf on the given data, which must have at least one element.
         OwningBuf(int id, std::unique_ptr<T>&& data, int length)
             : _id(id), _data(std::move(data)), _length(length)
         {
@@ -30,8 +31,10 @@ namespace NowSound
         OwningBuf(OwningBuf&& other)
             : _id(other._id), _data(std::move(other._data)), _length(other._length)
         {
-            Check(_data != nullptr);
-            Check(_length > 0);
+            Check((_data == nullptr) == (_length == 0));
+
+            Check(other._data == nullptr);
+            other._length = 0;
         }
 
         int Id() const { return _id; }
@@ -48,6 +51,11 @@ namespace NowSound
             _id = other._id;
             _data = std::move(other._data);
             _length = other._length;
+
+            Check((_data == nullptr) == (_length == 0));
+            Check(other._data == nullptr);
+            other._length = 0;
+
             return *this;
         }
     };
@@ -61,7 +69,7 @@ namespace NowSound
         virtual void Free(OwningBuf<TValue>&& buf) = 0;
     };
 
-    // Non-owning, pass-by-copy reference to the data owned by an OwningBuf<T>.
+    // Non-owning, pass-by-value reference to the data owned by an OwningBuf<T>.
     // TODO: consider converting this to span<T>.
     template<typename T>
     class Buf

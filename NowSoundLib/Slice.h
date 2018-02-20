@@ -21,12 +21,12 @@ namespace NowSound
     class Slice
     {
     private:
-        // Copy memory from src to dest, using counts of T.
+        // Copy memory from src to dest.  All non-pointer arguments are counts of T values, *not* byte counts.
         static void ArrayCopy(const TValue* src, int64_t srcOffset, const TValue* dest, int64_t destOffset, int64_t count)
         {
             std::memcpy(
-                (uint8_t*)dest + destOffset,
-                (uint8_t*)src + srcOffset,
+                (uint8_t*)dest + (destOffset * sizeof(TValue)),
+                (uint8_t*)src + (srcOffset * sizeof(TValue)),
                 count * sizeof(TValue));
         }
 
