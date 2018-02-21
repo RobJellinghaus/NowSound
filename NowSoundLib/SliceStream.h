@@ -252,7 +252,7 @@ namespace NowSound
                 ContinuousDuration<TTime>{0},
                 false, // isShut
                 Duration<TTime>{},
-                std::move(std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>()))),
+                std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>())),
             _allocator{ allocator },
             _buffers{ },
             _remainingFreeSlice{ },
@@ -269,7 +269,7 @@ namespace NowSound
                 ContinuousDuration<TTime>{0},
                 false, // isShut
                 Duration<TTime>{},
-                std::move(std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>()))),
+                std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>())),
             _allocator{ allocator },
             _buffers{},
             _remainingFreeSlice{},
