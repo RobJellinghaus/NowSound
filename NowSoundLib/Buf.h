@@ -19,19 +19,21 @@ namespace NowSound
     public:
         OwningBuf() = delete;
 
+        // Create a new OwningBuf with a newly allocated T[length] backing store.
         OwningBuf(int id, int length)
-            : _id(id), _data(std::move(std::unique_ptr<T>(new T[length]))), _length(length)
+            : _id(id), _data(std::unique_ptr<T>(new T[length])), _length(length)
         {
             Check(length > 0);
         }
 
+        // Create an OwningBuf which takes ownership of rawBuffer (which had better have the given length).
         OwningBuf(int id, int length, T* rawBuffer)
-            : _id(id), _data(std::move(std::unique_ptr<T>(rawBuffer))), _length(length)
+            : _id(id), _data(std::unique_ptr<T>(rawBuffer)), _length(length)
         {
             Check(length > 0);
         }
 
-        // move constructor
+        // Move constructor.
         OwningBuf(OwningBuf&& other)
             : _id(other._id), _data(std::move(other._data)), _length(other._length)
         {

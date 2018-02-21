@@ -62,13 +62,13 @@ namespace NowSound
             {
                 _totalBufferCount++;
                 OwningBuf<T> result(_latestBufferId++, BufferLength);
-                return std::move(result);
+                return result;
             }
             else
             {
                 OwningBuf<T> ret(std::move(_freeList[_freeList.size() - 1]));
                 _freeList.erase(_freeList.end() - 1);
-                return std::move(ret);
+                return ret;
             }
         }
 
