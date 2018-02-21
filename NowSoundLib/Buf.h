@@ -25,6 +25,12 @@ namespace NowSound
             Check(length > 0);
         }
 
+        OwningBuf(int id, int length, T* rawBuffer)
+            : _id(id), _data(std::move(std::unique_ptr<T>(rawBuffer))), _length(length)
+        {
+            Check(length > 0);
+        }
+
         // move constructor
         OwningBuf(OwningBuf&& other)
             : _id(other._id), _data(std::move(other._data)), _length(other._length)

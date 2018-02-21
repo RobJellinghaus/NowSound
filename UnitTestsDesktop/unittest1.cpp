@@ -199,48 +199,38 @@ namespace UnitTestsDesktop
             Check(Verify4SliceFloatStream(stream2, 0) == 1500);
         }
 
-        /*
-        [TestMethod]
-        public void TestStreamAppending()
+        TEST_METHOD(TestStreamAppending)
         {
             const int sliverCount = 4; // 4 floats = 16 bytes
             const int floatNumSlices = 11; // 11 slices per buffer, to test various cases
-            BufferAllocator<float> bufferAllocator = new BufferAllocator<float>(sliverCount * floatNumSlices, 1);
+            BufferAllocator<float> bufferAllocator(sliverCount * floatNumSlices, 1);
+            int bufferLength = floatNumSlices * sliverCount;
 
-            float[] buffer = AllocateSmall4FloatArray(floatNumSlices, sliverCount);
+            float* buffer = AllocateSmall4FloatArray(floatNumSlices, sliverCount);
+            OwningBuf<float> owningBuf(0, bufferLength, buffer);
 
-            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator);
 
-            unsafe{
-                fixed(float* f = buffer) {
-                IntPtr pf = new IntPtr(f);
+            stream.Append(Duration<AudioSample>(floatNumSlices), buffer);
 
-                stream.Append(floatNumSlices, pf);
-            }
-            }
-
-            Check(stream.DiscreteDuration == floatNumSlices);
+            Check(stream.DiscreteDuration() == floatNumSlices);
 
             Check(Verify4SliceFloatStream(stream, 0) == 11);
 
             // clear original buffer to test copying back into it
-            for (int i = 0; i < buffer.Length; i++) {
+            for (int i = 0; i < bufferLength; i++) {
                 buffer[i] = 0;
             }
 
-            unsafe{
-                fixed(float* f = buffer) {
-                IntPtr pf = new IntPtr(f);
-                stream.CopyTo(stream.DiscreteInterval, pf);
-            }
-            }
+            stream.CopyTo(stream.DiscreteInterval(), buffer);
 
-            BufferedSliceStream<AudioSample, float> stream2 = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount);
-            stream2.Append(new Slice<AudioSample, float>(new Buf<float>(-3, buffer), sliverCount));
+            BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator);
+            stream2.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
 
             Check(Verify4SliceFloatStream(stream2, 0) == 11);
         }
 
+        /*
         [TestMethod]
         public void TestStreamSlicing()
         {
