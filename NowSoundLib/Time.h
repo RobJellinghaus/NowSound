@@ -219,10 +219,10 @@ namespace NowSound
     public:
         Interval() = delete;
 
+        // Construct the given interval. duration must be non-negative, but initialTime may be any value.
         Interval(Time<TTime> initialTime, Duration<TTime> duration)
             : _initialTime(initialTime), _duration(duration)
         {
-            Check(initialTime >= 0);
             Check(duration >= 0);
         }
 

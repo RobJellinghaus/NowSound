@@ -140,9 +140,9 @@ namespace NowSound
             SliceStream<TTime, TValue>::Shut(finalDuration);
         }
 
-        // Get a reference to the next slice at the given time, up to the given duration if possible, or the
-        // largest available slice if not.
-        // 
+        // Get a reference to the next slice at the given time.
+        // If there is no slice at the exact time, return the most immediately preceding slice.
+        // If the next available slice is not as long as the source interval, return the largest available slice starting at the given time.
         // If the interval IsEmpty, return an empty slice.
         virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
 
@@ -400,10 +400,9 @@ namespace NowSound
         // Copy strided data from a source array into a single destination sliver.
         void AppendSliver(TValue* source, int startOffset, int width, int stride, int height)
         {
-            Check(source != null);
+            Check(source != nullptr);
             int neededLength = startOffset + stride * (height - 1) + width;
-            Check(source.Length >= neededLength);
-            Check(SliverCount == width * height);
+            Check(SliverCount() == width * height);
             Check(stride >= width);
 
             EnsureFreeSlice();
@@ -414,7 +413,7 @@ namespace NowSound
             int destinationOffset = 0;
             for (int h = 0; h < height; h++)
             {
-                destination.CopyFrom(source, sourceOffset, destinationOffset, width);
+                destination.CopyFrom(source + sourceOffset, destinationOffset, width);
 
                 sourceOffset += stride;
                 destinationOffset += width;
@@ -528,6 +527,13 @@ namespace NowSound
             // First, get the index of the slice just after the one we want.
             TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
             auto firstSliceNotLessThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
+
+            // If there is no slice less than target, we want the last available slice.
+            if (firstSliceNotLessThanTarget == _data.end())
+            {
+                // The variable name is technically wrong in this case.
+                firstSliceNotLessThanTarget = _data.end() - 1;
+            }
 
             return *firstSliceNotLessThanTarget;
         }

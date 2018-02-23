@@ -152,6 +152,12 @@ namespace NowSound
             ArrayCopy(source, 0, _buffer.Data(), _offset.Value() * _sliverCount, _duration.Value() * _sliverCount);
         }
 
+        // Copy data from the source, replacing only a portion of the slice.
+        void CopyFrom(TValue* source, int sliverIndex, int length)
+        {
+            ArrayCopy(source, 0, _buffer.Data(), _offset.Value() * _sliverCount + sliverIndex, length);
+        }
+
         // Are these samples adjacent in their underlying storage?
         bool Precedes(const Slice<TTime, TValue>& next) const
         {
