@@ -144,7 +144,7 @@ namespace NowSound
         // If there is no slice at the exact time, return the most immediately preceding slice.
         // If the next available slice is not as long as the source interval, return the largest available slice starting at the given time.
         // If the interval IsEmpty, return an empty slice.
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> sourceInterval) const = 0;
+        virtual Slice<TTime, TValue> GetSliceContaining(Interval<TTime> sourceInterval) const = 0;
 
         // Append contiguous data.
         // This must not be shut yet.
@@ -476,7 +476,7 @@ namespace NowSound
             Interval<TTime> sourceInterval = sourceIntervalArgument;
             while (!sourceInterval.IsEmpty())
             {
-                Slice<TTime, TValue> source(GetNextSliceAt(sourceInterval));
+                Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
                 source.CopyTo(p);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.SliceDuration());
             }
@@ -487,14 +487,15 @@ namespace NowSound
         {
             while (!sourceInterval.IsEmpty())
             {
-                Slice<TTime, TValue> source(GetNextSliceAt(sourceInterval));
+                Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
                 destinationStream->Append(source);
                 sourceInterval = sourceInterval.SubintervalStartingAt(source.SliceDuration());
             }
         }
 
-        // Map the interval time to stream local time, and get the next slice of it.
-        virtual Slice<TTime, TValue> GetNextSliceAt(Interval<TTime> interval) const
+        // Map the interval time to stream local time, and get the slice containing the start time of the interval
+        // (after the interval is mapped to stream time per the current mapping).
+        virtual Slice<TTime, TValue> GetSliceContaining(Interval<TTime> interval) const
         {
             Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(this, interval);
 
@@ -517,7 +518,7 @@ namespace NowSound
             return ret;
         }
 
-        // Get the first slice that intersects the given interval.
+        // Get the slice that intersects the given interval's start time.
         const TimedSlice<TTime, TValue>& GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
         {
             // we must overlap somewhere
@@ -528,14 +529,22 @@ namespace NowSound
             TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
             auto firstSliceNotLessThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
 
-            // If there is no slice less than target, we want the last available slice.
             if (firstSliceNotLessThanTarget == _data.end())
             {
-                // The variable name is technically wrong in this case.
-                firstSliceNotLessThanTarget = _data.end() - 1;
+                // If we reached the end, then the slice we want is the last slice.
+                return *(firstSliceNotLessThanTarget - 1);
             }
-
-            return *firstSliceNotLessThanTarget;
+            else if (firstSliceNotLessThanTarget->InitialTime() == firstMappedInterval.InitialTime())
+            {
+                // If we found a slice starting at the exact right time, then return it.
+                return *firstSliceNotLessThanTarget;
+            }
+            else
+            {
+                // The slice we found starts after the desired initial time.
+                // Therefore the slice we want is the slice just before it, which will contain the desired initial time.
+                return *(firstSliceNotLessThanTarget - 1);
+            }
         }
     };
 }

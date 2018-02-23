@@ -218,7 +218,7 @@ namespace NowSound
             {
                 // get up to one second or samplesRemaining, whichever is smaller
                 Slice<AudioSample, float> longest(
-                    _audioStream.GetNextSliceAt(Interval<AudioSample>(_localTime, slicesRemaining)));
+                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 

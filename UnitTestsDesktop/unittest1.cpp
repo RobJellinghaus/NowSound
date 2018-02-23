@@ -101,7 +101,7 @@ namespace UnitTestsDesktop
             Check(stream.DiscreteDuration() == 0);
 
             Interval<AudioSample> interval(0, 10);
-            Slice<AudioSample, float> firstSlice(stream.GetNextSliceAt(interval));
+            Slice<AudioSample, float> firstSlice(stream.GetSliceContaining(interval));
             Check(firstSlice.IsEmpty());
 
             // Now let's fill a float array...
@@ -118,7 +118,7 @@ namespace UnitTestsDesktop
             Check(stream.InitialTime() == 0);
             Check(stream.DiscreteDuration() == FloatNumSlices);
 
-            Slice<AudioSample, float> theSlice = stream.GetNextSliceAt(stream.DiscreteInterval());
+            Slice<AudioSample, float> theSlice = stream.GetSliceContaining(stream.DiscreteInterval());
 
             VerifySlice(theSlice);
             Check(theSlice.SliceDuration() == floatNumSlicesDuration);
@@ -128,7 +128,7 @@ namespace UnitTestsDesktop
         {
             Interval<AudioSample> interval = stream.DiscreteInterval();
             while (!interval.IsEmpty()) {
-                Slice<AudioSample, float> nextSlice = stream.GetNextSliceAt(interval);
+                Slice<AudioSample, float> nextSlice = stream.GetSliceContaining(interval);
                 for (int i = 0; i < nextSlice.SliceDuration().Value(); i++) {
                     Check(nextSlice.Get(i, 0) == f);
                     Check(nextSlice.Get(i, 1) == f + 0.25f);
@@ -245,19 +245,23 @@ namespace UnitTestsDesktop
 
             // test getting slices from existing stream
             // should return slice with duration 2, because [-2, 2) intersected with [0, 22) = [0, 2)
-            Slice<AudioSample, float> beforeFirst = stream.GetNextSliceAt(Interval<AudioSample>((-2), 4));
+            Slice<AudioSample, float> beforeFirst = stream.GetSliceContaining(Interval<AudioSample>((-2), 4));
             Check(beforeFirst.SliceDuration() == 2);
 
             // should return slice with duration 3, because [19, 24) intersected with [0, 22) = [19, 22)
-            Slice<AudioSample, float> afterLast = stream.GetNextSliceAt(Interval<AudioSample>(19, 5));
+            Slice<AudioSample, float> afterLast = stream.GetSliceContaining(Interval<AudioSample>(19, 5));
             Check(afterLast.SliceDuration() == 3);
 
-            // now get slice across the buffer boundary, verify it is split as expected
+            // now get slice across the buffer boundary (at time 11); verify it is split as expected
             Interval<AudioSample> splitInterval(7, 8);
-            Slice<AudioSample, float> beforeSplit = stream.GetNextSliceAt(splitInterval);
+            Slice<AudioSample, float> beforeSplit = stream.GetSliceContaining(splitInterval);
+            Check(beforeSplit.Offset() == 7);
             Check(beforeSplit.SliceDuration() == 4);
 
-            Slice<AudioSample, float> afterSplit = stream.GetNextSliceAt(splitInterval.SubintervalStartingAt(beforeSplit.SliceDuration()));
+            // Now get [11, 15)
+            Interval<AudioSample> afterBufferSplitInterval = splitInterval.SubintervalStartingAt(beforeSplit.SliceDuration());
+            Slice<AudioSample, float> afterSplit = stream.GetSliceContaining(afterBufferSplitInterval);
+            Check(afterSplit.Offset() == 0);
             Check(afterSplit.SliceDuration() == beforeSplit.SliceDuration());
             float lastBefore = beforeSplit.Get(3, 0);
             float firstAfter = afterSplit.Get(0, 0);
@@ -270,14 +274,14 @@ namespace UnitTestsDesktop
             
             stream.AppendSliver(testStrideCopy, 2, 2, 6, 2);
 
-            Slice<AudioSample, float> lastSliver = stream.GetNextSliceAt(Interval<AudioSample>(22, 1));
+            Slice<AudioSample, float> lastSliver = stream.GetSliceContaining(Interval<AudioSample>(22, 1));
             Check(lastSliver.SliceDuration() == 1);
             Check(lastSliver.Get(0, 0) == 1);
             Check(lastSliver.Get(0, 1) == 1);
             Check(lastSliver.Get(0, 2) == 2);
             Check(lastSliver.Get(0, 3) == 2);
 
-            Slice<AudioSample, float> firstSlice = stream.GetNextSliceAt(Interval<AudioSample>(-2, 100));
+            Slice<AudioSample, float> firstSlice = stream.GetSliceContaining(Interval<AudioSample>(-2, 100));
             Check(firstSlice.SliceDuration() == 11);
         }
 
