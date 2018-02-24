@@ -434,7 +434,7 @@ namespace NowSound
             {
                 Duration<TTime> toTrim = this->DiscreteDuration() - _maxBufferedDuration;
                 // get the first slice
-                TimedSlice<TTime, TValue>& firstSlice = _data[0];
+                TimedSlice<TTime, TValue> firstSlice = _data[0];
                 if (firstSlice.Value().SliceDuration() <= toTrim)
                 {
                     _data.erase(_data.begin());
@@ -462,7 +462,7 @@ namespace NowSound
                         newSlice);
                     _data[0] = newFirstSlice;
                     this->_discreteDuration = this->_discreteDuration - toTrim;
-                    this->_initialTime = this->_initialTime - toTrim;
+                    this->_initialTime = this->_initialTime + toTrim;
                 }
             }
         }

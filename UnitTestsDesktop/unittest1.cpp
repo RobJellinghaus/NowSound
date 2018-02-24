@@ -360,7 +360,7 @@ namespace UnitTestsDesktop
             Check(slice.Get(0, 0) == 0);
         }
 
-        /*
+        /* TODO: perhaps revive this test? I think I already have coverage of Free(), so postponing porting this.
         [TestMethod]
         public void TestDispose()
         {
@@ -393,29 +393,31 @@ namespace UnitTestsDesktop
             buffer2 = bufferAllocator.Allocate();
             Check(buffer.Data == buffer2.Data);
         }
+        */
 
-        [TestMethod]
-        public void TestLimitedBufferingStream()
+        TEST_METHOD(TestLimitedBufferingStream)
         {
             const int sliverCount = 4; // 4 floats = 16 bytes
             const int sliceCount = 11; // 11 slices per buffer, to test various cases
-            BufferAllocator<float> bufferAllocator = new BufferAllocator<float>(sliverCount * sliceCount, 1);
+            BufferAllocator<float> bufferAllocator(sliverCount * sliceCount, 1);
 
-            float[] tempBuffer = AllocateSmall4FloatArray(20, sliverCount);
+            float* tempBuffer = AllocateSmall4FloatArray(20);
+            OwningBuf<float> owningBuf(0, 20 * sliverCount, tempBuffer);
 
-            BufferedSliceStream<AudioSample, float> stream = new BufferedSliceStream<AudioSample, float>(0, bufferAllocator, sliverCount, 5);
-            stream.Append(new Slice<AudioSample, float>(new Buf<float>(-7, tempBuffer), 0, 11, sliverCount));
-            Check(stream.DiscreteDuration == 5);
-            Slice<AudioSample, float> slice = stream.GetSliceContaining(stream.DiscreteInterval);
+            BufferedSliceStream<AudioSample, float> stream(0, sliverCount, &bufferAllocator, /*maxBufferedDuration:*/ 5, /*useContinuousLoopingMapper:*/ false);
+            stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), 0, 11, sliverCount));
+            Check(stream.DiscreteDuration() == 5);
+            Slice<AudioSample, float> slice = stream.GetSliceContaining(stream.DiscreteInterval());
             Check(slice.Get(0, 0) == 6);
 
-            stream.Append(new Slice<AudioSample, float>(new Buf<float>(-8, tempBuffer), 11, 5, sliverCount));
-            Check(stream.DiscreteDuration == 5);
-            Check(stream.InitialTime == 11);
-            slice = stream.GetSliceContaining(stream.DiscreteInterval);
+            stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), 11, 5, sliverCount));
+            Check(stream.DiscreteDuration() == 5);
+            Check(stream.InitialTime() == 11);
+            slice = stream.GetSliceContaining(stream.DiscreteInterval());
             Check(slice.Get(0, 0) == 11);
         }
 
+        /*
         [TestMethod]
         public void TestSparseSampleByteStream()
         {
