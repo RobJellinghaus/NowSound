@@ -43,8 +43,11 @@ namespace NowSound
             other._length = 0;
         }
 
+        // ID of this owning buffer; primarily for debugging.
         int Id() const { return _id; }
+        // Borrowed pointer to the actual data.
         T* Data() const { return _data.get(); }
+        // Count of T values in the actual data; NOT a count of slivers (those are a Slice-level concept).
         int Length() const { return _length; }
 
         bool operator==(const OwningBuf<T>& other) const
@@ -76,6 +79,7 @@ namespace NowSound
     };
 
     // Non-owning, pass-by-value reference to the data owned by an OwningBuf<T>.
+    // Knows nothing about sliver count.
     // TODO: consider converting this to span<T>.
     template<typename T>
     class Buf
@@ -93,7 +97,9 @@ namespace NowSound
             Check(_length > 0);
         }
 
+        // Borrowed pointer to the actual data.
         T* Data() const { return _data; }
+        // Length of actual data; count of T values (NOT slivers).
         int Length() const { return _length; }
 
         // allow default copy (and hence assignment)

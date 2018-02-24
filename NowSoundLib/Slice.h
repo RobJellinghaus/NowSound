@@ -52,7 +52,7 @@ namespace NowSound
         // Default slice is empty
         Slice() : _duration{}, _offset{}, _sliverCount{}, _buffer{} {}
 
-        Slice(Buf<TValue> buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverCount)
+        Slice(const Buf<TValue>& buffer, Duration<TTime> offset, Duration<TTime> duration, int sliverCount)
             : _buffer(buffer), _offset(offset), _duration(duration), _sliverCount(sliverCount)
         {
             Check(buffer.Data() != nullptr);
@@ -61,7 +61,7 @@ namespace NowSound
             Check((offset * sliverCount) + (duration * sliverCount) <= buffer.Length()); // TODO: this looks wrong... use GSL std::byte
         }
 
-        Slice(const Buf<TValue> buffer, int sliverCount)
+        Slice(const Buf<TValue>& buffer, int sliverCount)
             : _buffer(buffer), _offset(0), _duration(buffer.Length() / sliverCount), _sliverCount(sliverCount)
         {}
 

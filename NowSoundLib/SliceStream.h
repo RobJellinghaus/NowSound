@@ -359,8 +359,6 @@ namespace NowSound
 
                 Trim();
             }
-
-            this->_discreteDuration = this->_discreteDuration + duration;
         }
 
         // Append this slice's data, by copying it into this stream's private buffers.
