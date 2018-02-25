@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+#include "Check.h"
 #include "NowSoundLib.h"
 #include <sstream>
 
@@ -27,9 +28,34 @@ TimeSpan timeSpanFromSeconds(int seconds)
     return TimeSpan(seconds * TicksPerSecond);
 }
 
+// Simple application which exercises NowSoundLib, allowing test of basic looping.
 struct App : ApplicationT<App>
 {
+    // The interaction model of this app is:
+    // - Status text box gets updated with overall graph state.
+    // - Initially, a "Start Recording Track #1" button is visible.
+    // - When clicked, "Start Recording" turns to "Stop Recording & Start Looping Track #1", and a new track gets recorded.
+    // - When the "Stop Recording..." button is clicked, it turns to "Pause Track #1", and the track starts looping.
+    // - If the "Pause Loop #1" button is clicked, the track pauses, and the button turns to "Resume Looping Track #1".
+    //   Also, a new "Start Recording Track #2" button appears, with the same behavior.
+    // 
+    // Result: the app is effectively a simple live looper capable of looping N tracks.
+    // Eventually, may add per-loop status.
+
+    // Label string.
     const std::wstring AudioGraphStateString = L"Audio graph state: ";
+
+    TextBlock _textBlock1{ nullptr };
+    TextBlock _textBlock2{ nullptr };
+    Button _button1{ nullptr };
+
+    apartment_context _uiThread;
+
+    struct TrackButton
+    {
+        TrackId _trackId;
+        Button _button;
+    };
 
     std::wstring StateLabel(NowSoundGraph_State state)
     {
@@ -68,8 +94,8 @@ struct App : ApplicationT<App>
         while (expectedState != NowSoundGraph::NowSoundGraph_GetGraphState()
             && winrt::clock::now() < timeoutTime)
         {
-            // wait in intervals of 1/100 sec
-            co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
+            // wait in intervals of 1/1000 sec
+            co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.001f)));
 
             currentState = NowSoundGraph::NowSoundGraph_GetGraphState();
         }
@@ -87,7 +113,7 @@ struct App : ApplicationT<App>
         _textBlock2.Text(L"");
 
         _button1 = Button();
-        _button1.Content(IReference<hstring>(L"Play Something"));
+        _button1.Content(IReference<hstring>(L"Start Recording"));
 
         _button1.Click([&](IInspectable const&, RoutedEventArgs const&)
         {
@@ -107,34 +133,6 @@ struct App : ApplicationT<App>
         // and here goes
         NowSoundGraph::NowSoundGraph_InitializeAsync();
 
-        /*
-        Compositor compositor;
-        SpriteVisual visual = compositor.CreateSpriteVisual();
-        Rect bounds = window.Bounds();
-        visual.Size({ bounds.Width, bounds.Height });
-        _target = compositor.CreateTargetForCurrentView();
-        _target.Root(visual);
-
-        window.PointerPressed([=](auto && ...)
-        {
-            static bool playing = true;
-            playing = !playing;
-
-            if (playing)
-            {
-                graph.Start();
-            }
-            else
-            {
-                graph.Stop();
-            }
-        });
-
-        window.SizeChanged([=](auto &&, WindowSizeChangedEventArgs const & args)
-        {
-            visual.Size(args.Size());
-        });
-        */
         Async();
     }
 
@@ -146,14 +144,17 @@ struct App : ApplicationT<App>
         co_await resume_background();
         // wait only one second (and hopefully much less) for graph to become initialized.
         // 1000 second timeout is for early stage debugging.
-        co_await WaitForGraphState(NowSound::NowSoundGraph_State::Initialized, winrt::clock::now() + timeSpanFromSeconds(1000));
+        const int timeoutInSeconds = 1000;
+        co_await WaitForGraphState(
+            NowSound::NowSoundGraph_State::Initialized,
+            winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
 
         co_await resume_background();
         NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
 
         NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
-        co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(1000));
+        co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
 
         NowSound_GraphInfo graphInfo = NowSoundGraph::NowSoundGraph_GetGraphInfo();
 
@@ -165,15 +166,9 @@ struct App : ApplicationT<App>
 
         NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
 
-        co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(1000));
+        co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
     }
 
-    TextBlock _textBlock1{ nullptr };
-    TextBlock _textBlock2{ nullptr };
-    Button _button1{ nullptr };
-    // Button _button2{ nullptr };
-
-    apartment_context _uiThread;
 };
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)

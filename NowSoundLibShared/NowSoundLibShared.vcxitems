@@ -14,18 +14,18 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Buf.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\BufferAllocator.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Check.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Clock.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\IntervalMapper.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Recorder.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Slice.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\SliceStream.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Time.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)BufferAllocator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Check.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Clock.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Buf.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)IntervalMapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Recorder.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Slice.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SliceStream.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Time.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Check.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\NowSoundLib\Clock.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Check.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Clock.cpp" />
   </ItemGroup>
 </Project>
