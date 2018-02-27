@@ -41,16 +41,7 @@ struct App : ApplicationT<App>
     // 
     // Result: the app is effectively a simple live looper capable of looping N tracks.
 
-    // Label string.
-    const std::wstring AudioGraphStateString = L"Audio graph state: ";
-
-    TextBlock _textBlock1{ nullptr };
-    TextBlock _textBlock2{ nullptr };
-
-    StackPanel _stackPanel{ nullptr };
-
-    static int _nextTrackNumber;
-
+    // There is one TrackButton per recorded track, plus one more to allow recording a new track.
     struct TrackButton
     {
         App* _app;
@@ -58,13 +49,49 @@ struct App : ApplicationT<App>
         TrackId _trackId;
         NowSoundTrack_State _trackState;
         Button _button;
+        std::wstring _label;
+
+        void UpdateLabel()
+        {
+            // TODO: called only from UI thread
+            wstringstream wstr{};
+            wstr << _label << " Track # " << _trackNumber;
+            hstring hstr{};
+            hstr = wstr.str();
+            _button.Content(IReference<hstring>(hstr));
+        }
+
+        IAsyncAction Update()
+        {
+            NowSoundTrack_State currentState{ NowSoundTrackAPI::NowSoundTrack_State(_trackId) };
+            if (currentState != _trackState)
+            {
+                if (currentState == NowSoundTrack_State::Looping)
+                {
+                    _label = L"Mute Currently Looping";
+                }
+
+                apartment_context currentContext;
+                co_await _app->_uiThread;
+                UpdateLabel();
+                co_await currentContext;
+                _trackState = currentState;
+            }
+        }
 
         void HandleClick()
         {
             if (_trackId == -1)
             {
                 // we haven't started recording yet; time to do so!
-                // ... soon.
+                _trackId = NowSoundGraph::NowSoundGraph_CreateRecordingTrackAsync();
+                // don't initialize _trackState; that's Update's job
+                _label = L"Stop Recording";
+            }
+            else if (_trackState == NowSoundTrack_State::Recording)
+            {
+                NowSoundTrackAPI::NowSoundTrack_FinishRecording(_trackId);
+                _label = L"Finishing Recording Of";
             }
         }
 
@@ -72,10 +99,10 @@ struct App : ApplicationT<App>
             : _app{ app },
             _trackNumber{ _nextTrackNumber++ },
             _trackId{ -1 },
-            _button{ Button() }
+            _button{ Button() },
+            _label{ L"Start Recording" }
         {
-            // TODO: ensure this is only called from within UI context
-            _button.Content(IReference<hstring>(L"Start Recording Track #"));
+            UpdateLabel();
 
             app->_stackPanel.Children().Append(_button);
 
@@ -90,11 +117,24 @@ struct App : ApplicationT<App>
             _trackNumber{ other._trackNumber },
             _trackId{ other._trackId },
             _trackState{ other._trackState },
-            _button{ std::move(other._button) }
+            _button{ std::move(other._button) },
+            _label{ std::move(other._label) }
         { }
     };
 
+    // Label string.
+    const std::wstring AudioGraphStateString = L"Audio graph state: ";
+
+    TextBlock _textBlock1{ nullptr };
+    TextBlock _textBlock2{ nullptr };
+
+    StackPanel _stackPanel{ nullptr };
+
+    static int _nextTrackNumber;
+
     std::vector<TrackButton> _trackButtons{};
+
+    std::mutex _mutex{};
 
     apartment_context _uiThread;
 
@@ -146,6 +186,8 @@ struct App : ApplicationT<App>
         return expectedState == currentState;
     }
 
+    fire_and_forget LaunchedAsync();
+
     void OnLaunched(LaunchActivatedEventArgs const&)
     {
         _textBlock1 = TextBlock();
@@ -165,50 +207,69 @@ struct App : ApplicationT<App>
         // and here goes
         NowSoundGraph::NowSoundGraph_InitializeAsync();
 
-        Async();
+        LaunchedAsync();
     }
-
-    fire_and_forget Async()
-    {
-        apartment_context ui_thread;
-        _uiThread = ui_thread;
-
-        co_await resume_background();
-        // wait only one second (and hopefully much less) for graph to become initialized.
-        // 1000 second timeout is for early stage debugging.
-        const int timeoutInSeconds = 1000;
-        co_await WaitForGraphState(
-            NowSound::NowSoundGraph_State::Initialized,
-            winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
-
-        co_await resume_background();
-        NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
-
-        NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
-
-        co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
-
-        NowSound_GraphInfo graphInfo = NowSoundGraph::NowSoundGraph_GetGraphInfo();
-
-        co_await _uiThread;
-        std::wstringstream wstr;
-        wstr << L"Latency in samples: " << graphInfo.LatencyInSamples << " | Samples per quantum: " << graphInfo.SamplesPerQuantum;
-        _textBlock2.Text(wstr.str());
-        co_await resume_background();
-
-        NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
-
-        co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
-
-        co_await _uiThread;
-
-        // let's create our first TrackButton!
-        _trackButtons.push_back(TrackButton(this));
-    }
-
 };
 
 int App::_nextTrackNumber{ 1 };
+
+fire_and_forget App::LaunchedAsync()
+{
+    apartment_context ui_thread;
+    _uiThread = ui_thread;
+
+    // create our update loop
+    create_task([this]() -> IAsyncAction
+    {
+        // wait in intervals of 1/100 sec
+        co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
+
+        {
+            // Lock the _trackButtons array
+            std::lock_guard<std::mutex> guard(_mutex);
+
+            for (auto& button : _trackButtons)
+            {
+                co_await button.Update();
+            }
+        }
+    });
+
+    co_await resume_background();
+    // wait only one second (and hopefully much less) for graph to become initialized.
+    // 1000 second timeout is for early stage debugging.
+    const int timeoutInSeconds = 1000;
+    co_await WaitForGraphState(
+        NowSound::NowSoundGraph_State::Initialized,
+        winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+
+    co_await resume_background();
+    NowSound_DeviceInfo deviceInfo = NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo();
+
+    NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
+
+    co_await WaitForGraphState(NowSoundGraph_State::Created, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+
+    NowSound_GraphInfo graphInfo = NowSoundGraph::NowSoundGraph_GetGraphInfo();
+
+    co_await _uiThread;
+    std::wstringstream wstr;
+    wstr << L"Latency in samples: " << graphInfo.LatencyInSamples << " | Samples per quantum: " << graphInfo.SamplesPerQuantum;
+    _textBlock2.Text(wstr.str());
+    co_await resume_background();
+
+    NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
+
+    co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+
+    co_await _uiThread;
+
+    // let's create our first TrackButton!
+    {
+        std::lock_guard<std::mutex> guard(_mutex);
+        _trackButtons.push_back(TrackButton(this));
+    }
+}
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
