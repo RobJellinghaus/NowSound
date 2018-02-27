@@ -15,6 +15,7 @@ using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
+using namespace Windows::Media;
 using namespace Windows::Media::Audio;
 using namespace Windows::System;
 using namespace Windows::Storage;
@@ -36,11 +37,15 @@ AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 // First, an allocator for 128-second 48Khz stereo float sample buffers.
 BufferAllocator<float> s_audioAllocator(((int)Clock::SampleRateHz * 2 * sizeof(float)), 128);
 
+AudioFrame s_audioFrame{ nullptr };
+
 AudioGraph NowSoundGraph::GetAudioGraph() { return s_audioGraph; }
 
 AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return s_deviceOutputNode; }
 
 BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &s_audioAllocator; }
+
+AudioFrame NowSoundGraph::GetAudioFrame() { return s_audioFrame; }
 
 NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
 {
@@ -68,6 +73,8 @@ void NowSoundGraph::NowSoundGraph_InitializeAsync()
         s_audioGraph = result.Graph();
 
         s_audioGraphState = NowSoundGraph_State::Initialized;
+
+        s_audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
     });
 }
 

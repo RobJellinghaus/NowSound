@@ -197,7 +197,7 @@ namespace NowSound
                 return;
             }
 
-            Windows::Media::AudioBuffer buffer(s_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
             IMemoryBufferReference reference(buffer.CreateReference());
 
             uint8_t* dataInBytes{};
@@ -212,7 +212,7 @@ namespace NowSound
             uint32_t bytesRemaining = capacityInBytes;
             int slicesRemaining = (int)bytesRemaining / 8; // stereo float
             
-            s_audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            NowSoundGraph::GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
             while (slicesRemaining > 0)
             {
@@ -226,7 +226,7 @@ namespace NowSound
 
                 TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
 
-                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {s_audioFrame.Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
                 //HoloDebug.Log(line);
                 //Spam.Audio.WriteLine(line);
 
@@ -235,7 +235,7 @@ namespace NowSound
                 slicesRemaining -= (int)longest.SliceDuration().Value();
             }
 
-            _audioFrameInputNode.AddFrame(s_audioFrame);
+            _audioFrameInputNode.AddFrame(NowSoundGraph::GetAudioFrame());
 
             _lastQuantumTime = dateTimeNow;
         }
@@ -314,8 +314,6 @@ namespace NowSound
 
         return continueRecording;
     }
-
-    Windows::Media::AudioFrame NowSoundTrack::s_audioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
     int NowSoundTrack::s_sequenceNumber{};
 

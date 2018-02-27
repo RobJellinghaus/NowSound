@@ -40,22 +40,64 @@ struct App : ApplicationT<App>
     //   Also, a new "Start Recording Track #2" button appears, with the same behavior.
     // 
     // Result: the app is effectively a simple live looper capable of looping N tracks.
-    // Eventually, may add per-loop status.
 
     // Label string.
     const std::wstring AudioGraphStateString = L"Audio graph state: ";
 
     TextBlock _textBlock1{ nullptr };
     TextBlock _textBlock2{ nullptr };
-    Button _button1{ nullptr };
 
-    apartment_context _uiThread;
+    StackPanel _stackPanel{ nullptr };
+
+    static int _nextTrackNumber;
 
     struct TrackButton
     {
+        App* _app;
+        int _trackNumber;
         TrackId _trackId;
+        NowSoundTrack_State _trackState;
         Button _button;
+
+        void HandleClick()
+        {
+            if (_trackId == -1)
+            {
+                // we haven't started recording yet; time to do so!
+                // ... soon.
+            }
+        }
+
+        TrackButton(App* app)
+            : _app{ app },
+            _trackNumber{ _nextTrackNumber++ },
+            _trackId{ -1 },
+            _button{ Button() }
+        {
+            // TODO: ensure this is only called from within UI context
+            hstring label{ L"Start Recording Track #" };
+            _button.Content(IReference<hstring>(label));
+
+            app->_stackPanel.Children().Append(_button);
+
+            _button.Click([&](IInspectable const&, RoutedEventArgs const&)
+            {
+                HandleClick();
+            });
+        }
+
+        TrackButton(TrackButton&& other)
+            : _app{ other._app },
+            _trackNumber{ other._trackNumber },
+            _trackId{ other._trackId },
+            _trackState{ other._trackState },
+            _button{ std::move(other._button) }
+        { }
     };
+
+    std::vector<TrackButton> _trackButtons{};
+
+    apartment_context _uiThread;
 
     std::wstring StateLabel(NowSoundGraph_State state)
     {
@@ -112,20 +154,11 @@ struct App : ApplicationT<App>
         _textBlock2 = TextBlock();
         _textBlock2.Text(L"");
 
-        _button1 = Button();
-        _button1.Content(IReference<hstring>(L"Start Recording"));
-
-        _button1.Click([&](IInspectable const&, RoutedEventArgs const&)
-        {
-            NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync();
-        });
-
         Window xamlWindow = Window::Current();
 
         StackPanel stackPanel = StackPanel();
         stackPanel.Children().Append(_textBlock1);
         stackPanel.Children().Append(_textBlock2);
-        stackPanel.Children().Append(_button1);
 
         xamlWindow.Content(stackPanel);
         xamlWindow.Activate();
@@ -167,9 +200,16 @@ struct App : ApplicationT<App>
         NowSoundGraph::NowSoundGraph_StartAudioGraphAsync();
 
         co_await WaitForGraphState(NowSoundGraph_State::Running, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+
+        co_await _uiThread;
+
+        // let's create our first TrackButton!
+        _trackButtons.push_back(TrackButton(this));
     }
 
 };
+
+int App::_nextTrackNumber{ 1 };
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {

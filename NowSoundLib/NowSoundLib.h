@@ -84,8 +84,20 @@ namespace NowSound
         public:
             // These methods are for internal use only (since they not dllexported and are not using exportable types).
 
+            // The (currently singleton) AudioGraph.
             static Windows::Media::Audio::AudioGraph GetAudioGraph();
+
+            // The default audio output node.
             static Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
+
+            // The singleton (for reuse and to avoid reallocation) AudioFrame used for receiving input.
+            // TODO: should this be per-track?
+            // We keep a one-quarter-second (stereo float) AudioFrame and reuse it (between all inputs?! TODO fix this for multiple inputs)
+            // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
+            // buffers, which therefore still have time to drain.
+            // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
+            static Windows::Media::AudioFrame GetAudioFrame();
+
             // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
             // referencing it everywhere, because all this mutable static state continues to be concerning.
             static BufferAllocator<float>* GetAudioAllocator();

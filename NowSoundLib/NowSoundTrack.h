@@ -34,12 +34,6 @@ namespace NowSound
         // 
         static int s_sequenceNumber;
 
-        // We keep a one-quarter-second (stereo float) AudioFrame and reuse it (between all inputs?! TODO fix this for multiple inputs)
-        // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
-        // buffers, which therefore still have time to drain.
-        // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
-        static Windows::Media::AudioFrame s_audioFrame;
-
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;
 
