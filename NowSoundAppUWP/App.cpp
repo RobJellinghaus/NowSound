@@ -75,8 +75,7 @@ struct App : ApplicationT<App>
             _button{ Button() }
         {
             // TODO: ensure this is only called from within UI context
-            hstring label{ L"Start Recording Track #" };
-            _button.Content(IReference<hstring>(label));
+            _button.Content(IReference<hstring>(L"Start Recording Track #"));
 
             app->_stackPanel.Children().Append(_button);
 
@@ -156,11 +155,11 @@ struct App : ApplicationT<App>
 
         Window xamlWindow = Window::Current();
 
-        StackPanel stackPanel = StackPanel();
-        stackPanel.Children().Append(_textBlock1);
-        stackPanel.Children().Append(_textBlock2);
+        _stackPanel = StackPanel();
+        _stackPanel.Children().Append(_textBlock1);
+        _stackPanel.Children().Append(_textBlock2);
 
-        xamlWindow.Content(stackPanel);
+        xamlWindow.Content(_stackPanel);
         xamlWindow.Activate();
 
         // and here goes
