@@ -119,6 +119,13 @@ void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
     s_audioGraphState = NowSoundGraph_State::Running;
 }
 
+TrackId NowSoundGraph::NowSoundGraph_CreateRecordingTrackAsync()
+{
+    Check(s_audioGraphState == NowSoundGraph_State::Running);
+
+    // ... complete this
+}
+
 IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
 {
     // This must be called on the UI thread.
