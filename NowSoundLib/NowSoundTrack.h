@@ -30,21 +30,17 @@ namespace NowSound
 {
     class NowSoundTrack : IRecorder<AudioSample, float>
     {
-        // Sequence number of next Track; purely diagnostic, never exposed to outside.
-        // 
-        static int s_sequenceNumber;
-
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;
 
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
-        const int _sequenceNumber;
+        const TrackId _trackId;
 
         // The audio graph which created this Track.
         // HolofunkAudioGraph _audioGraph; // TODO: do we want to have graph objects? Might we want multiple graphs for different output devices?
 
         // The input the track is recording from, if recording.
-        AudioInputId _inputId;
+        const AudioInputId _inputId;
 
         // The current state of the track.
         NowSoundTrack_State _state;
@@ -62,7 +58,7 @@ namespace NowSound
         // This is the output node for this Track, but the input node for the audio graph.
         Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
 
-        // The stream containing this Track's data.
+        // The stream containing this Track's data; this is an owning reference.
         BufferedSliceStream<AudioSample, float> _audioStream;
 
         // Local time is based on the Now when the track started looping, and advances strictly
@@ -92,7 +88,7 @@ namespace NowSound
         bool _isMuted;
 
     public:
-        NowSoundTrack(AudioInputId inputId);
+        NowSoundTrack(TrackId trackId, AudioInputId inputId);
 
         // In what state is this track?
         NowSoundTrack_State State() const;

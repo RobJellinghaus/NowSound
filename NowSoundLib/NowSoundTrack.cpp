@@ -6,6 +6,7 @@
 #include "stdint.h"
 
 #include "BufferAllocator.h"
+#include "Check.h"
 #include "Clock.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
@@ -85,39 +86,43 @@ namespace NowSound
         Track(trackId)->UnityUpdate();
     }
 
-    std::vector<std::unique_ptr<NowSoundTrack>> NowSoundTrackAPI::_tracks{};
+    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrackAPI::_tracks{};
 
     NowSoundTrack* NowSoundTrackAPI::Track(TrackId id)
     {
-        NowSoundTrack* value = _tracks.at(static_cast<int>(id)).get();
+        NowSoundTrack* value = _tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
 
-    NowSoundTrack::NowSoundTrack(AudioInputId inputId)
-        : _sequenceNumber(s_sequenceNumber++),
-        _state(NowSoundTrack_State::Recording),
-        _inputId(inputId),
-        _startTime(Clock::Instance().Now()),
-        _audioStream(
-            _startTime,
-            2,
-            NowSoundGraph::GetAudioAllocator(),
-            /*maxBufferedDuration:*/ 0,
-            /*useContinuousLoopingMapper*/ false),
-        // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
-        _beatDuration(1),
-        _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
-        _localTime(0)
+    NowSoundTrack::NowSoundTrack(TrackId trackId, AudioInputId inputId)
+        : _trackId(trackId),
+            _inputId(inputId),
+            _state(NowSoundTrack_State::Recording),
+            _startTime(Clock::Instance().Now()),
+            _audioStream(
+                _startTime,
+                2,
+                NowSoundGraph::GetAudioAllocator(),
+                /*maxBufferedDuration:*/ 0,
+                /*useContinuousLoopingMapper*/ false),
+            // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
+            _beatDuration(1),
+            _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
+            _localTime(0)
     {
-        // Tracks should only be created from the Unity thread.
+        // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
 
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraph_State::Running);
 
+        AudioDeviceInputNode audioDeviceInputNode = NowSoundGraph::GetAudioDeviceInputNode();
+
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
+        // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
+        // In general, what is the most synchronous / fastest way to switch from recording to playing?
         _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::GetAudioDeviceOutputNode());
         _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
         {
@@ -314,8 +319,6 @@ namespace NowSound
 
         return continueRecording;
     }
-
-    int NowSoundTrack::s_sequenceNumber{};
 
     int NowSoundTrack::s_zeroByteOutgoingFrameCount{};
 }

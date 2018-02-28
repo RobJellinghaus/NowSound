@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "Clock.h"
 #include "NowSoundLib.h"
+#include "NowSoundTrack.h"
 
 using namespace NowSound;
 using namespace concurrency;
@@ -31,13 +32,23 @@ static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized
 
 static AudioGraph s_audioGraph{ nullptr };
 
-// TODO: really really need a real graph node store
+// The default output device. TODO: support multiple output devices.
 AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
 
 // First, an allocator for 128-second 48Khz stereo float sample buffers.
 BufferAllocator<float> s_audioAllocator(((int)Clock::SampleRateHz * 2 * sizeof(float)), 128);
 
+// Audio frame, reused for copying audio.
 AudioFrame s_audioFrame{ nullptr };
+
+// The default input device. TODO: input device selection.
+AudioDeviceInputNode s_defaultInputDevice{ nullptr };
+
+// This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
+AudioFrameOutputNode s_inputDeviceFrameOutputNode{ nullptr };
+
+// The next TrackId to be allocated.
+TrackId s_trackId{ 0 };
 
 AudioGraph NowSoundGraph::GetAudioGraph() { return s_audioGraph; }
 
@@ -100,6 +111,24 @@ void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*NowSound_DeviceInfo ou
         }
 
         s_deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
+
+        // Create a device input node
+        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await s_audioGraph.CreateDeviceInputNodeAsync();
+
+        if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
+        {
+            // Cannot create device input node
+            CoreApplication::Exit();
+            return;
+        }
+
+        s_defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
+        s_inputDeviceFrameOutputNode = s_audioGraph.CreateFrameOutputNode();
+        s_defaultInputDevice.AddOutgoingConnection(s_inputDeviceFrameOutputNode);
+
+        // TODO: add Graph_QuantumStarted handler
+        ...
+
         s_audioGraphState = NowSoundGraph_State::Created;
     });
 }
@@ -121,9 +150,16 @@ void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
 
 TrackId NowSoundGraph::NowSoundGraph_CreateRecordingTrackAsync()
 {
+    // TODO: confirm we are on UI thread.
+    // Since we are mutating the audio graph, we must not be on the audio graph thread.
     Check(s_audioGraphState == NowSoundGraph_State::Running);
 
-    // ... complete this
+    TrackId id = s_trackId++;
+
+    std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0));
+    NowSoundTrackAPI::AddTrack(id, std::move(newTrack));
+
+    return id;
 }
 
 IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
@@ -168,4 +204,25 @@ void NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync()
 
 void NowSoundGraph::NowSoundGraph_DestroyAudioGraphAsync()
 {
+}
+
+void NowSoundGraph::HandleIncomingAudio()
+{
+    AudioFrame frame = frameOutputNode.GetFrame();
+
+    uint8_t* dataInBytes{};
+    uint32_t capacityInBytes{};
+
+    // OMG KENNY KERR WINS AGAIN:
+    // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
+    Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+    IMemoryBufferReference reference(buffer.CreateReference());
+    winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
+    check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
+
+}
+
+void NowSoundTrackAPI::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)
+{
+    _tracks.emplace(id, std::move(track));
 }

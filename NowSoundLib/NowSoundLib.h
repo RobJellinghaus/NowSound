@@ -75,7 +75,7 @@ namespace NowSound
 
             // Create a new track and begin recording.
             // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-            static __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync();
+            static __declspec(dllexport) int NowSoundGraph_CreateRecordingTrackAsync();
 
         private:
             // Async helper method.
@@ -87,7 +87,10 @@ namespace NowSound
             // The (currently singleton) AudioGraph.
             static Windows::Media::Audio::AudioGraph GetAudioGraph();
 
-            // The default audio output node.
+            // The default audio input node. TODO: support device selection.
+            static Windows::Media::Audio::AudioDeviceInputNode GetAudioDeviceInputNode();
+
+            // The default audio output node.  TODO: support device selection.
             static Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
 
             // The singleton (for reuse and to avoid reallocation) AudioFrame used for receiving input.
@@ -101,6 +104,9 @@ namespace NowSound
             // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
             // referencing it everywhere, because all this mutable static state continues to be concerning.
             static BufferAllocator<float>* GetAudioAllocator();
+
+            // A graph quantum has started; handle any available input audio.
+            static void HandleIncomingAudio();
         };
 
         // Interface used to invoke operations on a particular audio track.
@@ -144,8 +150,12 @@ namespace NowSound
             // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
             static void __declspec(dllexport) NowSoundTrack_UnityUpdate(TrackId trackId);
 
+        public:
+            // non-exported methods for "internal" use
+            static void AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track);
+
         private:
-            static std::vector<std::unique_ptr<NowSoundTrack>> _tracks;
+            static std::map<TrackId, std::unique_ptr<NowSoundTrack>> _tracks;
             static NowSoundTrack* Track(TrackId id);
         };
     };
