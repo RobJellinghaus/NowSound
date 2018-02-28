@@ -117,8 +117,6 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraph_State::Running);
 
-        AudioDeviceInputNode audioDeviceInputNode = NowSoundGraph::GetAudioDeviceInputNode();
-
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
         // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
@@ -128,6 +126,8 @@ namespace NowSound
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
+
+
     }
     
     NowSoundTrack_State NowSoundTrack::State() const { return _state; }
@@ -202,14 +202,14 @@ namespace NowSound
                 return;
             }
 
-            Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
-            IMemoryBufferReference reference(buffer.CreateReference());
 
             uint8_t* dataInBytes{};
             uint32_t capacityInBytes{};
 
             // OMG KENNY KERR WINS AGAIN:
             // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
+            Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            IMemoryBufferReference reference(buffer.CreateReference());
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
