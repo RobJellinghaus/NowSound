@@ -45,19 +45,19 @@ namespace NowSound
         };
 
         // Information about an audio graph.
-        struct NowSound_GraphInfo
+        struct NowSoundGraphInfo
         {
             int32_t LatencyInSamples;
             int32_t SamplesPerQuantum;
 
-            NowSound_GraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
+            NowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
             {
                 LatencyInSamples = latencyInSamples;
                 SamplesPerQuantum = samplesPerQuantum;
             }
         };
 
-        enum NowSoundGraph_State
+        enum NowSoundGraphState
         {
             // InitializeAsync() has not yet been called.
             Uninitialized,
@@ -82,7 +82,7 @@ namespace NowSound
         };
 
         // The state of a particular IHolofunkAudioTrack.
-        enum NowSoundTrack_State
+        enum NowSoundTrackState
         {
             // The track is being recorded and it is not known when it will finish.
             Recording,

@@ -3,7 +3,9 @@
 
 #include "pch.h"
 #include "Clock.h"
+#include "GetBuffer.h"
 #include "NowSoundLib.h"
+#include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
 
 using namespace NowSound;
@@ -28,45 +30,35 @@ TimeSpan timeSpanFromSeconds(int seconds)
     return TimeSpan(seconds * Clock::TicksPerSecond);
 }
 
-static NowSoundGraph_State s_audioGraphState{ NowSoundGraph_State::Uninitialized };
+std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ nullptr };
 
-static AudioGraph s_audioGraph{ nullptr };
+NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
-// The default output device. TODO: support multiple output devices.
-AudioDeviceOutputNode s_deviceOutputNode{ nullptr };
+NowSoundGraph::NowSoundGraph()
+    : _audioGraph{ nullptr },
+    _audioGraphState{ NowSoundGraphState::Uninitialized },
+    _deviceOutputNode{ nullptr },
+    _audioAllocator{ ((int)Clock::SampleRateHz * 2 * sizeof(float)), 128 },
+    _audioFrame{ nullptr },
+    _defaultInputDevice{ nullptr },
+    _inputDeviceFrameOutputNode{ nullptr },
+    _trackId{ 0 }
+{ }
 
-// First, an allocator for 128-second 48Khz stereo float sample buffers.
-BufferAllocator<float> s_audioAllocator(((int)Clock::SampleRateHz * 2 * sizeof(float)), 128);
+AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
 
-// Audio frame, reused for copying audio.
-AudioFrame s_audioFrame{ nullptr };
+AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return _deviceOutputNode; }
 
-// The default input device. TODO: input device selection.
-AudioDeviceInputNode s_defaultInputDevice{ nullptr };
+BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &_audioAllocator; }
 
-// This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
-AudioFrameOutputNode s_inputDeviceFrameOutputNode{ nullptr };
+AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
 
-// The next TrackId to be allocated.
-TrackId s_trackId{ 0 };
+NowSoundGraphState NowSoundGraph::GetGraphState() { return _audioGraphState; }
 
-AudioGraph NowSoundGraph::GetAudioGraph() { return s_audioGraph; }
-
-AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return s_deviceOutputNode; }
-
-BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &s_audioAllocator; }
-
-AudioFrame NowSoundGraph::GetAudioFrame() { return s_audioFrame; }
-
-NowSoundGraph_State NowSoundGraph::NowSoundGraph_GetGraphState()
+void NowSoundGraph::InitializeAsync()
 {
-    return s_audioGraphState;
-}
-
-void NowSoundGraph::NowSoundGraph_InitializeAsync()
-{
-    Check(s_audioGraphState == NowSoundGraph_State::Uninitialized);
-    create_task([]() -> IAsyncAction
+    Check(_audioGraphState == NowSoundGraphState::Uninitialized);
+    create_task([&]() -> IAsyncAction
     {
         AudioGraphSettings settings(AudioRenderCategory::Media);
         settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
@@ -81,27 +73,27 @@ void NowSoundGraph::NowSoundGraph_InitializeAsync()
             return;
         }
 
-        s_audioGraph = result.Graph();
+        _audioGraph = result.Graph();
 
-        s_audioGraphState = NowSoundGraph_State::Initialized;
+        _audioGraphState = NowSoundGraphState::Initialized;
 
-        s_audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
+        _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
     });
 }
 
-NowSound_DeviceInfo NowSoundGraph::NowSoundGraph_GetDefaultRenderDeviceInfo()
+NowSound_DeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
 {
     return NowSound_DeviceInfo(nullptr, nullptr);
 }
 
-void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
+void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
 {
-    Check(s_audioGraphState == NowSoundGraph_State::Initialized);
+    Check(_audioGraphState == NowSoundGraphState::Initialized);
 
     create_task([]() -> IAsyncAction
     {
         // Create a device output node
-        CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await s_audioGraph.CreateDeviceOutputNodeAsync();
+        CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
 
         if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
         {
@@ -110,10 +102,10 @@ void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*NowSound_DeviceInfo ou
             return;
         }
 
-        s_deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
+        _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
         // Create a device input node
-        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await s_audioGraph.CreateDeviceInputNodeAsync();
+        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync();
 
         if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
         {
@@ -122,39 +114,43 @@ void NowSoundGraph::NowSoundGraph_CreateAudioGraphAsync(/*NowSound_DeviceInfo ou
             return;
         }
 
-        s_defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
-        s_inputDeviceFrameOutputNode = s_audioGraph.CreateFrameOutputNode();
-        s_defaultInputDevice.AddOutgoingConnection(s_inputDeviceFrameOutputNode);
+        _defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
+        _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
+        _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
-        // TODO: add Graph_QuantumStarted handler
-        ...
+        /*
+        _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
+        {
+            HandleIncomingAudio();
+        });
+        */
 
-        s_audioGraphState = NowSoundGraph_State::Created;
+        _audioGraphState = NowSoundGraphState::Created;
     });
 }
 
-NowSound_GraphInfo NowSoundGraph::NowSoundGraph_GetGraphInfo()
+NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
 {
-    Check(s_audioGraphState >= NowSoundGraph_State::Created);
-    return NowSound_GraphInfo(s_audioGraph.LatencyInSamples(), s_audioGraph.SamplesPerQuantum());
+    Check(_audioGraphState >= NowSoundGraphState::Created);
+    return NowSoundGraphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
 }
 
-void NowSoundGraph::NowSoundGraph_StartAudioGraphAsync()
+void NowSoundGraph::StartAudioGraphAsync()
 {
-    Check(s_audioGraphState == NowSoundGraph_State::Created);
+    Check(_audioGraphState == NowSoundGraphState::Created);
 
-    s_audioGraph.Start();
+    _audioGraph.Start();
 
-    s_audioGraphState = NowSoundGraph_State::Running;
+    _audioGraphState = NowSoundGraphState::Running;
 }
 
-TrackId NowSoundGraph::NowSoundGraph_CreateRecordingTrackAsync()
+TrackId NowSoundGraph::CreateRecordingTrackAsync()
 {
     // TODO: confirm we are on UI thread.
     // Since we are mutating the audio graph, we must not be on the audio graph thread.
-    Check(s_audioGraphState == NowSoundGraph_State::Running);
+    Check(_audioGraphState == NowSoundGraphState::Running);
 
-    TrackId id = s_trackId++;
+    TrackId id = _trackId++;
 
     std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0));
     NowSoundTrackAPI::AddTrack(id, std::move(newTrack));
@@ -176,7 +172,7 @@ IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
         return;
     }
 
-    CreateAudioFileInputNodeResult fileInputResult = co_await s_audioGraph.CreateFileInputNodeAsync(file);
+    CreateAudioFileInputNodeResult fileInputResult = co_await _audioGraph.CreateFileInputNodeAsync(file);
     if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
     {
         // Cannot read input file
@@ -193,22 +189,24 @@ IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
         return;
     }
 
-    fileInput.AddOutgoingConnection(s_deviceOutputNode);
+    fileInput.AddOutgoingConnection(_deviceOutputNode);
     fileInput.Start();
 }
 
-void NowSoundGraph::NowSoundGraph_PlayUserSelectedSoundFileAsync()
+void NowSoundGraph::PlayUserSelectedSoundFileAsync()
 {
     PlayUserSelectedSoundFileAsyncImpl();
 }
 
-void NowSoundGraph::NowSoundGraph_DestroyAudioGraphAsync()
+void NowSoundGraph::DestroyAudioGraphAsync()
 {
 }
 
 void NowSoundGraph::HandleIncomingAudio()
 {
-    AudioFrame frame = frameOutputNode.GetFrame();
+    // TODO: advance the clock
+
+    AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
 
     uint8_t* dataInBytes{};
     uint32_t capacityInBytes{};
@@ -220,6 +218,32 @@ void NowSoundGraph::HandleIncomingAudio()
     winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
     check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
+    if (capacityInBytes == 0)
+    {
+        // we don't count zero-byte frames... and why do they ever happen???
+        return;
+    }
+
+    // Must be multiple of 8 (2 channels, 4 bytes/float)
+    Check((capacityInBytes & 0x7) == 0);
+
+    uint32_t bufferStart = 0;
+    if (Clock::Instance().Now().Value() == 0)
+    {
+        // if maxCapacityEncountered is greater than the audio graph buffer size, 
+        // then the audio graph decided to give us a big backload of buffer content
+        // as its first callback.  Not sure why it does this, but we don't want it,
+        // so take only the tail of the buffer.
+        if (capacityInBytes > (_audioGraph.LatencyInSamples() << 3))
+        {
+            bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() << 3);
+            capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() << 3);
+        }
+    }
+
+    // iterate through all active Recorders
+    // note that Recorders must be added or removed only inside the audio graph
+    // (e.g. QuantumStarted or FrameInputAvailable)
 }
 
 void NowSoundTrackAPI::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)

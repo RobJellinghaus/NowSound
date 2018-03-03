@@ -34,16 +34,16 @@ namespace NowSound
     extern "C"
     {
         // Operations on the audio graph as a whole.
-        // There is a single "static" audio graph defined here; multiple audio graphs are not supported.
+        // There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
         // All async methods document the state the graph must be in when called, and the state the graph
         // transitions to on completion.
         // TODO: make this support multiple (non-static) graphs.
-        class NowSoundGraph
+        class NowSoundGraphAPI
         {
         public:
             // Get the current state of the audio graph; intended to be efficiently pollable by the client.
             // This is the only method that may be called in any state whatoever.
-            static __declspec(dllexport) NowSoundGraph_State NowSoundGraph_GetGraphState();
+            static __declspec(dllexport) NowSoundGraphState NowSoundGraph_GetGraphState();
 
             // Initialize the audio graph subsystem such that device information can be queried.
             // Graph must be Uninitialized.  On completion, graph becomes Initialized.
@@ -59,7 +59,7 @@ namespace NowSound
 
             // Get the graph info for the created graph.
             // Graph must be Created or Running.
-            static __declspec(dllexport) NowSound_GraphInfo NowSoundGraph_GetGraphInfo();
+            static __declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetGraphInfo();
 
             // Start the audio graph.
             // Graph must be Created.  On completion, graph becomes Started.
@@ -76,45 +76,14 @@ namespace NowSound
             // Create a new track and begin recording.
             // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
             static __declspec(dllexport) int NowSoundGraph_CreateRecordingTrackAsync();
-
-        private:
-            // Async helper method.
-            static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
-
-        public:
-            // These methods are for internal use only (since they not dllexported and are not using exportable types).
-
-            // The (currently singleton) AudioGraph.
-            static Windows::Media::Audio::AudioGraph GetAudioGraph();
-
-            // The default audio input node. TODO: support device selection.
-            static Windows::Media::Audio::AudioDeviceInputNode GetAudioDeviceInputNode();
-
-            // The default audio output node.  TODO: support device selection.
-            static Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
-
-            // The singleton (for reuse and to avoid reallocation) AudioFrame used for receiving input.
-            // TODO: should this be per-track?
-            // We keep a one-quarter-second (stereo float) AudioFrame and reuse it (between all inputs?! TODO fix this for multiple inputs)
-            // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
-            // buffers, which therefore still have time to drain.
-            // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
-            static Windows::Media::AudioFrame GetAudioFrame();
-
-            // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
-            // referencing it everywhere, because all this mutable static state continues to be concerning.
-            static BufferAllocator<float>* GetAudioAllocator();
-
-            // A graph quantum has started; handle any available input audio.
-            static void HandleIncomingAudio();
-        };
+        }
 
         // Interface used to invoke operations on a particular audio track.
         class NowSoundTrackAPI
         {
         public:
             // In what state is this track?
-            static __declspec(dllexport) NowSoundTrack_State NowSoundTrack_State(TrackId trackId);
+            static __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId);
 
             // Duration in beats of current Clock.
             // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.

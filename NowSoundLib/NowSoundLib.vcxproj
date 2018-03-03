@@ -309,6 +309,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="GetBuffer.h" />
+    <ClInclude Include="NowSoundGraph.h" />
     <ClInclude Include="NowSoundLibTypes.h" />
     <ClInclude Include="NowSoundTrack.h" />
     <ClInclude Include="NowSoundLib.h" />

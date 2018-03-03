@@ -43,7 +43,7 @@ namespace NowSound
         const AudioInputId _inputId;
 
         // The current state of the track.
-        NowSoundTrack_State _state;
+        NowSoundTrackState _state;
 
         // The number of complete beats thaat measures the duration of this track.
         // Increases steadily while Recording; sets a time limit to further recording during FinishRecording;
@@ -91,7 +91,7 @@ namespace NowSound
         NowSoundTrack(TrackId trackId, AudioInputId inputId);
 
         // In what state is this track?
-        NowSoundTrack_State State() const;
+        NowSoundTrackState State() const;
 
         // Duration in beats of current Clock.
         // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.

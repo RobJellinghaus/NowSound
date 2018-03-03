@@ -8,6 +8,7 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Clock.h"
+#include "GetBuffer.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
 #include "Recorder.h"
@@ -24,17 +25,9 @@ using namespace Windows::Foundation;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 
-#include "winrt/Windows.Foundation.h"
-
-// From https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-struct __declspec(uuid("5b0d3235-4dba-4d44-865e-8f1d0e4fd04d")) __declspec(novtable) IMemoryBufferByteAccess : ::IUnknown
-{
-    virtual HRESULT __stdcall GetBuffer(uint8_t** value, uint32_t* capacity) = 0;
-};
-
 namespace NowSound
 {
-    __declspec(dllexport) NowSoundTrack_State NowSoundTrackAPI::NowSoundTrack_State(TrackId trackId)
+    __declspec(dllexport) NowSoundTrackState NowSoundTrackAPI::NowSoundTrack_State(TrackId trackId)
     {
         return Track(trackId)->State();
     }
@@ -98,7 +91,7 @@ namespace NowSound
     NowSoundTrack::NowSoundTrack(TrackId trackId, AudioInputId inputId)
         : _trackId(trackId),
             _inputId(inputId),
-            _state(NowSoundTrack_State::Recording),
+            _state(NowSoundTrackState::Recording),
             _startTime(Clock::Instance().Now()),
             _audioStream(
                 _startTime,
@@ -115,7 +108,7 @@ namespace NowSound
         // TODO: thread contracts.
 
         // should only ever call this when graph is fully up and running
-        Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraph_State::Running);
+        Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraphState::Running);
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
@@ -130,7 +123,7 @@ namespace NowSound
 
     }
     
-    NowSoundTrack_State NowSoundTrack::State() const { return _state; }
+    NowSoundTrackState NowSoundTrack::State() const { return _state; }
     
     Duration<Beat> NowSoundTrack::BeatDuration() const { return _beatDuration; }
     
@@ -161,7 +154,7 @@ namespace NowSound
 
         // no need for any synchronization at all; the Record() logic will see this change.
         // We have no memory fence here but this write does reliably get seen sufficiently quickly in practice.
-        _state = NowSoundTrack_State::FinishRecording;
+        _state = NowSoundTrackState::FinishRecording;
     }
 
     void NowSoundTrack::Delete()
@@ -189,7 +182,7 @@ namespace NowSound
             return;
         }
 
-        if (_state == NowSoundTrack_State::Looping)
+        if (_state == NowSoundTrackState::Looping)
         {
             // we are looping; let's play!
             // TODO: why did we have this lock statement here?  lock(this)
@@ -201,7 +194,6 @@ namespace NowSound
                 s_zeroByteOutgoingFrameCount++;
                 return;
             }
-
 
             uint8_t* dataInBytes{};
             uint32_t capacityInBytes{};
@@ -255,7 +247,7 @@ namespace NowSound
         // TODO: what was this for? lock(this)
         switch (_state)
         {
-        case NowSoundTrack_State::Recording:
+        case NowSoundTrackState::Recording:
         {
             // How many complete beats after we record this data?
             Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
@@ -276,7 +268,7 @@ namespace NowSound
             break;
         }
 
-        case NowSoundTrack_State::FinishRecording:
+        case NowSoundTrackState::FinishRecording:
         {
             // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
@@ -290,7 +282,7 @@ namespace NowSound
                 duration = roundedUpDuration - _audioStream.DiscreteDuration();
 
                 // we are done recording altogether
-                _state = NowSoundTrack_State::Looping;
+                _state = NowSoundTrackState::Looping;
                 continueRecording = false;
 
                 _audioStream.Append(duration, data);
@@ -310,7 +302,7 @@ namespace NowSound
             break;
         }
 
-        case NowSoundTrack_State::Looping:
+        case NowSoundTrackState::Looping:
         {
             Check(false); // Should never still be recording once in looping state
             return false;
