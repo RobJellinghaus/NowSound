@@ -39,7 +39,7 @@ namespace NowSound
 
         // Get the device info for the default render device.
         // Graph must not be Uninitialized or InError.
-        NowSound_DeviceInfo _GetDefaultRenderDeviceInfo();
+        NowSoundDeviceInfo GetDefaultRenderDeviceInfo();
 
         // Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.
@@ -70,7 +70,7 @@ namespace NowSound
         NowSoundGraph();
 
         // Async helper method.
-        static IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
+        IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 
         // The singleton (for now) graph.
         static std::unique_ptr<NowSoundGraph> s_instance;
@@ -82,22 +82,22 @@ namespace NowSound
         NowSoundGraphState _audioGraphState;
 
         // The default output device. TODO: support multiple output devices.
-        AudioDeviceOutputNode _deviceOutputNode{ nullptr };
+        AudioDeviceOutputNode _deviceOutputNode;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 
         // Audio frame, reused for copying audio.
-        AudioFrame _audioFrame{ nullptr };
+        Windows::Media::AudioFrame _audioFrame;
 
         // The default input device. TODO: input device selection.
-        AudioDeviceInputNode _defaultInputDevice{ nullptr };
+        AudioDeviceInputNode _defaultInputDevice;
 
         // This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
-        AudioFrameOutputNode _inputDeviceFrameOutputNode{ nullptr };
+        AudioFrameOutputNode _inputDeviceFrameOutputNode;
 
         // The next TrackId to be allocated.
-        TrackId _trackId{ 0 };
+        TrackId _trackId;
 
     public:
         // The static instance of the graph.  We may eventually have multiple.

@@ -9,6 +9,7 @@
 #include "Check.h"
 #include "Clock.h"
 #include "GetBuffer.h"
+#include "NowSoundGraph.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
 #include "Recorder.h"
@@ -96,25 +97,25 @@ namespace NowSound
             _audioStream(
                 _startTime,
                 2,
-                NowSoundGraph::GetAudioAllocator(),
+                NowSoundGraph::Instance()->GetAudioAllocator(),
                 /*maxBufferedDuration:*/ 0,
                 /*useContinuousLoopingMapper*/ false),
             // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
             _beatDuration(1),
-            _audioFrameInputNode(NowSoundGraph::GetAudioGraph().CreateFrameInputNode()),
+            _audioFrameInputNode(NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode()),
             _localTime(0)
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
 
         // should only ever call this when graph is fully up and running
-        Check(NowSoundGraph::NowSoundGraph_GetGraphState() == NowSoundGraphState::Running);
+        Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::Running);
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
         // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
         // In general, what is the most synchronous / fastest way to switch from recording to playing?
-        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::GetAudioDeviceOutputNode());
+        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
         _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
         {
             FrameInputNode_QuantumStarted(sender, args);
@@ -200,7 +201,7 @@ namespace NowSound
 
             // OMG KENNY KERR WINS AGAIN:
             // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-            Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            Windows::Media::AudioBuffer buffer(NowSoundGraph::Instance()->GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
             IMemoryBufferReference reference(buffer.CreateReference());
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
@@ -209,7 +210,7 @@ namespace NowSound
             uint32_t bytesRemaining = capacityInBytes;
             int slicesRemaining = (int)bytesRemaining / 8; // stereo float
             
-            NowSoundGraph::GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            NowSoundGraph::Instance()->GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
             while (slicesRemaining > 0)
             {
@@ -232,7 +233,7 @@ namespace NowSound
                 slicesRemaining -= (int)longest.SliceDuration().Value();
             }
 
-            _audioFrameInputNode.AddFrame(NowSoundGraph::GetAudioFrame());
+            _audioFrameInputNode.AddFrame(NowSoundGraph::Instance()->GetAudioFrame());
 
             _lastQuantumTime = dateTimeNow;
         }

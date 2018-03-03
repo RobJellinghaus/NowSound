@@ -30,14 +30,14 @@ namespace NowSound
     extern "C"
     {
         // Information about an audio device.
-        struct NowSound_DeviceInfo
+        struct NowSoundDeviceInfo
         {
             LPWSTR Id;
             LPWSTR Name;
 
             // Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
             // Note that this does *not* own the strings; these must be owned elsewhere.
-            NowSound_DeviceInfo(LPWSTR id, LPWSTR name)
+            NowSoundDeviceInfo(LPWSTR id, LPWSTR name)
             {
                 Id = id;
                 Name = name;

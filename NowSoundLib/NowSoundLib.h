@@ -51,7 +51,7 @@ namespace NowSound
 
             // Get the device info for the default render device.
             // Graph must not be Uninitialized or InError.
-            static __declspec(dllexport) NowSound_DeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
+            static __declspec(dllexport) NowSoundDeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
 
             // Create the audio graph.
             // Graph must be Initialized.  On completion, graph becomes Created.
@@ -76,7 +76,7 @@ namespace NowSound
             // Create a new track and begin recording.
             // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
             static __declspec(dllexport) int NowSoundGraph_CreateRecordingTrackAsync();
-        }
+        };
 
         // Interface used to invoke operations on a particular audio track.
         class NowSoundTrackAPI

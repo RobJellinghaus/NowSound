@@ -81,16 +81,16 @@ void NowSoundGraph::InitializeAsync()
     });
 }
 
-NowSound_DeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
+NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
 {
-    return NowSound_DeviceInfo(nullptr, nullptr);
+    return NowSoundDeviceInfo(nullptr, nullptr);
 }
 
 void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
 {
     Check(_audioGraphState == NowSoundGraphState::Initialized);
 
-    create_task([]() -> IAsyncAction
+    create_task([&]() -> IAsyncAction
     {
         // Create a device output node
         CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
