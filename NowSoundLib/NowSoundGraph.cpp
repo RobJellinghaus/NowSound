@@ -24,6 +24,51 @@ using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
 
+NowSoundGraphState NowSoundGraphAPI::NowSoundGraph_GetGraphState()
+{
+    return NowSoundGraph::Instance()->GetGraphState();
+}
+
+void NowSoundGraphAPI::NowSoundGraph_InitializeAsync()
+{
+    NowSoundGraph::Instance()->InitializeAsync();
+}
+
+NowSoundDeviceInfo NowSoundGraphAPI::NowSoundGraph_GetDefaultRenderDeviceInfo()
+{
+    return NowSoundGraph::Instance()->GetDefaultRenderDeviceInfo();
+}
+
+void NowSoundGraphAPI::NowSoundGraph_CreateAudioGraphAsync()
+{
+    return NowSoundGraph::Instance()->CreateAudioGraphAsync();
+}
+
+NowSoundGraphInfo NowSoundGraphAPI::NowSoundGraph_GetGraphInfo()
+{
+    return NowSoundGraph::Instance()->GetGraphInfo();
+}
+
+void NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync()
+{
+    NowSoundGraph::Instance()->StartAudioGraphAsync();
+}
+
+void NowSoundGraphAPI::NowSoundGraph_PlayUserSelectedSoundFileAsync()
+{
+    NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
+}
+
+void NowSoundGraphAPI::NowSoundGraph_DestroyAudioGraphAsync()
+{
+    NowSoundGraph::Instance()->DestroyAudioGraphAsync();
+}
+
+int NowSoundGraphAPI::NowSoundGraph_CreateRecordingTrackAsync()
+{
+    return NowSoundGraph::Instance()->CreateRecordingTrackAsync();
+}
+
 TimeSpan timeSpanFromSeconds(int seconds)
 {
     // TimeSpan is in 100ns units
@@ -105,7 +150,8 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
         _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
         // Create a device input node
-        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync();
+        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await 
+            _audioGraph.CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
 
         if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
         {
