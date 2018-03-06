@@ -28,7 +28,7 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-    class NowSoundTrack : IRecorder<AudioSample, float>
+    class NowSoundTrack : public IRecorder<AudioSample, float>
     {
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;

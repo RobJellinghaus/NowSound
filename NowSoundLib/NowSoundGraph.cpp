@@ -2,6 +2,9 @@
 // Licensed under the MIT license
 
 #include "pch.h"
+
+#include <algorithm>
+
 #include "Clock.h"
 #include "GetBuffer.h"
 #include "NowSoundLib.h"
@@ -75,7 +78,7 @@ TimeSpan timeSpanFromSeconds(int seconds)
     return TimeSpan(seconds * Clock::TicksPerSecond);
 }
 
-std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ nullptr };
+std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ new NowSoundGraph() };
 
 NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
@@ -87,7 +90,9 @@ NowSoundGraph::NowSoundGraph()
     _audioFrame{ nullptr },
     _defaultInputDevice{ nullptr },
     _inputDeviceFrameOutputNode{ nullptr },
-    _trackId{ 0 }
+    _trackId{ 0 },
+    _recorders{ },
+    _recorderMutex{ }
 { }
 
 AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
@@ -133,6 +138,8 @@ NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
 
 void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
 {
+    // TODO: verify not on audio graph thread
+
     Check(_audioGraphState == NowSoundGraphState::Initialized);
 
     create_task([&]() -> IAsyncAction
@@ -164,12 +171,10 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
         _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
         _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
-        /*
         _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
         {
             HandleIncomingAudio();
         });
-        */
 
         _audioGraphState = NowSoundGraphState::Created;
     });
@@ -177,12 +182,17 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
 
 NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
 {
+    // TODO: verify not on audio graph thread
+
     Check(_audioGraphState >= NowSoundGraphState::Created);
+
     return NowSoundGraphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
 }
 
 void NowSoundGraph::StartAudioGraphAsync()
 {
+    // TODO: verify not on audio graph thread
+
     Check(_audioGraphState == NowSoundGraphState::Created);
 
     _audioGraph.Start();
@@ -192,13 +202,20 @@ void NowSoundGraph::StartAudioGraphAsync()
 
 TrackId NowSoundGraph::CreateRecordingTrackAsync()
 {
-    // TODO: confirm we are on UI thread.
-    // Since we are mutating the audio graph, we must not be on the audio graph thread.
+    // TODO: verify not on audio graph thread
+
     Check(_audioGraphState == NowSoundGraphState::Running);
 
     TrackId id = _trackId++;
 
     std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0));
+
+    // new tracks are created as recording; lock the _recorders collection and add this new track
+    {
+        std::lock_guard<std::mutex> guard(_recorderMutex);
+        _recorders.push_back(newTrack.get());
+    }
+
     NowSoundTrackAPI::AddTrack(id, std::move(newTrack));
 
     return id;
@@ -273,6 +290,8 @@ void NowSoundGraph::HandleIncomingAudio()
     // Must be multiple of 8 (2 channels, 4 bytes/float)
     Check((capacityInBytes & 0x7) == 0);
 
+    Duration<AudioSample> duration(capacityInBytes >> 3);
+
     uint32_t bufferStart = 0;
     if (Clock::Instance().Now().Value() == 0)
     {
@@ -280,7 +299,7 @@ void NowSoundGraph::HandleIncomingAudio()
         // then the audio graph decided to give us a big backload of buffer content
         // as its first callback.  Not sure why it does this, but we don't want it,
         // so take only the tail of the buffer.
-        if (capacityInBytes > (_audioGraph.LatencyInSamples() << 3))
+        if (capacityInBytes > ((uint32_t)_audioGraph.LatencyInSamples() << 3))
         {
             bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() << 3);
             capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() << 3);
@@ -290,6 +309,24 @@ void NowSoundGraph::HandleIncomingAudio()
     // iterate through all active Recorders
     // note that Recorders must be added or removed only inside the audio graph
     // (e.g. QuantumStarted or FrameInputAvailable)
+    std::vector<IRecorder<AudioSample, float>*> _completedRecorders{};
+    {
+        std::lock_guard<std::mutex> guard(_recorderMutex);
+        for (IRecorder<AudioSample, float>* recorder : _recorders)
+        {
+            bool stillRecording =
+                    recorder->Record(Clock::Instance().Now(), duration, (float*)(dataInBytes + bufferStart));
+            if (!stillRecording)
+            {
+                _completedRecorders.push_back(recorder);
+            }
+        }
+        for (IRecorder<AudioSample, float>* completedRecorder : _completedRecorders)
+        {
+            // not optimally efficient but we will only ever have one or two completed per incoming audio frame
+            _recorders.erase(std::find(_recorders.begin(), _recorders.end(), completedRecorder));
+        }
+    }
 }
 
 void NowSoundTrackAPI::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)

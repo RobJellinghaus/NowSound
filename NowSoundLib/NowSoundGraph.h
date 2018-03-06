@@ -6,12 +6,14 @@
 #include "pch.h"
 
 #include <future>
+#include <vector>
 
 #include "stdint.h"
 
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "NowSoundLibTypes.h"
+#include "Recorder.h"
 #include "SliceStream.h"
 
 using namespace std::chrono;
@@ -98,6 +100,13 @@ namespace NowSound
 
         // The next TrackId to be allocated.
         TrackId _trackId;
+
+        // Vector of active Recorders; these are non-owning pointers borrowed from the collection of Tracks
+        // held by NowSoundTrackAPI.
+        std::vector<IRecorder<AudioSample, float>*> _recorders;
+
+        // Mutex for the collection of recorders; taken when adding to or traversing the recorder collection.
+        std::mutex _recorderMutex;
 
     public:
         // The static instance of the graph.  We may eventually have multiple.
