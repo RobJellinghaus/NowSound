@@ -177,7 +177,7 @@ namespace NowSound
     {
         DateTime dateTimeNow = DateTime::clock::now();
 
-        if (IsMuted())
+        if (IsMuted() || _state != NowSoundTrackState::Recording)
         {
             // copy nothing to anywhere
             return;

@@ -54,6 +54,7 @@ struct App : ApplicationT<App>
         void UpdateLabel()
         {
             // TODO: called only from UI thread
+
             wstringstream wstr{};
             wstr << _label << " Track # " << _trackNumber;
             hstring hstr{};
@@ -61,8 +62,10 @@ struct App : ApplicationT<App>
             _button.Content(IReference<hstring>(hstr));
         }
 
-        IAsyncAction Update()
+        void Update()
         {
+            // TODO: called only from UI context
+
             NowSoundTrackState currentState{ NowSoundTrackAPI::NowSoundTrack_State(_trackId) };
             if (currentState != _trackState)
             {
@@ -71,10 +74,7 @@ struct App : ApplicationT<App>
                     _label = L"Mute Currently Looping";
                 }
 
-                apartment_context currentContext;
-                co_await _app->_uiThread;
                 UpdateLabel();
-                co_await currentContext;
                 _trackState = currentState;
             }
         }
@@ -181,7 +181,7 @@ struct App : ApplicationT<App>
             currentState = NowSoundGraphAPI::NowSoundGraph_GetGraphState();
         }
 
-        UpdateStateLabel();
+        co_await UpdateStateLabel();
 
         return expectedState == currentState;
     }
@@ -209,31 +209,53 @@ struct App : ApplicationT<App>
 
         LaunchedAsync();
     }
+
+    void UpdateButtons()
+    {
+        // Must be called on UI context.
+
+        // Lock the _trackButtons array
+        {
+            std::lock_guard<std::mutex> guard(_mutex);
+
+            for (auto& button : _trackButtons)
+            {
+                button.Update();
+            }
+        }
+    }
+
+    // loop forever, updating the buttons
+    IAsyncAction UpdateLoop()
+    {
+        for (;;)
+        {
+            // wait in intervals of 1 sec (TODO: decrease once stable)
+            co_await resume_after(TimeSpan((int)(TicksPerSecond * 1)));
+
+            co_await _uiThread;
+
+            UpdateButtons();
+
+            co_await resume_background();
+        }
+    }
 };
 
 int App::_nextTrackNumber{ 1 };
 
 fire_and_forget App::LaunchedAsync()
 {
-    apartment_context ui_thread;
+    apartment_context ui_thread{};
     _uiThread = ui_thread;
 
+    /*
     // create our update loop
     create_task([this]() -> IAsyncAction
     {
-        // wait in intervals of 1/100 sec
-        co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01f)));
-
-        {
-            // Lock the _trackButtons array
-            std::lock_guard<std::mutex> guard(_mutex);
-
-            for (auto& button : _trackButtons)
-            {
-                co_await button.Update();
-            }
-        }
+        co_await UpdateLoop();
     });
+    */
 
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.
