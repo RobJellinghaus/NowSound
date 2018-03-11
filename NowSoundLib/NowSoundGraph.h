@@ -30,10 +30,19 @@ namespace NowSound
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
-    public:
+    public: // API methods
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
-        // This is the only method that may be called in any state whatoever.
+        // This is one of the only two methods that may be called in any state whatoever.
+        // All other methods declare which state the graph must be in to call the method, and the state
+        // the method transitions the graph to once the asynchronous action is complete.
+        // TODO: consider having some separate mutual exclusion to prevent multiple concurrent methods
+        // from firing (don't want the graph to, e.g., get started twice in a race).
         NowSoundGraphState GetGraphState();
+
+        // If this returns true, the graph is currently in an asynchronous activity that is not yet complete.
+        // The graph should be polled until this becomes false, at which time GetGraphState() will be updated.
+        // All methods which change graph state have an implicit precondition that this method returns false.
+        bool GetGraphChangingState();
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
@@ -67,15 +76,25 @@ namespace NowSound
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         int CreateRecordingTrackAsync();
 
-    private:
+    private: // constructor and internal implementations
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
 
-        // Async helper method.
+        // Async helper method, to work around compiler bug with lambdas which await and capture this.
+        IAsyncAction InitializeAsyncImpl();
+
+        // Async helper method, to work around compiler bug with lambdas which await and capture this.
+        IAsyncAction CreateAudioGraphAsyncImpl();
+
+        // Async helper method, to work around compiler bug with lambdas which await and capture this.
         IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 
+    private: // instance variables
         // The singleton (for now) graph.
         static std::unique_ptr<NowSoundGraph> s_instance;
+
+        // Is this graph changing state? (Prevent re-entrant state changing methods.)
+        bool _changingState;
 
         // The AudioGraph managed by this NowSoundGraph.
         AudioGraph _audioGraph;
@@ -108,7 +127,7 @@ namespace NowSound
         // Mutex for the collection of recorders; taken when adding to or traversing the recorder collection.
         std::mutex _recorderMutex;
 
-    public:
+    public: // Implementation methods used from elsewhere in the library
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();
 

@@ -151,23 +151,22 @@ struct App : ApplicationT<App>
         }
     }
 
-    // Update the state label.
-    // Transition to the UI thread to do so, and then return to calling context before exiting.
-    IAsyncAction UpdateStateLabel()
+    // Update the state label.  Must be on UI context.
+    void UpdateStateLabel()
     {
-        apartment_context calling_context;
-
-        co_await _uiThread;
         std::wstring str(AudioGraphStateString);
         str.append(StateLabel(NowSoundGraphAPI::NowSoundGraph_GetGraphState()));
         _textBlock1.Text(str);
-
-        co_await calling_context;
     }
 
     // Wait until the graph state becomes the expected state, or timeoutTime is reached.
-    std::future<bool> WaitForGraphState(NowSoundGraphState expectedState, DateTime timeoutTime)
+    std::future<bool> WaitForGraphState(NowSoundGraphState expectedState, TimeSpan timeout)
     {
+        DateTime timeoutTime = winrt::clock::now() + timeout;
+
+        // ensure we are in the background while waiting
+        co_await resume_background();
+
         // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
         // so we use polling in this example -- and to determine how it actually works in modern C++.
         NowSoundGraphState currentState = NowSoundGraphAPI::NowSoundGraph_GetGraphState();
@@ -181,7 +180,10 @@ struct App : ApplicationT<App>
             currentState = NowSoundGraphAPI::NowSoundGraph_GetGraphState();
         }
 
-        co_await UpdateStateLabel();
+        // switch to UI thread to update state label, then back to background
+        co_await _uiThread;
+        UpdateStateLabel();
+        co_await resume_background();
 
         return expectedState == currentState;
     }
@@ -230,14 +232,15 @@ struct App : ApplicationT<App>
     {
         for (;;)
         {
+            // always wait in the background
+            co_await resume_background();
+
             // wait in intervals of 1 sec (TODO: decrease once stable)
             co_await resume_after(TimeSpan((int)(TicksPerSecond * 1)));
 
+            // switch to UI thread to update buttons
             co_await _uiThread;
-
             UpdateButtons();
-
-            co_await resume_background();
         }
     }
 };
@@ -249,28 +252,18 @@ fire_and_forget App::LaunchedAsync()
     apartment_context ui_thread{};
     _uiThread = ui_thread;
 
-    /*
-    // create our update loop
-    create_task([this]() -> IAsyncAction
-    {
-        co_await UpdateLoop();
-    });
-    */
-
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.
     // 1000 second timeout is for early stage debugging.
     const int timeoutInSeconds = 1000;
-    co_await WaitForGraphState(
-        NowSound::NowSoundGraphState::Initialized,
-        winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSound::NowSoundGraphState::Initialized, timeSpanFromSeconds(timeoutInSeconds));
 
     co_await resume_background();
     NowSoundDeviceInfo deviceInfo = NowSoundGraphAPI::NowSoundGraph_GetDefaultRenderDeviceInfo();
 
     NowSoundGraphAPI::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
-    co_await WaitForGraphState(NowSoundGraphState::Created, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSoundGraphState::Created, timeSpanFromSeconds(timeoutInSeconds));
 
     NowSoundGraphInfo graphInfo = NowSoundGraphAPI::NowSoundGraph_GetGraphInfo();
 
@@ -282,7 +275,7 @@ fire_and_forget App::LaunchedAsync()
 
     NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync();
 
-    co_await WaitForGraphState(NowSoundGraphState::Running, winrt::clock::now() + timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSoundGraphState::Running, timeSpanFromSeconds(timeoutInSeconds));
 
     co_await _uiThread;
 
@@ -291,6 +284,10 @@ fire_and_forget App::LaunchedAsync()
         std::lock_guard<std::mutex> guard(_mutex);
         _trackButtons.push_back(TrackButton(this));
     }
+
+    // and start our update loop!  Strangely, don't seem to need to await this....
+    // TODO: uncomment
+    // UpdateLoop();
 }
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)

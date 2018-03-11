@@ -92,7 +92,8 @@ NowSoundGraph::NowSoundGraph()
     _inputDeviceFrameOutputNode{ nullptr },
     _trackId{ 0 },
     _recorders{ },
-    _recorderMutex{ }
+    _recorderMutex{ },
+    _changingState{ false }
 { }
 
 AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
@@ -105,30 +106,41 @@ AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
 
 NowSoundGraphState NowSoundGraph::GetGraphState() { return _audioGraphState; }
 
+bool NowSoundGraph::GetGraphChangingState() { return _changingState; }
+
 void NowSoundGraph::InitializeAsync()
 {
     Check(_audioGraphState == NowSoundGraphState::Uninitialized);
-    create_task([&]() -> IAsyncAction
+    Check(!_changingState);
+    _changingState = true;
+    create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
+}
+
+IAsyncAction NowSoundGraph::InitializeAsyncImpl()
+{
+    AudioGraphSettings settings(AudioRenderCategory::Media);
+    settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
+    settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
+    // leaving PrimaryRenderDevice uninitialized will use default output device
+    CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+
+    if (result.Status() != AudioGraphCreationStatus::Success)
     {
-        AudioGraphSettings settings(AudioRenderCategory::Media);
-        settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
-        settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
-        // leaving PrimaryRenderDevice uninitialized will use default output device
-        CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+        // Cannot create graph
+        CoreApplication::Exit();
+        return;
+    }
 
-        if (result.Status() != AudioGraphCreationStatus::Success)
-        {
-            // Cannot create graph
-            CoreApplication::Exit();
-            return;
-        }
+    // NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
+    // this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
+    // Probable compiler bug?  TODO: replicate the bug in test app.
+    _audioGraph = result.Graph();
 
-        _audioGraph = result.Graph();
+    _audioGraphState = NowSoundGraphState::Initialized;
 
-        _audioGraphState = NowSoundGraphState::Initialized;
+    _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
-        _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
-    });
+    _changingState = false;
 }
 
 NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
@@ -141,43 +153,48 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
     // TODO: verify not on audio graph thread
 
     Check(_audioGraphState == NowSoundGraphState::Initialized);
+    Check(!_changingState);
 
-    create_task([&]() -> IAsyncAction
+    _changingState = true;
+    create_task([this]() -> IAsyncAction { co_await CreateAudioGraphAsyncImpl(); });
+}
+
+IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
+{
+    // Create a device output node
+    CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
+
+    if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
     {
-        // Create a device output node
-        CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
+        // Cannot create device output node
+        CoreApplication::Exit();
+        return;
+    }
 
-        if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-        {
-            // Cannot create device output node
-            CoreApplication::Exit();
-            return;
-        }
+    _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
-        _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
+    // Create a device input node
+    CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await
+        _audioGraph.CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
 
-        // Create a device input node
-        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await 
-            _audioGraph.CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
+    if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
+    {
+        // Cannot create device input node
+        CoreApplication::Exit();
+        return;
+    }
 
-        if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-        {
-            // Cannot create device input node
-            CoreApplication::Exit();
-            return;
-        }
+    _defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
+    _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
+    _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
-        _defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
-        _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
-        _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
-
-        _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
-        {
-            HandleIncomingAudio();
-        });
-
-        _audioGraphState = NowSoundGraphState::Created;
+    _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
+    {
+        HandleIncomingAudio();
     });
+
+    _audioGraphState = NowSoundGraphState::Created;
+    _changingState = false;
 }
 
 NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
@@ -195,6 +212,7 @@ void NowSoundGraph::StartAudioGraphAsync()
 
     Check(_audioGraphState == NowSoundGraphState::Created);
 
+    // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
     _audioGraph.Start();
 
     _audioGraphState = NowSoundGraphState::Running;
@@ -216,6 +234,7 @@ TrackId NowSoundGraph::CreateRecordingTrackAsync()
         _recorders.push_back(newTrack.get());
     }
 
+    // move the new track over to the collection of tracks in NowSoundTrackAPI
     NowSoundTrackAPI::AddTrack(id, std::move(newTrack));
 
     return id;
