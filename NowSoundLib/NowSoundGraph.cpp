@@ -144,7 +144,7 @@ IAsyncAction NowSoundGraph::InitializeAsyncImpl()
     if (result.Status() != AudioGraphCreationStatus::Success)
     {
         // Cannot create graph
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
@@ -179,7 +179,7 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
     {
         // Cannot create device output node
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
@@ -192,7 +192,7 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
     {
         // Cannot create device input node
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
@@ -261,7 +261,7 @@ IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
 
     if (!file)
     {
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
@@ -269,7 +269,7 @@ IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
     if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
     {
         // Cannot read input file
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
@@ -278,7 +278,7 @@ IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
     if (fileInput.Duration() <= timeSpanFromSeconds(3))
     {
         // Imported file is too short
-        CoreApplication::Exit();
+        Check(false);
         return;
     }
 
