@@ -160,12 +160,12 @@ struct App : ApplicationT<App>
     }
 
     // Wait until the graph state becomes the expected state, or timeoutTime is reached.
+    // Must be called from background context (all waits should always be in background).
     std::future<bool> WaitForGraphState(NowSoundGraphState expectedState, TimeSpan timeout)
     {
-        DateTime timeoutTime = winrt::clock::now() + timeout;
+        // TODO: ensure not on UI context.
 
-        // ensure we are in the background while waiting
-        co_await resume_background();
+        DateTime timeoutTime = winrt::clock::now() + timeout;
 
         // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
         // so we use polling in this example -- and to determine how it actually works in modern C++.
@@ -258,7 +258,6 @@ fire_and_forget App::LaunchedAsync()
     const int timeoutInSeconds = 1000;
     co_await WaitForGraphState(NowSound::NowSoundGraphState::Initialized, timeSpanFromSeconds(timeoutInSeconds));
 
-    co_await resume_background();
     NowSoundDeviceInfo deviceInfo = NowSoundGraphAPI::NowSoundGraph_GetDefaultRenderDeviceInfo();
 
     NowSoundGraphAPI::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection

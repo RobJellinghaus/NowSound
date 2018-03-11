@@ -89,6 +89,14 @@ namespace NowSound
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
         IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 
+        // Check that the expected state is the current state, and that no current state change is happening;
+        // then mark that a state change is now happening.
+        void PrepareToChangeState(NowSoundGraphState expectedState);
+
+        // Check that a state change is happening, then switch the state to newState and mark the state change
+        // as no longer happening.
+        void ChangeState(NowSoundGraphState newState);
+
     private: // instance variables
         // The singleton (for now) graph.
         static std::unique_ptr<NowSoundGraph> s_instance;
@@ -126,6 +134,10 @@ namespace NowSound
 
         // Mutex for the collection of recorders; taken when adding to or traversing the recorder collection.
         std::mutex _recorderMutex;
+
+        // Mutex for the state of the graph.
+        // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
+        std::mutex _stateMutex;
 
     public: // Implementation methods used from elsewhere in the library
         // The static instance of the graph.  We may eventually have multiple.

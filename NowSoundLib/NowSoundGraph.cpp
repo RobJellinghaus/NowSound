@@ -104,15 +104,32 @@ BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &_audioAlloc
 
 AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
 
-NowSoundGraphState NowSoundGraph::GetGraphState() { return _audioGraphState; }
+void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
+{
+    std::lock_guard<std::mutex> guard(_stateMutex);
+    Check(_audioGraphState == expectedState);
+    Check(!_changingState);
+    _changingState = true;
+}
 
-bool NowSoundGraph::GetGraphChangingState() { return _changingState; }
+void NowSoundGraph::ChangeState(NowSoundGraphState newState)
+{
+    std::lock_guard<std::mutex> guard(_stateMutex);
+    Check(_changingState);
+    _changingState = false;
+    _audioGraphState = newState;
+}
+
+NowSoundGraphState NowSoundGraph::GetGraphState()
+{
+    std::lock_guard<std::mutex> guard(_stateMutex);
+    return _audioGraphState;
+}
 
 void NowSoundGraph::InitializeAsync()
 {
-    Check(_audioGraphState == NowSoundGraphState::Uninitialized);
-    Check(!_changingState);
-    _changingState = true;
+    PrepareToChangeState(NowSoundGraphState::Uninitialized);
+    // this does not need to be locked
     create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
 }
 
@@ -136,11 +153,9 @@ IAsyncAction NowSoundGraph::InitializeAsyncImpl()
     // Probable compiler bug?  TODO: replicate the bug in test app.
     _audioGraph = result.Graph();
 
-    _audioGraphState = NowSoundGraphState::Initialized;
-
     _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
-    _changingState = false;
+    ChangeState(NowSoundGraphState::Initialized);
 }
 
 NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
@@ -152,10 +167,7 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
 {
     // TODO: verify not on audio graph thread
 
-    Check(_audioGraphState == NowSoundGraphState::Initialized);
-    Check(!_changingState);
-
-    _changingState = true;
+    PrepareToChangeState(NowSoundGraphState::Initialized);
     create_task([this]() -> IAsyncAction { co_await CreateAudioGraphAsyncImpl(); });
 }
 
@@ -193,8 +205,7 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
         HandleIncomingAudio();
     });
 
-    _audioGraphState = NowSoundGraphState::Created;
-    _changingState = false;
+    ChangeState(NowSoundGraphState::Created);
 }
 
 NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
@@ -210,12 +221,12 @@ void NowSoundGraph::StartAudioGraphAsync()
 {
     // TODO: verify not on audio graph thread
 
-    Check(_audioGraphState == NowSoundGraphState::Created);
+    PrepareToChangeState(NowSoundGraphState::Created);
 
     // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
     _audioGraph.Start();
 
-    _audioGraphState = NowSoundGraphState::Running;
+    ChangeState(NowSoundGraphState::Running);
 }
 
 TrackId NowSoundGraph::CreateRecordingTrackAsync()
