@@ -24,5 +24,6 @@
     <Capability Name="internetClient" />
     <uap:Capability Name="videosLibrary" />
     <rescap:Capability Name="previewUiComposition" />
+    <DeviceCapability Name="microphone" />
   </Capabilities>
 </Package>

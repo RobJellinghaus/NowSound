@@ -30,13 +30,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest">
-      <Filter>Assets</Filter>
-    </AppxManifest>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Video_TemporaryKey.pfx">
       <Filter>Assets</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
 </Project>
