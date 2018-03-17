@@ -223,8 +223,13 @@ void NowSoundGraph::StartAudioGraphAsync()
 
     PrepareToChangeState(NowSoundGraphState::Created);
 
+    // MAKE THE CLOCK NOW.
+    Clock::Initialize(90 /* BPM */, 4 /* beats per measure */, 2);
+
     // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
     _audioGraph.Start();
+
+    // As of now, we will start getting HandleIncomingAudio() callbacks.
 
     ChangeState(NowSoundGraphState::Running);
 }
