@@ -57,41 +57,50 @@ namespace NowSound
             }
         };
 
+        // The states of a NowSound graph.
+        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
+        // to disambiguate them from the TrackState identifiers.
         enum NowSoundGraphState
         {
             // InitializeAsync() has not yet been called.
-            Uninitialized,
+            GraphUninitialized,
 
             // Some error has occurred; GetLastError() will have details.
-            InError,
+            GraphInError,
 
             // A gap in incoming audio data was detected; this should ideally never happen.
             // NOTYET: Discontinuity,
 
             // InitializeAsync() has completed; devices can now be queried.
-            Initialized,
+            GraphInitialized,
 
             // CreateAudioGraphAsync() has completed; other methods can now be called.
-            Created,
+            GraphCreated,
 
             // The audio graph has been started and is running.
-            Running,
+            GraphRunning,
 
             // The audio graph has been stopped.
             // NOTYET: Stopped,
         };
 
         // The state of a particular IHolofunkAudioTrack.
+        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
+        // to disambiguate them from the GraphState identifiers.
         enum NowSoundTrackState
         {
+            // This track is not initialized -- important for some state machine cases and for catching bugs
+            // (also important that this be the default value)
+            TrackUninitialized,
+
             // The track is being recorded and it is not known when it will finish.
-            Recording,
+            TrackRecording,
 
             // The track is finishing off its now-known recording time.
-            FinishRecording,
+            TrackFinishRecording,
 
             // The track is playing back, looping.
-            Looping,
+            TrackLooping,
         };
 
         // The audio inputs known to the app.

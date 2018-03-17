@@ -84,7 +84,7 @@ NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
 NowSoundGraph::NowSoundGraph()
     : _audioGraph{ nullptr },
-    _audioGraphState{ NowSoundGraphState::Uninitialized },
+    _audioGraphState{ NowSoundGraphState::GraphUninitialized },
     _deviceOutputNode{ nullptr },
     _audioAllocator{ ((int)Clock::SampleRateHz * 2 * sizeof(float)), 128 },
     _audioFrame{ nullptr },
@@ -128,7 +128,7 @@ NowSoundGraphState NowSoundGraph::GetGraphState()
 
 void NowSoundGraph::InitializeAsync()
 {
-    PrepareToChangeState(NowSoundGraphState::Uninitialized);
+    PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
     // this does not need to be locked
     create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
 }
@@ -155,7 +155,7 @@ IAsyncAction NowSoundGraph::InitializeAsyncImpl()
 
     _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
-    ChangeState(NowSoundGraphState::Initialized);
+    ChangeState(NowSoundGraphState::GraphInitialized);
 }
 
 NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
@@ -167,7 +167,7 @@ void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) 
 {
     // TODO: verify not on audio graph thread
 
-    PrepareToChangeState(NowSoundGraphState::Initialized);
+    PrepareToChangeState(NowSoundGraphState::GraphInitialized);
     create_task([this]() -> IAsyncAction { co_await CreateAudioGraphAsyncImpl(); });
 }
 
@@ -205,14 +205,14 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
         HandleIncomingAudio();
     });
 
-    ChangeState(NowSoundGraphState::Created);
+    ChangeState(NowSoundGraphState::GraphCreated);
 }
 
 NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
 {
     // TODO: verify not on audio graph thread
 
-    Check(_audioGraphState >= NowSoundGraphState::Created);
+    Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
     return NowSoundGraphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
 }
@@ -221,7 +221,7 @@ void NowSoundGraph::StartAudioGraphAsync()
 {
     // TODO: verify not on audio graph thread
 
-    PrepareToChangeState(NowSoundGraphState::Created);
+    PrepareToChangeState(NowSoundGraphState::GraphCreated);
 
     // MAKE THE CLOCK NOW.
     Clock::Initialize(90 /* BPM */, 4 /* beats per measure */, 2);
@@ -231,14 +231,14 @@ void NowSoundGraph::StartAudioGraphAsync()
 
     // As of now, we will start getting HandleIncomingAudio() callbacks.
 
-    ChangeState(NowSoundGraphState::Running);
+    ChangeState(NowSoundGraphState::GraphRunning);
 }
 
 TrackId NowSoundGraph::CreateRecordingTrackAsync()
 {
     // TODO: verify not on audio graph thread
 
-    Check(_audioGraphState == NowSoundGraphState::Running);
+    Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
     TrackId id = _trackId++;
 
@@ -350,7 +350,8 @@ void NowSoundGraph::HandleIncomingAudio()
         for (IRecorder<AudioSample, float>* recorder : _recorders)
         {
             bool stillRecording =
-                    recorder->Record(Clock::Instance().Now(), duration, (float*)(dataInBytes + bufferStart));
+                recorder->Record(Clock::Instance().Now(), duration, (float*)(dataInBytes + bufferStart));
+
             if (!stillRecording)
             {
                 _completedRecorders.push_back(recorder);

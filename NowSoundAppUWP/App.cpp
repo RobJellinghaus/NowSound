@@ -56,7 +56,7 @@ struct App : ApplicationT<App>
             // TODO: called only from UI thread
 
             wstringstream wstr{};
-            wstr << _label << " Track # " << _trackNumber;
+            wstr << " Track # " << _trackNumber << L": " << _label;
             hstring hstr{};
             hstr = wstr.str();
             _button.Content(IReference<hstring>(hstr));
@@ -66,12 +66,28 @@ struct App : ApplicationT<App>
         {
             // TODO: called only from UI context
 
-            NowSoundTrackState currentState{ NowSoundTrackAPI::NowSoundTrack_State(_trackId) };
+            NowSoundTrackState currentState{};
+            if (_trackId != -1)
+            {
+                _trackId = NowSoundTrackAPI::NowSoundTrack_State(_trackId);
+            }
+
             if (currentState != _trackState)
             {
-                if (currentState == NowSoundTrackState::Looping)
+                switch (currentState)
                 {
-                    _label = L"Mute Currently Looping";
+                case NowSoundTrackState::TrackUninitialized:
+                    _label = L"Uninitialized";
+                    break;
+                case NowSoundTrackState::TrackRecording:
+                    _label = L"Recording";
+                    break;
+                case NowSoundTrackState::TrackLooping:
+                    _label = L"Looping";
+                    break;
+                case NowSoundTrackState::TrackFinishRecording:
+                    _label = L"FinishRecording";
+                    break;
                 }
 
                 UpdateLabel();
@@ -81,17 +97,15 @@ struct App : ApplicationT<App>
 
         void HandleClick()
         {
-            if (_trackId == -1)
+            if (_trackState == NowSoundTrackState::TrackUninitialized)
             {
                 // we haven't started recording yet; time to do so!
                 _trackId = NowSoundGraphAPI::NowSoundGraph_CreateRecordingTrackAsync();
                 // don't initialize _trackState; that's Update's job
-                _label = L"Stop Recording";
             }
-            else if (_trackState == NowSoundTrackState::Recording)
+            else if (_trackState == NowSoundTrackState::TrackRecording)
             {
                 NowSoundTrackAPI::NowSoundTrack_FinishRecording(_trackId);
-                _label = L"Finishing Recording Of";
             }
         }
 
@@ -100,7 +114,8 @@ struct App : ApplicationT<App>
             _trackNumber{ _nextTrackNumber++ },
             _trackId{ -1 },
             _button{ Button() },
-            _label{ L"Start Recording" }
+            _label{ L"Uninitialized" },
+            _trackState{NowSoundTrackState::TrackUninitialized}
         {
             UpdateLabel();
 
@@ -142,11 +157,11 @@ struct App : ApplicationT<App>
     {
         switch (state)
         {
-        case NowSoundGraphState::Uninitialized: return L"Uninitialized";
-        case NowSoundGraphState::Initialized: return L"Initialized";
-        case NowSoundGraphState::Created: return L"Created";
-        case NowSoundGraphState::Running: return L"Running";
-        case NowSoundGraphState::InError: return L"InError";
+        case NowSoundGraphState::GraphUninitialized: return L"Uninitialized";
+        case NowSoundGraphState::GraphInitialized: return L"Initialized";
+        case NowSoundGraphState::GraphCreated: return L"Created";
+        case NowSoundGraphState::GraphRunning: return L"Running";
+        case NowSoundGraphState::GraphInError: return L"InError";
         default: { Check(false); return L""; } // Unknown graph state; should be impossible
         }
     }
@@ -230,7 +245,7 @@ struct App : ApplicationT<App>
     // loop forever, updating the buttons
     IAsyncAction UpdateLoop()
     {
-        for (;;)
+        while (true)
         {
             // always wait in the background
             co_await resume_background();
@@ -256,13 +271,13 @@ fire_and_forget App::LaunchedAsync()
     // wait only one second (and hopefully much less) for graph to become initialized.
     // 1000 second timeout is for early stage debugging.
     const int timeoutInSeconds = 1000;
-    co_await WaitForGraphState(NowSound::NowSoundGraphState::Initialized, timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSound::NowSoundGraphState::GraphInitialized, timeSpanFromSeconds(timeoutInSeconds));
 
     NowSoundDeviceInfo deviceInfo = NowSoundGraphAPI::NowSoundGraph_GetDefaultRenderDeviceInfo();
 
     NowSoundGraphAPI::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
-    co_await WaitForGraphState(NowSoundGraphState::Created, timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSoundGraphState::GraphCreated, timeSpanFromSeconds(timeoutInSeconds));
 
     NowSoundGraphInfo graphInfo = NowSoundGraphAPI::NowSoundGraph_GetGraphInfo();
 
@@ -274,7 +289,7 @@ fire_and_forget App::LaunchedAsync()
 
     NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync();
 
-    co_await WaitForGraphState(NowSoundGraphState::Running, timeSpanFromSeconds(timeoutInSeconds));
+    co_await WaitForGraphState(NowSoundGraphState::GraphRunning, timeSpanFromSeconds(timeoutInSeconds));
 
     co_await _uiThread;
 
@@ -286,7 +301,8 @@ fire_and_forget App::LaunchedAsync()
 
     // and start our update loop!  Strangely, don't seem to need to await this....
     // TODO: uncomment
-    // UpdateLoop();
+    co_await resume_background();
+    co_await UpdateLoop();
 }
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
