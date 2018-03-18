@@ -33,15 +33,16 @@ struct App : ApplicationT<App>
 {
     // The interaction model of this app is:
     // - Status text box gets updated with overall graph state.
-    // - Initially, a "Start Recording Track #1" button is visible.
-    // - When clicked, "Start Recording" turns to "Stop Recording & Start Looping Track #1", and a new track gets recorded.
-    // - When the "Stop Recording..." button is clicked, it turns to "Pause Track #1", and the track starts looping.
-    // - If the "Pause Loop #1" button is clicked, the track pauses, and the button turns to "Resume Looping Track #1".
-    //   Also, a new "Start Recording Track #2" button appears, with the same behavior.
+    // - Initially, a "Track #1: Uninitialized" button is visible.
+    // - When clicked, this turns to "Track #1: Recording", and a new track begins recording.
+    // - When *that* is clicked, it turns to "Track #1: FinishRecording" and then "Track #1: Looping",
+    // and the track starts looping.
+    // - Also, a new "Track #2: Uninitialized" button appears, with the same behavior.
     // 
     // Result: the app is effectively a simple live looper capable of looping N tracks.
 
     // There is one TrackButton per recorded track, plus one more to allow recording a new track.
+    // Note that every method in TrackButton() expects to be called on the UI context.
     struct TrackButton
     {
         App* _app;
@@ -53,8 +54,6 @@ struct App : ApplicationT<App>
 
         void UpdateLabel()
         {
-            // TODO: called only from UI thread
-
             wstringstream wstr{};
             wstr << " Track # " << _trackNumber << L": " << _label;
             hstring hstr{};
@@ -64,12 +63,10 @@ struct App : ApplicationT<App>
 
         void Update()
         {
-            // TODO: called only from UI context
-
             NowSoundTrackState currentState{};
             if (_trackId != -1)
             {
-                _trackId = NowSoundTrackAPI::NowSoundTrack_State(_trackId);
+                currentState = NowSoundTrackAPI::NowSoundTrack_State(_trackId);
             }
 
             if (currentState != _trackState)
@@ -121,20 +118,15 @@ struct App : ApplicationT<App>
 
             app->_stackPanel.Children().Append(_button);
 
-            _button.Click([&](IInspectable const&, RoutedEventArgs const&)
+            _button.Click([this](IInspectable const&, RoutedEventArgs const&)
             {
                 HandleClick();
             });
         }
 
-        TrackButton(TrackButton&& other)
-            : _app{ other._app },
-            _trackNumber{ other._trackNumber },
-            _trackId{ other._trackId },
-            _trackState{ other._trackState },
-            _button{ std::move(other._button) },
-            _label{ std::move(other._label) }
-        { }
+        // don't allow these to be copied ever
+        TrackButton(TrackButton& other) = delete;
+        TrackButton(TrackButton&& other) = delete;
     };
 
     // Label string.
@@ -147,7 +139,7 @@ struct App : ApplicationT<App>
 
     static int _nextTrackNumber;
 
-    std::vector<TrackButton> _trackButtons{};
+    std::vector<std::unique_ptr<TrackButton>> _trackButtons{};
 
     std::mutex _mutex{};
 
@@ -237,7 +229,7 @@ struct App : ApplicationT<App>
 
             for (auto& button : _trackButtons)
             {
-                button.Update();
+                button->Update();
             }
         }
     }
@@ -296,7 +288,7 @@ fire_and_forget App::LaunchedAsync()
     // let's create our first TrackButton!
     {
         std::lock_guard<std::mutex> guard(_mutex);
-        _trackButtons.push_back(TrackButton(this));
+        _trackButtons.push_back(std::unique_ptr<TrackButton>(new TrackButton(this)));
     }
 
     // and start our update loop!  Strangely, don't seem to need to await this....

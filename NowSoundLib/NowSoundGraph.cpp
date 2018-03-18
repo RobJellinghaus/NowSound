@@ -325,8 +325,6 @@ void NowSoundGraph::HandleIncomingAudio()
     // Must be multiple of 8 (2 channels, 4 bytes/float)
     Check((capacityInBytes & 0x7) == 0);
 
-    Duration<AudioSample> duration(capacityInBytes >> 3);
-
     uint32_t bufferStart = 0;
     if (Clock::Instance().Now().Value() == 0)
     {
@@ -341,12 +339,16 @@ void NowSoundGraph::HandleIncomingAudio()
         }
     }
 
+    Duration<AudioSample> duration(capacityInBytes >> 3);
+
     // iterate through all active Recorders
     // note that Recorders must be added or removed only inside the audio graph
     // (e.g. QuantumStarted or FrameInputAvailable)
     std::vector<IRecorder<AudioSample, float>*> _completedRecorders{};
     {
         std::lock_guard<std::mutex> guard(_recorderMutex);
+
+        // Give the new audio to each Recorder, collecting the ones that are done.
         for (IRecorder<AudioSample, float>* recorder : _recorders)
         {
             bool stillRecording =
@@ -357,6 +359,8 @@ void NowSoundGraph::HandleIncomingAudio()
                 _completedRecorders.push_back(recorder);
             }
         }
+
+        // Now remove all the done ones.
         for (IRecorder<AudioSample, float>* completedRecorder : _completedRecorders)
         {
             // not optimally efficient but we will only ever have one or two completed per incoming audio frame

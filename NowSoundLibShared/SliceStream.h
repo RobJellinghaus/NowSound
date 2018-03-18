@@ -211,7 +211,7 @@ namespace NowSound
 
         // Internally append this slice (which must be allocated from our free buffer); this does the work
         // of coalescing, updating _data and other fields, etc.
-        Slice<TTime, TValue> InternalAppend(const Slice<TTime, TValue>& source)
+        void InternalAppend(const Slice<TTime, TValue>& source)
         {
             Check(source.Buffer().Data() == _remainingFreeSlice.Buffer().Data()); // dest must be from our free buffer
 
@@ -228,15 +228,12 @@ namespace NowSound
                 }
                 else
                 {
-                    //Spam.Audio.WriteLine("BufferedSliceStream.InternalAppend: last did not precede; last slice is " + last.Slice + ", last slice time " + last.InitialTime + ", dest is " + dest);
                     _data.push_back(TimedSlice<TTime, TValue>(last.InitialTime() + last.Value().SliceDuration(), source));
                 }
             }
 
             this->_discreteDuration = this->_discreteDuration + source.SliceDuration();
             _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(source.SliceDuration());
-
-            return source;
         }
 
     public:
@@ -347,12 +344,12 @@ namespace NowSound
                 }
 
                 // now we know source can fit
-                Slice<TTime, TValue> dest = _remainingFreeSlice.SubsliceOfDuration(duration);
+                Slice<TTime, TValue> dest(_remainingFreeSlice.SubsliceOfDuration(durationToCopy));
                 dest.CopyFrom(p);
 
                 // dest may well be adjacent to the previous slice, if there is one, since we may
                 // be appending onto an open chunk.  So here is where we coalesce this, if so.
-                dest = InternalAppend(dest);
+                InternalAppend(dest);
 
                 // and update our loop variables
                 duration = duration - durationToCopy;
@@ -386,7 +383,7 @@ namespace NowSound
 
                 // dest may well be adjacent to the previous slice, if there is one, since we may
                 // be appending onto an open chunk.  So here is where we coalesce this, if so.
-                dest = InternalAppend(dest);
+                InternalAppend(dest);
 
                 // and update our loop variables
                 source = originalSource.SubsliceStartingAt(source.SliceDuration());

@@ -90,20 +90,21 @@ namespace NowSound
     }
 
     NowSoundTrack::NowSoundTrack(TrackId trackId, AudioInputId inputId)
-        : _trackId(trackId),
-            _inputId(inputId),
-            _state(NowSoundTrackState::TrackRecording),
-            _startTime(Clock::Instance().Now()),
-            _audioStream(
-                _startTime,
-                2,
-                NowSoundGraph::Instance()->GetAudioAllocator(),
-                /*maxBufferedDuration:*/ 0,
-                /*useContinuousLoopingMapper*/ false),
-            // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
-            _beatDuration(1),
-            _audioFrameInputNode(NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode()),
-            _localTime(0)
+        : _trackId{ trackId },
+        _inputId{ inputId },
+        _state{ NowSoundTrackState::TrackRecording },
+        _startTime{ Clock::Instance().Now() },
+        _audioStream(
+            _startTime,
+            2,
+            NowSoundGraph::Instance()->GetAudioAllocator(),
+            /*maxBufferedDuration:*/ 0,
+            /*useContinuousLoopingMapper*/ false),
+        // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
+        _beatDuration{ 1 },
+        _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
+        _localTime{ 0 },
+        _isMuted{ false }
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -177,66 +178,63 @@ namespace NowSound
     {
         DateTime dateTimeNow = DateTime::clock::now();
 
-        if (IsMuted() || _state != NowSoundTrackState::TrackRecording)
+        if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
         {
             // copy nothing to anywhere
             return;
         }
 
-        if (_state == NowSoundTrackState::TrackLooping)
+        // we are looping; let's play!
+        // TODO: why did we have this lock statement here?  lock(this)
+        Check(args.RequiredSamples() >= 0);
+        uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
+
+        if (requiredSamples == 0)
         {
-            // we are looping; let's play!
-            // TODO: why did we have this lock statement here?  lock(this)
-            Check(args.RequiredSamples() >= 0);
-            uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
-
-            if (requiredSamples == 0)
-            {
-                s_zeroByteOutgoingFrameCount++;
-                return;
-            }
-
-            uint8_t* dataInBytes{};
-            uint32_t capacityInBytes{};
-
-            // OMG KENNY KERR WINS AGAIN:
-            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-            Windows::Media::AudioBuffer buffer(NowSoundGraph::Instance()->GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
-            IMemoryBufferReference reference(buffer.CreateReference());
-            winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-            check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
-
-            // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
-            uint32_t bytesRemaining = capacityInBytes;
-            int slicesRemaining = (int)bytesRemaining / 8; // stereo float
-            
-            NowSoundGraph::Instance()->GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
-
-            while (slicesRemaining > 0)
-            {
-                // get up to one second or samplesRemaining, whichever is smaller
-                Slice<AudioSample, float> longest(
-                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
-
-                longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
-
-                Time<AudioSample> now(Clock::Instance().Now());
-
-                TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
-
-                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-                //HoloDebug.Log(line);
-                //Spam.Audio.WriteLine(line);
-
-                dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
-                _localTime = _localTime + longest.SliceDuration();
-                slicesRemaining -= (int)longest.SliceDuration().Value();
-            }
-
-            _audioFrameInputNode.AddFrame(NowSoundGraph::Instance()->GetAudioFrame());
-
-            _lastQuantumTime = dateTimeNow;
+            s_zeroByteOutgoingFrameCount++;
+            return;
         }
+
+        uint8_t* dataInBytes{};
+        uint32_t capacityInBytes{};
+
+        // OMG KENNY KERR WINS AGAIN:
+        // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
+        Windows::Media::AudioBuffer buffer(NowSoundGraph::Instance()->GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+        IMemoryBufferReference reference(buffer.CreateReference());
+        winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
+        check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
+
+        // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
+        uint32_t bytesRemaining = capacityInBytes;
+        int slicesRemaining = (int)bytesRemaining / 8; // stereo float
+            
+        NowSoundGraph::Instance()->GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+
+        while (slicesRemaining > 0)
+        {
+            // get up to one second or samplesRemaining, whichever is smaller
+            Slice<AudioSample, float> longest(
+                _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
+
+            longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
+
+            Time<AudioSample> now(Clock::Instance().Now());
+
+            TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
+
+            //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+            //HoloDebug.Log(line);
+            //Spam.Audio.WriteLine(line);
+
+            dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
+            _localTime = _localTime + longest.SliceDuration();
+            slicesRemaining -= (int)longest.SliceDuration().Value();
+        }
+
+        _audioFrameInputNode.AddFrame(NowSoundGraph::Instance()->GetAudioFrame());
+
+        _lastQuantumTime = dateTimeNow;
     }
 
     // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
