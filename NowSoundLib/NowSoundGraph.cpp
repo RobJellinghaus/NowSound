@@ -102,8 +102,6 @@ AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return _device
 
 BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &_audioAllocator; }
 
-AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
-
 void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
 {
     std::lock_guard<std::mutex> guard(_stateMutex);
@@ -152,8 +150,6 @@ IAsyncAction NowSoundGraph::InitializeAsyncImpl()
     // this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
     // Probable compiler bug?  TODO: replicate the bug in test app.
     _audioGraph = result.Graph();
-
-    _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
 
     ChangeState(NowSoundGraphState::GraphInitialized);
 }
@@ -302,7 +298,12 @@ void NowSoundGraph::DestroyAudioGraphAsync()
 
 void NowSoundGraph::HandleIncomingAudio()
 {
-    // TODO: advance the clock
+    if (_audioFrame == nullptr)
+    {
+        // we want to create this on the audio context, or we get E_DENIEDACCESS
+        // 0.25 sec stereo float buffer
+        _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
+    }
 
     AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
 
@@ -311,7 +312,7 @@ void NowSoundGraph::HandleIncomingAudio()
 
     // OMG KENNY KERR WINS AGAIN:
     // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-    Windows::Media::AudioBuffer buffer(NowSoundGraph::GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+    Windows::Media::AudioBuffer buffer(frame.LockBuffer(Windows::Media::AudioBufferAccessMode::Read));
     IMemoryBufferReference reference(buffer.CreateReference());
     winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
     check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
@@ -340,6 +341,8 @@ void NowSoundGraph::HandleIncomingAudio()
     }
 
     Duration<AudioSample> duration(capacityInBytes >> 3);
+
+    Clock::Instance().AdvanceFromAudioGraph(duration);
 
     // iterate through all active Recorders
     // note that Recorders must be added or removed only inside the audio graph

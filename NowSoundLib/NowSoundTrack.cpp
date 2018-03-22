@@ -104,7 +104,8 @@ namespace NowSound
         _beatDuration{ 1 },
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _localTime{ 0 },
-        _isMuted{ false }
+        _isMuted{ false },
+        _audioFrame{ nullptr }
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -121,8 +122,6 @@ namespace NowSound
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
-
-
     }
     
     NowSoundTrackState NowSoundTrack::State() const { return _state; }
@@ -176,6 +175,14 @@ namespace NowSound
 
     void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
     {
+        Check(sender == _audioFrameInputNode);
+
+        if (_audioFrame == nullptr)
+        {
+            // 0.25 sec stereo float buffer
+            _audioFrame = Windows::Media::AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
+        }
+
         DateTime dateTimeNow = DateTime::clock::now();
 
         if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
@@ -200,7 +207,7 @@ namespace NowSound
 
         // OMG KENNY KERR WINS AGAIN:
         // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-        Windows::Media::AudioBuffer buffer(NowSoundGraph::Instance()->GetAudioFrame().LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+        Windows::Media::AudioBuffer buffer(_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
         IMemoryBufferReference reference(buffer.CreateReference());
         winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
         check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
@@ -209,7 +216,7 @@ namespace NowSound
         uint32_t bytesRemaining = capacityInBytes;
         int slicesRemaining = (int)bytesRemaining / 8; // stereo float
             
-        NowSoundGraph::Instance()->GetAudioFrame().Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+        _audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
         while (slicesRemaining > 0)
         {
@@ -232,7 +239,7 @@ namespace NowSound
             slicesRemaining -= (int)longest.SliceDuration().Value();
         }
 
-        _audioFrameInputNode.AddFrame(NowSoundGraph::Instance()->GetAudioFrame());
+        sender.AddFrame(_audioFrame);
 
         _lastQuantumTime = dateTimeNow;
     }

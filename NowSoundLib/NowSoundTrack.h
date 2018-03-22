@@ -87,6 +87,12 @@ namespace NowSound
 
         bool _isMuted;
 
+        // The AudioFrame used for delivering output.
+        // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
+        // buffers, which therefore still have time to drain.
+        // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
+        Windows::Media::AudioFrame _audioFrame;
+
     public:
         NowSoundTrack(TrackId trackId, AudioInputId inputId);
 
