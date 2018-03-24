@@ -202,41 +202,46 @@ namespace NowSound
             return;
         }
 
-        uint8_t* dataInBytes{};
-        uint32_t capacityInBytes{};
-
-        // OMG KENNY KERR WINS AGAIN:
-        // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-        Windows::Media::AudioBuffer buffer(_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
-        IMemoryBufferReference reference(buffer.CreateReference());
-        winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-        check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
-
-        // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
-        uint32_t bytesRemaining = capacityInBytes;
-        int slicesRemaining = (int)bytesRemaining / 8; // stereo float
-            
-        _audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
-
-        while (slicesRemaining > 0)
         {
-            // get up to one second or samplesRemaining, whichever is smaller
-            Slice<AudioSample, float> longest(
-                _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
+            // this nested scope sets the extend of the LockBuffer call below,
+            // which must close before the AddFrame call (which takes a read lock on the buffer).
+            // Otherwise the AddFrame throws E_ACCESSDENIED.
+            uint8_t* dataInBytes{};
+            uint32_t capacityInBytes{};
 
-            longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
+            // OMG KENNY KERR WINS AGAIN:
+            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
+            Windows::Media::AudioBuffer buffer(_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            IMemoryBufferReference reference(buffer.CreateReference());
+            winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
+            check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
-            Time<AudioSample> now(Clock::Instance().Now());
+            // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
+            uint32_t bytesRemaining = capacityInBytes;
+            int slicesRemaining = (int)bytesRemaining / 8; // stereo float
 
-            TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
+            _audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
-            //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-            //HoloDebug.Log(line);
-            //Spam.Audio.WriteLine(line);
+            while (slicesRemaining > 0)
+            {
+                // get up to one second or samplesRemaining, whichever is smaller
+                Slice<AudioSample, float> longest(
+                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
 
-            dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
-            _localTime = _localTime + longest.SliceDuration();
-            slicesRemaining -= (int)longest.SliceDuration().Value();
+                longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
+
+                Time<AudioSample> now(Clock::Instance().Now());
+
+                TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
+
+                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
+                //HoloDebug.Log(line);
+                //Spam.Audio.WriteLine(line);
+
+                dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
+                _localTime = _localTime + longest.SliceDuration();
+                slicesRemaining -= (int)longest.SliceDuration().Value();
+            }
         }
 
         sender.AddFrame(_audioFrame);
