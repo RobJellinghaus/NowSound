@@ -95,12 +95,13 @@ Integers (either short, normal, or long) were used for sample counts, byte count
 ticks, timestamps, milliseconds, and every other quantity.  Getting confused was easy to do
 and hard to debug.
 
-This code uses a common pattern, defining generic types Time<T> and Duration<T>.  The "T"
+This code uses a common pattern, defining generic types `Time<T>` and `Duration<T>`.  The "T"
 generic parameter serves as a placeholder for the type of time/duration involved.  For instance,
-Time<Sample> defines a timestamp in terms of a count of audio samples since the start of the
-program.  Duration<Sample> defines a time interval in terms of a number of audio samples.
+`Time<Sample>` defines a timestamp in terms of a count of audio samples since the start of the
+program.  `Duration<Sample>` defines a time interval in terms of a number of audio samples.
 Arithmetic operators exist to add Time + Duration, subtract Duration from Time, subtract Time
-from Time giving a Duration, etc.
+from Time giving a Duration, etc., provided that the T parameters match; you can't subtract
+a `Time<Sample>` from a `Time<Seconds>` as the compiler won't let you.
 
 This may look verbose, but it precludes so many kinds of bugs that it has been well worth
 doing.
