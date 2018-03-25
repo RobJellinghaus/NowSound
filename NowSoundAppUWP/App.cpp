@@ -61,7 +61,7 @@ struct App : ApplicationT<App>
             _button.Content(IReference<hstring>(hstr));
         }
 
-        void Update()
+        std::unique_ptr<TrackButton> Update()
         {
             NowSoundTrackState currentState{};
             if (_trackId != -1)
@@ -89,6 +89,18 @@ struct App : ApplicationT<App>
 
                 UpdateLabel();
                 _trackState = currentState;
+                if (currentState == NowSoundTrackState::TrackLooping)
+                {
+                    return std::unique_ptr<TrackButton>{new TrackButton{_app}};
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
+            else
+            {
+                return nullptr;
             }
         }
 
@@ -227,9 +239,18 @@ struct App : ApplicationT<App>
         {
             std::lock_guard<std::mutex> guard(_mutex);
 
+            std::vector<std::unique_ptr<TrackButton>> newTrackButtons{};
             for (auto& button : _trackButtons)
             {
-                button->Update();
+                std::unique_ptr<TrackButton> newButtonOpt = button->Update();
+                if (newButtonOpt != nullptr)
+                {
+                    newTrackButtons.push_back(std::move(newButtonOpt));
+                }
+            }
+            for (auto& newButton : newTrackButtons)
+            {
+                _trackButtons.push_back(std::move(newButton));
             }
         }
     }
@@ -286,10 +307,7 @@ fire_and_forget App::LaunchedAsync()
     co_await _uiThread;
 
     // let's create our first TrackButton!
-    {
-        std::lock_guard<std::mutex> guard(_mutex);
-        _trackButtons.push_back(std::unique_ptr<TrackButton>(new TrackButton(this)));
-    }
+    _trackButtons.push_back(std::unique_ptr<TrackButton>(new TrackButton(this)));
 
     // and start our update loop!  Strangely, don't seem to need to await this....
     // TODO: uncomment
