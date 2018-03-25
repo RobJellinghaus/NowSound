@@ -45,9 +45,8 @@ version of the library.  (UWP security restrictions are not friendly to most cur
 NowSound is implemented using the amazing [cppwinnrt](https://github.com/Microsoft/cppwinrt)
 library, which makes Windows component-based programming more pleasant than I ever thought
 C++ could be.  I used Kenny Kerr's great [examples](https://github.com/kennykerr/cppwinrt) as a
-starting point.  The most impressive thing about C++/WinRT is how incredibly easy it makes
-multi-threaded concurrent programming -- using the co_await expression in C++ is literally as
-easy as C#.
+starting point.  The most impressive thing about C++/WinRT is its concurrency support -- using
+the co_await expression in C++ is literally as easy as the await expression in C#.
 
 *Note as of March 2018:* The cppwinrt libraries are present only in Windows Insider preview
 builds of Windows, so if you are not ready to install such a build, you will not be able to build
