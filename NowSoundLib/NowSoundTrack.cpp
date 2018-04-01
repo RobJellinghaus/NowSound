@@ -250,7 +250,7 @@ namespace NowSound
     }
 
     // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
-    bool NowSoundTrack::Record(Time<AudioSample> now, Duration<AudioSample> duration, float* data)
+    bool NowSoundTrack::Record(Duration<AudioSample> duration, float* data)
     {
         // TODO: ThreadContract.RequireAudioGraph();
 
@@ -302,7 +302,7 @@ namespace NowSound
                 _audioStream.Shut(ExactDuration());
 
                 // and initialize _localTime
-                _localTime = now;
+                _localTime = Clock::Instance().Now();
             }
             else
             {

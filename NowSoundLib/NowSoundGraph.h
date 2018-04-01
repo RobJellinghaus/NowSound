@@ -139,6 +139,15 @@ namespace NowSound
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
         std::mutex _stateMutex;
 
+        // Stream that buffers the last second of input audio, for latency compensation.
+        // (Not really clear why latency compensation should be needed for NowSoundApp which shouldn't really
+        // have any problematic latency... but this was needed for gesture latency compensation with Kinect,
+        // so let's at least experiment with it.)
+        BufferedSliceStream<AudioSample, float> _incomingAudioStream;
+
+        // Adapter to record incoming data into _incomingAudioStream.
+        StreamRecorder<AudioSample, float> _incomingAudioStreamRecorder;
+
     public: // Implementation methods used from elsewhere in the library
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();

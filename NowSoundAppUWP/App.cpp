@@ -263,8 +263,8 @@ struct App : ApplicationT<App>
             // always wait in the background
             co_await resume_background();
 
-            // wait in intervals of 1 sec (TODO: decrease once stable)
-            co_await resume_after(TimeSpan((int)(TicksPerSecond * 1)));
+            // wait in intervals of 1/100 sec
+            co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01)));
 
             // switch to UI thread to update buttons
             co_await _uiThread;

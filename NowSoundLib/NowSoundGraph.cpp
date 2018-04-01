@@ -93,7 +93,9 @@ NowSoundGraph::NowSoundGraph()
     _trackId{ 0 },
     _recorders{ },
     _recorderMutex{ },
-    _changingState{ false }
+    _changingState{ false },
+    _incomingAudioStream(0, 2, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
+    _incomingAudioStreamRecorder(&_incomingAudioStream)
 { }
 
 AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
@@ -221,6 +223,9 @@ void NowSoundGraph::StartAudioGraphAsync()
 
     // MAKE THE CLOCK NOW.
     Clock::Initialize(90 /* BPM */, 4 /* beats per measure */, 2);
+
+    // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
+    _recorders.push_back(&_incomingAudioStreamRecorder);
 
     // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
     _audioGraph.Start();
@@ -355,7 +360,7 @@ void NowSoundGraph::HandleIncomingAudio()
         for (IRecorder<AudioSample, float>* recorder : _recorders)
         {
             bool stillRecording =
-                recorder->Record(Clock::Instance().Now(), duration, (float*)(dataInBytes + bufferStart));
+                recorder->Record(duration, (float*)(dataInBytes + bufferStart));
 
             if (!stillRecording)
             {
