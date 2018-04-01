@@ -57,6 +57,58 @@ namespace NowSound
             }
         };
 
+        // Information about the current graph time in NowSound terms.
+        struct NowSoundTimeInfo
+        {
+            // The number of samples elamsed since the audio graph started.
+            int64_t TimeInSamples;
+            // The exact current beat (including fractional part; truncate to get integral beat count).
+            float ExactBeat;
+            // The current BPM of the graph.
+            int32_t BeatsPerMinute;
+            // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
+            int32_t BeatInMeasure;
+
+            NowSoundTimeInfo(
+                int64_t timeInSamples,
+                float exactBeat,
+                int32_t beatsPerMinute,
+                int32_t beatInMeasure)
+                : TimeInSamples(timeInSamples),
+                ExactBeat(exactBeat),
+                BeatsPerMinute(beatsPerMinute),
+                BeatInMeasure(beatInMeasure)
+            {}
+        };
+
+        // Information about a track's time in NowSound terms.
+        struct NowSoundTrackTimeInfo
+        {
+            // The duration of the track in audio samples.
+            int64_t DurationInSamples;
+            // The duration of the track in beats.
+            int64_t DurationInBeats;
+            // The duration of the track in exact seconds; DurationInSamples is this, rounded up to the nearest sample.
+            float ExactDuration;
+            // The current playing time of the current track, in samples.
+            int64_t CurrentTrackTimeInSamples;
+            // The current beat of the track (e.g. a 12 beat track = this ranges from 0 to 11).
+            float CurrentTrackBeat;
+
+            NowSoundTrackTimeInfo(
+                int64_t durationInSamples,
+                int64_t durationInBeats,
+                float exactDuration,
+                int64_t currentTrackTimeInSamples,
+                float currentTrackBeat)
+                : DurationInSamples(durationInSamples),
+                DurationInBeats(durationInBeats),
+                ExactDuration(exactDuration),
+                CurrentTrackTimeInSamples(currentTrackTimeInSamples),
+                CurrentTrackBeat(currentTrackBeat)
+            {}
+        };
+
         // The states of a NowSound graph.
         // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
         // to disambiguate them from the TrackState identifiers.

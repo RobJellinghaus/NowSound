@@ -50,17 +50,34 @@ struct App : ApplicationT<App>
         TrackId _trackId;
         NowSoundTrackState _trackState;
         Button _button;
+        TextBlock _textBlock;
         std::wstring _label;
 
-        void UpdateLabel()
+        void UpdateUI()
         {
             wstringstream wstr{};
-            wstr << " Track # " << _trackNumber << L": " << _label;
+            wstr << L" Track # " << _trackNumber << L": " << _label;
             hstring hstr{};
             hstr = wstr.str();
             _button.Content(IReference<hstring>(hstr));
+
+            wstr = wstringstream{};
+            if (_trackId != -1)
+            {
+                NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrackAPI::NowSoundTrack_TimeInfo(_trackId);
+                wstr << L"  Duration (samples): " << trackTimeInfo.DurationInSamples
+                    << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
+                    << L" | Current beat: " << trackTimeInfo.CurrentTrackBeat;
+            }
+            else
+            {
+                wstr << L"";
+            }
+            _textBlock.Text(wstr.str());
         }
 
+        // Update this track button.  If this track button just started looping, then make and return
+        // a new (uninitialized) track button.
         std::unique_ptr<TrackButton> Update()
         {
             NowSoundTrackState currentState{};
@@ -69,6 +86,7 @@ struct App : ApplicationT<App>
                 currentState = NowSoundTrackAPI::NowSoundTrack_State(_trackId);
             }
 
+            std::unique_ptr<TrackButton> returnValue{};
             if (currentState != _trackState)
             {
                 switch (currentState)
@@ -87,21 +105,16 @@ struct App : ApplicationT<App>
                     break;
                 }
 
-                UpdateLabel();
                 _trackState = currentState;
                 if (currentState == NowSoundTrackState::TrackLooping)
                 {
-                    return std::unique_ptr<TrackButton>{new TrackButton{_app}};
-                }
-                else
-                {
-                    return nullptr;
+                    returnValue = std::unique_ptr<TrackButton>{new TrackButton{_app}};
                 }
             }
-            else
-            {
-                return nullptr;
-            }
+
+            UpdateUI();
+
+            return returnValue;
         }
 
         void HandleClick()
@@ -123,12 +136,17 @@ struct App : ApplicationT<App>
             _trackNumber{ _nextTrackNumber++ },
             _trackId{ -1 },
             _button{ Button() },
+            _textBlock{ TextBlock() },
             _label{ L"Uninitialized" },
             _trackState{NowSoundTrackState::TrackUninitialized}
         {
-            UpdateLabel();
+            UpdateUI();
 
-            app->_stackPanel.Children().Append(_button);
+            StackPanel trackPanel{};
+            trackPanel.Orientation(Windows::UI::Xaml::Controls::Orientation::Horizontal);
+            trackPanel.Children().Append(_button);
+            trackPanel.Children().Append(_textBlock);
+            app->_stackPanel.Children().Append(trackPanel);
 
             _button.Click([this](IInspectable const&, RoutedEventArgs const&)
             {
@@ -144,17 +162,20 @@ struct App : ApplicationT<App>
     // Label string.
     const std::wstring AudioGraphStateString = L"Audio graph state: ";
 
-    TextBlock _textBlock1{ nullptr };
-    TextBlock _textBlock2{ nullptr };
+    TextBlock _textBlockGraphStatus{ nullptr };
+    TextBlock _textBlockGraphInfo{ nullptr };
+    TextBlock _textBlockTimeInfo{ nullptr };
 
     StackPanel _stackPanel{ nullptr };
 
     static int _nextTrackNumber;
 
+    // The per-track UI controls.
+    // This is only ever modified (and even traversed) from the UI context, so does not need to be locked.
     std::vector<std::unique_ptr<TrackButton>> _trackButtons{};
 
-    std::mutex _mutex{};
-
+    // The apartment context of the UI thread; must co_await this before updating UI
+    // (and must thereafter switch out of UI context ASAP, for liveness).
     apartment_context _uiThread;
 
     std::wstring StateLabel(NowSoundGraphState state)
@@ -170,16 +191,17 @@ struct App : ApplicationT<App>
         }
     }
 
-    // Update the state label.  Must be on UI context.
+    // Update the state label.
+    // Must be on UI context.
     void UpdateStateLabel()
     {
         std::wstring str(AudioGraphStateString);
         str.append(StateLabel(NowSoundGraphAPI::NowSoundGraph_GetGraphState()));
-        _textBlock1.Text(str);
+        _textBlockGraphStatus.Text(str);
     }
 
     // Wait until the graph state becomes the expected state, or timeoutTime is reached.
-    // Must be called from background context (all waits should always be in background).
+    // Must be on background context (all waits should always be in background).
     std::future<bool> WaitForGraphState(NowSoundGraphState expectedState, TimeSpan timeout)
     {
         // TODO: ensure not on UI context.
@@ -211,16 +233,19 @@ struct App : ApplicationT<App>
 
     void OnLaunched(LaunchActivatedEventArgs const&)
     {
-        _textBlock1 = TextBlock();
-        _textBlock1.Text(AudioGraphStateString);
-        _textBlock2 = TextBlock();
-        _textBlock2.Text(L"");
+        _textBlockGraphStatus = TextBlock();
+        _textBlockGraphStatus.Text(AudioGraphStateString);
+        _textBlockGraphInfo = TextBlock();
+        _textBlockGraphInfo.Text(L"");
+        _textBlockTimeInfo = TextBlock();
+        _textBlockTimeInfo.Text(L"");
 
         Window xamlWindow = Window::Current();
 
         _stackPanel = StackPanel();
-        _stackPanel.Children().Append(_textBlock1);
-        _stackPanel.Children().Append(_textBlock2);
+        _stackPanel.Children().Append(_textBlockGraphStatus);
+        _stackPanel.Children().Append(_textBlockGraphInfo);
+        _stackPanel.Children().Append(_textBlockTimeInfo);
 
         xamlWindow.Content(_stackPanel);
         xamlWindow.Activate();
@@ -231,27 +256,22 @@ struct App : ApplicationT<App>
         LaunchedAsync();
     }
 
+    // Update all the track buttons.
+    // Must be called on UI context.
     void UpdateButtons()
     {
-        // Must be called on UI context.
-
-        // Lock the _trackButtons array
+        std::vector<std::unique_ptr<TrackButton>> newTrackButtons{};
+        for (auto& button : _trackButtons)
         {
-            std::lock_guard<std::mutex> guard(_mutex);
-
-            std::vector<std::unique_ptr<TrackButton>> newTrackButtons{};
-            for (auto& button : _trackButtons)
+            std::unique_ptr<TrackButton> newButtonOpt = button->Update();
+            if (newButtonOpt != nullptr)
             {
-                std::unique_ptr<TrackButton> newButtonOpt = button->Update();
-                if (newButtonOpt != nullptr)
-                {
-                    newTrackButtons.push_back(std::move(newButtonOpt));
-                }
+                newTrackButtons.push_back(std::move(newButtonOpt));
             }
-            for (auto& newButton : newTrackButtons)
-            {
-                _trackButtons.push_back(std::move(newButton));
-            }
+        }
+        for (auto& newButton : newTrackButtons)
+        {
+            _trackButtons.push_back(std::move(newButton));
         }
     }
 
@@ -266,8 +286,18 @@ struct App : ApplicationT<App>
             // wait in intervals of 1/100 sec
             co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01)));
 
-            // switch to UI thread to update buttons
+            // switch to UI thread to update buttons and time info
             co_await _uiThread;
+
+            // update time info
+            NowSoundTimeInfo timeInfo = NowSoundGraphAPI::NowSoundGraph_GetTimeInfo();
+            std::wstringstream wstr;
+            wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
+                << L" | Beat: " << timeInfo.BeatInMeasure
+                << L" | Total beats: " << timeInfo.ExactBeat;
+            _textBlockTimeInfo.Text(wstr.str());
+
+            // update all buttons
             UpdateButtons();
         }
     }
@@ -297,7 +327,7 @@ fire_and_forget App::LaunchedAsync()
     co_await _uiThread;
     std::wstringstream wstr;
     wstr << L"Latency in samples: " << graphInfo.LatencyInSamples << " | Samples per quantum: " << graphInfo.SamplesPerQuantum;
-    _textBlock2.Text(wstr.str());
+    _textBlockGraphInfo.Text(wstr.str());
     co_await resume_background();
 
     NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync();

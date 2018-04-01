@@ -33,7 +33,7 @@ void NowSound::Clock::CalculateBeatDuration()
     _beatDuration = (ContinuousDuration<AudioSample>)(((float)SampleRateHz * 60) / _beatsPerMinute);
 }
 
-void NowSound::Clock::BPM(float value)
+void NowSound::Clock::BeatsPerMinute(float value)
 {
     _beatsPerMinute = value;
     CalculateBeatDuration();

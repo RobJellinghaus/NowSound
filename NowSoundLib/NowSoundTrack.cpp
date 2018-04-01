@@ -48,9 +48,9 @@ namespace NowSound
         return Track(trackId)->ExactDuration().Value();
     }
 
-    __declspec(dllexport) int64_t /*Time<AudioSample>*/ NowSoundTrackAPI::NowSoundTrack_StartTime(TrackId trackId)
+    __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrackAPI::NowSoundTrack_TimeInfo(TrackId trackId)
     {
-        return Track(trackId)->StartTime().Value();
+        return Track(trackId)->TimeInfo();
     }
 
     __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_FinishRecording(TrackId trackId)
@@ -84,12 +84,18 @@ namespace NowSound
 
     NowSoundTrack* NowSoundTrackAPI::Track(TrackId id)
     {
+        // TODO: concurrency hazard!!!  Should this lock tracks, or?  Probably need to lock_guard each public NowSoundTrackAPI method...
+        // or is it the case that track lifecycle is only ever driven from the API?  I think that is true, but we should ensure and check it.
+        Check(id >= 0 && id < _tracks.size());
         NowSoundTrack* value = _tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
 
-    NowSoundTrack::NowSoundTrack(TrackId trackId, AudioInputId inputId)
+    NowSoundTrack::NowSoundTrack(
+        TrackId trackId,
+        AudioInputId inputId,
+        const BufferedSliceStream<AudioSample, float>& sourceStream)
         : _trackId{ trackId },
         _inputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
@@ -104,14 +110,21 @@ namespace NowSound
         _beatDuration{ 1 },
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _localTime{ 0 },
-        _isMuted{ false },
-        _audioFrame{ nullptr }
+        _isMuted{ false }
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
 
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
+
+        // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
+        Duration<AudioSample> latencyCompensation = Clock::SampleRateHz / 2;
+        Interval<AudioSample> lastIntervalOfSourceStream(
+            sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensation,
+            latencyCompensation);
+        sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
+        // _localTime = _localTime + latencyCompensation;
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
@@ -142,9 +155,21 @@ namespace NowSound
     }
 
     ContinuousDuration<AudioSample> NowSoundTrack::ExactDuration() const
-    { return (int)BeatDuration().Value() * Clock::Instance().BeatDuration().Value(); }
+    {
+        return (int)BeatDuration().Value() * Clock::Instance().BeatDuration().Value();
+    }
 
     Time<AudioSample> NowSoundTrack::StartTime() const { return _startTime; }
+
+    NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
+    {
+        return NowSoundTrackTimeInfo(
+            this->_audioStream.DiscreteDuration().Value(),
+            this->BeatDuration().Value(),
+            this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
+            this->_localTime.Value(),
+            Clock::Instance().TimeToBeats(this->_localTime).Value());
+    }
 
     bool NowSoundTrack::IsMuted() const { return _isMuted; }
     void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
@@ -177,12 +202,6 @@ namespace NowSound
     {
         Check(sender == _audioFrameInputNode);
 
-        if (_audioFrame == nullptr)
-        {
-            // 0.25 sec stereo float buffer
-            _audioFrame = Windows::Media::AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
-        }
-
         DateTime dateTimeNow = DateTime::clock::now();
 
         if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
@@ -202,16 +221,17 @@ namespace NowSound
             return;
         }
 
+        Windows::Media::AudioFrame audioFrame = NowSoundGraph::Instance()->GetAudioFrame();
+
         {
-            // this nested scope sets the extend of the LockBuffer call below,
-            // which must close before the AddFrame call (which takes a read lock on the buffer).
-            // Otherwise the AddFrame throws E_ACCESSDENIED.
+            // This nested scope sets the extent of the LockBuffer call below, which must close before the AddFrame call.
+            // Otherwise the AddFrame will throw E_ACCESSDENIED when it tries to take a read lock on the frame.
             uint8_t* dataInBytes{};
             uint32_t capacityInBytes{};
 
             // OMG KENNY KERR WINS AGAIN:
             // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-            Windows::Media::AudioBuffer buffer(_audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
+            Windows::Media::AudioBuffer buffer(audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
             IMemoryBufferReference reference(buffer.CreateReference());
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
@@ -220,7 +240,7 @@ namespace NowSound
             uint32_t bytesRemaining = capacityInBytes;
             int slicesRemaining = (int)bytesRemaining / 8; // stereo float
 
-            _audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
             while (slicesRemaining > 0)
             {
@@ -244,7 +264,7 @@ namespace NowSound
             }
         }
 
-        sender.AddFrame(_audioFrame);
+        sender.AddFrame(audioFrame);
 
         _lastQuantumTime = dateTimeNow;
     }

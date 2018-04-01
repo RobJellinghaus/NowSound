@@ -1,6 +1,9 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+// This is the external include file for NowSoundLib.
+// This should be the only file #included from any external project seeking to invoke NowSoundLib.
+
 #pragma once
 
 #include "pch.h"
@@ -65,6 +68,10 @@ namespace NowSound
             // Graph must be Created.  On completion, graph becomes Started.
             static __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
 
+            // Get the current audio graph time.
+            // Graph must be Running.
+            static __declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetTimeInfo();
+
             // Play a user-selected sound file.
             // Graph must be Started.
             static __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
@@ -99,8 +106,8 @@ namespace NowSound
             // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
             static __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId);
 
-            // The starting moment at which this Track was created.
-            static __declspec(dllexport) int64_t /*Time<AudioSample>*/ NowSoundTrack_StartTime(TrackId trackId);
+            // The current timing information for this Track.
+            static __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_TimeInfo(TrackId trackId);
 
             // The user wishes the track to finish recording now.
             // Contractually requires State == NowSoundTrack_State.Recording.

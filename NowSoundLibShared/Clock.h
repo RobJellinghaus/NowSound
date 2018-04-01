@@ -76,8 +76,8 @@ namespace NowSound
         // This is the most useful value for humans to control and see, and in fact pretty much all 
         // time in the system is derived from this.  This value can only currently be changed when
         // no tracks exist.</remarks>
-        float BPM() const { return _beatsPerMinute; }
-        void BPM(float value);
+        float BeatsPerMinute() const { return _beatsPerMinute; }
+        void BeatsPerMinute(float value);
 
         int BytesPerSecond() const { return SampleRateHz * _inputChannelCount * sizeof(float); }
 

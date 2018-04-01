@@ -64,6 +64,10 @@ namespace NowSound
         // Graph must be Created.  On completion, graph becomes Started.
         void StartAudioGraphAsync();
 
+        // Get the time of the created graph.
+        // Graph must be Running.
+        NowSoundTimeInfo GetTimeInfo();
+
         // Play a user-selected sound file.
         // Graph must be Started.
         void PlayUserSelectedSoundFileAsync();
@@ -154,11 +158,11 @@ namespace NowSound
 
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
 
+        // Get the shared audio frame.
+        Windows::Media::AudioFrame GetAudioFrame();
+
         // The (currently singleton) AudioGraph.
         Windows::Media::Audio::AudioGraph GetAudioGraph();
-
-        // The default audio input node. TODO: support device selection.
-        Windows::Media::Audio::AudioDeviceInputNode GetAudioDeviceInputNode();
 
         // The default audio output node.  TODO: support device selection.
         Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();

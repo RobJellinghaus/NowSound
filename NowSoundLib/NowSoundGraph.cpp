@@ -57,6 +57,11 @@ void NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync()
     NowSoundGraph::Instance()->StartAudioGraphAsync();
 }
 
+NowSoundTimeInfo NowSoundGraphAPI::NowSoundGraph_GetTimeInfo()
+{
+    return NowSoundGraph::Instance()->GetTimeInfo();
+}
+
 void NowSoundGraphAPI::NowSoundGraph_PlayUserSelectedSoundFileAsync()
 {
     NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
@@ -97,6 +102,8 @@ NowSoundGraph::NowSoundGraph()
     _incomingAudioStream(0, 2, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
     _incomingAudioStreamRecorder(&_incomingAudioStream)
 { }
+
+AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
 
 AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
 
@@ -222,7 +229,7 @@ void NowSoundGraph::StartAudioGraphAsync()
     PrepareToChangeState(NowSoundGraphState::GraphCreated);
 
     // MAKE THE CLOCK NOW.
-    Clock::Initialize(90 /* BPM */, 4 /* beats per measure */, 2);
+    Clock::Initialize(60 /* BPM */, 4 /* beats per measure */, 2);
 
     // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
     _recorders.push_back(&_incomingAudioStreamRecorder);
@@ -235,6 +242,21 @@ void NowSoundGraph::StartAudioGraphAsync()
     ChangeState(NowSoundGraphState::GraphRunning);
 }
 
+NowSoundTimeInfo NowSoundGraph::GetTimeInfo()
+{
+    // TODO: verify not on audio graph thread
+
+    Check(_audioGraphState == NowSoundGraphState::GraphRunning);
+
+    Time<AudioSample> now = Clock::Instance().Now();
+    int completeBeats = Clock::Instance().TimeToCompleteBeats(now).Value();
+    return NowSoundTimeInfo(
+        now.Value(),
+        Clock::Instance().TimeToBeats(now).Value(),
+        Clock::Instance().BeatsPerMinute(),
+        completeBeats % Clock::Instance().BeatsPerMeasure());
+}
+
 TrackId NowSoundGraph::CreateRecordingTrackAsync()
 {
     // TODO: verify not on audio graph thread
@@ -243,7 +265,7 @@ TrackId NowSoundGraph::CreateRecordingTrackAsync()
 
     TrackId id = _trackId++;
 
-    std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0));
+    std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0, _incomingAudioStream));
 
     // new tracks are created as recording; lock the _recorders collection and add this new track
     {

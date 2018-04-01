@@ -13,9 +13,7 @@ namespace NowSound
     {
         if (!condition)
         {
-#if DEBUG
-            Debug::Break();
-#endif
+            DebugBreak();
             std::abort();
         }
     }

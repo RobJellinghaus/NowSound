@@ -87,14 +87,8 @@ namespace NowSound
 
         bool _isMuted;
 
-        // The AudioFrame used for delivering output.
-        // This should probably be at least one second, but the currently hacked muting implementation simply stops populating output
-        // buffers, which therefore still have time to drain.
-        // TODO: restructure to use submixer and set output volume on submixer when muting/unmuting, to avoid this issue and allow more efficient bigger buffers here.
-        Windows::Media::AudioFrame _audioFrame;
-
     public:
-        NowSoundTrack(TrackId trackId, AudioInputId inputId);
+        NowSoundTrack(TrackId trackId, AudioInputId inputId, const BufferedSliceStream<AudioSample, float>& sourceStream);
 
         // In what state is this track?
         NowSoundTrackState State() const;
@@ -115,6 +109,9 @@ namespace NowSound
 
         // The starting moment at which this Track was created.
         Time<AudioSample> StartTime() const;
+
+        // The full time info for this track (to allow just one call per track for all this info).
+        NowSoundTrackTimeInfo TimeInfo() const;
 
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.
