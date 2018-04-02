@@ -85,18 +85,30 @@ namespace NowSound
             int64_t CurrentTrackTimeInSamples;
             // The current beat of the track (e.g. a 12 beat track = this ranges from 0 to 11).
             float CurrentTrackBeat;
+            // The maximum time since last quantum over the last N seconds.
+            float MaximumTimeSinceLastQuantum;
+            // The minimum time since last quantum over the last N seconds.
+            float MinimumTimeSinceLastQuantum;
+            // The average time since last quantum over the last N seconds.
+            float AverageTimeSinceLastQuantum;
 
             NowSoundTrackTimeInfo(
                 int64_t durationInSamples,
                 int64_t durationInBeats,
                 float exactDuration,
                 int64_t currentTrackTimeInSamples,
-                float currentTrackBeat)
+                float currentTrackBeat,
+                float minSinceLastQuantum, 
+                float maxSinceLastQuantum, 
+                float averageSinceLastQuantum)
                 : DurationInSamples(durationInSamples),
                 DurationInBeats(durationInBeats),
                 ExactDuration(exactDuration),
                 CurrentTrackTimeInSamples(currentTrackTimeInSamples),
-                CurrentTrackBeat(currentTrackBeat)
+                CurrentTrackBeat(currentTrackBeat),
+                MinimumTimeSinceLastQuantum(minSinceLastQuantum),
+                MaximumTimeSinceLastQuantum(maxSinceLastQuantum),
+                AverageTimeSinceLastQuantum(averageSinceLastQuantum)
             {}
         };
 

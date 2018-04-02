@@ -18,6 +18,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Check.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Clock.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Buf.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Histogram.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)IntervalMapper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Recorder.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Slice.h" />

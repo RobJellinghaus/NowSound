@@ -72,10 +72,13 @@ struct App : ApplicationT<App>
                     trackTimeInfo.CurrentTrackBeat
                     - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
                         * trackTimeInfo.DurationInBeats);
-                wstr << L" Start time (samples): " << _recordingStartTime
+                wstr.precision(2);
+                wstr << L" Start (samples): " << _recordingStartTime
                     << L" | Duration (samples): " << trackTimeInfo.DurationInSamples
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
-                    << L" | Current beat: " << currentBeatInMeasure;
+                    << L" | Current beat: " << currentBeatInMeasure
+                    << L" | Max time since quantum: " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum
+                    << L" | Avg time since quantum: " << (int)trackTimeInfo.AverageTimeSinceLastQuantum;
             }
             else
             {

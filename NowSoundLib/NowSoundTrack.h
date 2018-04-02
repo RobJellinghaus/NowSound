@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Clock.h"
+#include "Histogram.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "Time.h"
@@ -75,6 +76,9 @@ namespace NowSound
         std::queue<std::wstring> _debugLog;
 
         void DebugLog(const std::wstring& entry);
+
+        // histogram of time since last sample request
+        Histogram _sinceLastSampleTimingHistogram;
 
     public:
         NowSoundTrack(TrackId trackId, AudioInputId inputId, const BufferedSliceStream<AudioSample, float>& sourceStream);

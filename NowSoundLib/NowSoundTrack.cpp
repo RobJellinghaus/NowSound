@@ -121,7 +121,8 @@ namespace NowSound
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _localTime{ 0 },
         _isMuted{ false },
-        _debugLog{}
+        _debugLog{},
+        _sinceLastSampleTimingHistogram{500} // 500 samples = 5 seconds at 100Hz audio frame input rate
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -192,7 +193,10 @@ namespace NowSound
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
             this->_localTime.Value(),
-            Clock::Instance().TimeToBeats(this->_localTime).Value());
+            Clock::Instance().TimeToBeats(this->_localTime).Value(),
+            _sinceLastSampleTimingHistogram.Min(),
+            _sinceLastSampleTimingHistogram.Max(),
+            _sinceLastSampleTimingHistogram.Average());
     }
 
     bool NowSoundTrack::IsMuted() const { return _isMuted; }
@@ -229,6 +233,8 @@ namespace NowSound
         sender.DiscardQueuedFrames();
 
         DateTime dateTimeNow = DateTime::clock::now();
+        TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
+        _lastQuantumTime = dateTimeNow;
 
         if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
         {
@@ -240,12 +246,22 @@ namespace NowSound
         Check(args.RequiredSamples() >= 0);
         uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
 
-        std::wstringstream wstr{};
-        wstr << L"Samples | " << Clock::Instance().Now().Value()
-            << L" | Time (secs) | " << ((float)(dateTimeNow.time_since_epoch().count()) / Clock::TicksPerSecond)
-            << L" | RequiredSamples | " << requiredSamples
-            << L" | LocalTime | " << _localTime.Value();
-        DebugLog(wstr.str());
+        float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::SampleRateHz / Clock::TicksPerSecond);
+
+        _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
+
+        bool x = false;
+        if (x)
+        {
+            std::wstringstream wstr{};
+            wstr.precision(2);
+            wstr << L"Samples | " << Clock::Instance().Now().Value()
+                << L" | RequiredSamples | " << requiredSamples
+                << L" | LocalTime | " << _localTime.Value()
+                << L" | SinceLast (samples) | " << samplesSinceLastQuantum;
+
+            DebugLog(wstr.str());
+        }
 
         if (requiredSamples == 0)
         {
@@ -285,12 +301,6 @@ namespace NowSound
 
                 Time<AudioSample> now(Clock::Instance().Now());
 
-                TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
-
-                //string line = $"track #{_sequenceNumber}: reqSamples {requiredSamples}; {sinceLast.TotalMilliseconds} msec since last; {NowSoundGraph::GetAudioFrame().Duration.Value.TotalMilliseconds} msec audio frame; now {now}, _localTime {_localTime}, samplesRemaining {samplesRemaining}, slice {longest}";
-                //HoloDebug.Log(line);
-                //Spam.Audio.WriteLine(line);
-
                 dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
                 _localTime = _localTime + longest.SliceDuration();
                 samplesRemaining -= (int)longest.SliceDuration().Value();
@@ -298,8 +308,6 @@ namespace NowSound
         }
 
         sender.AddFrame(audioFrame);
-
-        _lastQuantumTime = dateTimeNow;
     }
 
     // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
@@ -308,7 +316,6 @@ namespace NowSound
         // TODO: ThreadContract.RequireAudioGraph();
 
         bool continueRecording = true;
-        // TODO: what was this for? lock(this)
         switch (_state)
         {
         case NowSoundTrackState::TrackRecording:
