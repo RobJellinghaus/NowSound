@@ -104,15 +104,14 @@ namespace NowSound
             return Duration<Beat>((int)TimeToBeats(time).Value());
         }
 
-        const double Epsilon = 0.0001; // empirically seen some Beats values come too close to this
-
-                                       // What fraction of a beat?
+        // empirically seen some Beats values come too close to this
+        const double Epsilon = 0.0001; 
+        
+        // What fraction of a beat?
         ContinuousDuration<Beat> TimeToFractionalBeat(Time<AudioSample> time) const
         {
             float beatValue = TimeToBeats(time).Value();
             return ContinuousDuration<Beat>(beatValue - std::floor(beatValue));
         }
-
-
     };
 }

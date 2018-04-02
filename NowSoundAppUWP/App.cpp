@@ -76,9 +76,10 @@ struct App : ApplicationT<App>
                 wstr << L" Start (samples): " << _recordingStartTime
                     << L" | Duration (samples): " << trackTimeInfo.DurationInSamples
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
+                    << L" | Max samples/quantum: " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum
+                    << L" | Avg samples/quantum: " << (int)trackTimeInfo.AverageTimeSinceLastQuantum
                     << L" | Current beat: " << currentBeatInMeasure
-                    << L" | Max time since quantum: " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum
-                    << L" | Avg time since quantum: " << (int)trackTimeInfo.AverageTimeSinceLastQuantum;
+                    ;
             }
             else
             {

@@ -12,6 +12,7 @@
 #include "Check.h"
 #include "Clock.h"
 #include "GetBuffer.h"
+#include "MagicNumbers.h"
 #include "NowSoundGraph.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
@@ -109,10 +110,10 @@ namespace NowSound
         : _trackId{ trackId },
         _inputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
-        _startTime{ Clock::Instance().Now() },
+        // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
-            _startTime,
-            2,
+            Clock::Instance().Now() - MagicNumbers::TrackLatencyCompensation,
+            MagicNumbers::AudioChannelCount,
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
             /*useContinuousLoopingMapper*/ false),
@@ -122,7 +123,7 @@ namespace NowSound
         _localTime{ 0 },
         _isMuted{ false },
         _debugLog{},
-        _sinceLastSampleTimingHistogram{500} // 500 samples = 5 seconds at 100Hz audio frame input rate
+        _sinceLastSampleTimingHistogram{MagicNumbers::AudioQuantumHistogramCapacity}
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -130,16 +131,13 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
 
-        bool x = false;
-        if (x) 
+        if (MagicNumbers::TrackLatencyCompensation > 0)
         {
             // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-            Duration<AudioSample> latencyCompensation = Clock::SampleRateHz;
             Interval<AudioSample> lastIntervalOfSourceStream(
-                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensation,
-                latencyCompensation);
+                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - MagicNumbers::TrackLatencyCompensation,
+                MagicNumbers::TrackLatencyCompensation);
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
-            // _localTime = _localTime + latencyCompensation;
         }
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
@@ -156,7 +154,7 @@ namespace NowSound
     void NowSoundTrack::DebugLog(const std::wstring& entry)
     {
         _debugLog.push(entry);
-        if (_debugLog.size() > 1000)
+        if (_debugLog.size() > MagicNumbers::DebugLogCapacity)
         {
             _debugLog.pop();
         }
@@ -171,7 +169,7 @@ namespace NowSound
         // TODO: determine whether we really need a time that only moves forward between Unity frames.
         // For now, let time be determined solely by audio graph, and let Unity observe time increasing 
         // during a single Unity frame.
-        Duration<AudioSample> sinceStart(Clock::Instance().Now() - _startTime);
+        Duration<AudioSample> sinceStart(Clock::Instance().Now() - _audioStream.InitialTime());
         Time<AudioSample> sinceStartTime(sinceStart.Value());
 
         ContinuousDuration<Beat> beats = Clock::Instance().TimeToBeats(sinceStartTime);
@@ -184,7 +182,7 @@ namespace NowSound
         return (int)BeatDuration().Value() * Clock::Instance().BeatDuration().Value();
     }
 
-    Time<AudioSample> NowSoundTrack::StartTime() const { return _startTime; }
+    Time<AudioSample> NowSoundTrack::StartTime() const { return _audioStream.InitialTime(); }
 
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
@@ -288,7 +286,9 @@ namespace NowSound
             // To use low latency pipeline on every quantum, have this use requiredSamples*8 rather than capacityInBytes.
             uint32_t bytesRemaining = capacityInBytes; // requiredSamples * 8;
 
-            int samplesRemaining = (int)bytesRemaining / 8; // stereo float
+            int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
+
+            int samplesRemaining = (int)bytesRemaining / sampleSizeInBytes;
 
             // TODO: contact Microsoft about this: why is this API taking a timespan rather than an exact sample count?
             // And how does one ensure the timespan conversion is exactly right?
@@ -365,11 +365,7 @@ namespace NowSound
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
-
-                // and initialize _localTime -- but advance it by a certain amount, to make playback
-                // catch up with buffering.  TODO: EXPERIMENT WITH THIS
-                Duration<AudioSample> experimentalLoopTimeAdvance = Clock::SampleRateHz / 8;
-                _localTime = Clock::Instance().Now() + experimentalLoopTimeAdvance;
+                _localTime = Clock::Instance().Now();
             }
             else
             {

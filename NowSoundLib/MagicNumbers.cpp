@@ -3,6 +3,7 @@
 
 #include "pch.h"
 
+#include "Clock.h"
 #include "MagicNumbers.h"
 
 using namespace NowSound;
@@ -21,3 +22,13 @@ const int MagicNumbers::AudioChannelCount{ 2 };
 
 // 128 secs preallocated buffers
 const int MagicNumbers::InitialAudioBufferCount{ 128 };
+
+// 1/10 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
+const Duration<AudioSample> MagicNumbers::TrackLatencyCompensation{ 0 /*Clock::SampleRateHz / 8*/ };
+
+// This could easily be huge but 1000 is fine for getting at least a second's worth of per-track history at audio rate.
+const int MagicNumbers::DebugLogCapacity{ 1000 };
+
+// 200 histogram values at 100Hz = two seconds of history, enough to follow transient crackling/breakup
+// (due to losing foreground execution status, for example)
+const int MagicNumbers::AudioQuantumHistogramCapacity{ 200 };

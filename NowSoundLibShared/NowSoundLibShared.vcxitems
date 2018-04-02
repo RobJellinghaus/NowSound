@@ -28,5 +28,6 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Check.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Clock.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Histogram.cpp" />
   </ItemGroup>
 </Project>

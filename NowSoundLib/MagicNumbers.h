@@ -7,6 +7,8 @@
 
 // Constants that are assigned based on manual tuning.
 // These are collected into one location to avoid their being scattered subtly around the code.
+// Effectively, there should be no constant numeric values other than 0 or 1 anywhere in NowSoundLib
+// except in MagicNumbers.cpp.
 namespace NowSound
 {
     class MagicNumbers
@@ -32,5 +34,15 @@ namespace NowSound
         // How many (one-second, for now) audio buffers do we initially want to allocate?
         // Not much downside to allocating many; stereo float 48Khz = only 384KB per one-sec buffer
         static const int InitialAudioBufferCount;
+
+        // The amount of time by which to "pre-record" already-heard audio at the start of a new track.
+        static const Duration<AudioSample> TrackLatencyCompensation;
+
+        // The number of strings to buffer in the per-track debug log.
+        static const int DebugLogCapacity;
+
+        // How many audio frames' duration will the per-track histogram follow?
+        // The histogram helps detect spikes in the latency observed by the FrameInputNode_QuantumStarted method.
+        static const int AudioQuantumHistogramCapacity;
     };
 }

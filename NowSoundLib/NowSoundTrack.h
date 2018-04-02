@@ -36,9 +36,6 @@ namespace NowSound
         // TODO: relax this to permit non-quantized looping.
         Duration<Beat> _beatDuration;
 
-        // The starting time of this track.
-        const Time<AudioSample> _startTime;
-
         // The node this track uses for emitting data into the audio graph.
         // This is the output node for this Track, but the input node for the audio graph.
         winrt::Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
