@@ -56,14 +56,14 @@ namespace NowSound
             // The exact current beat (including fractional part; truncate to get integral beat count).
             float ExactBeat;
             // The current BPM of the graph.
-            int32_t BeatsPerMinute;
+            float BeatsPerMinute;
             // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
             int32_t BeatInMeasure;
 
             NowSoundTimeInfo(
                 int64_t timeInSamples,
                 float exactBeat,
-                int32_t beatsPerMinute,
+                float beatsPerMinute,
                 int32_t beatInMeasure)
                 : TimeInSamples(timeInSamples),
                 ExactBeat(exactBeat),

@@ -309,6 +309,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GetBuffer.h" />
+    <ClInclude Include="MagicNumbers.h" />
     <ClInclude Include="NowSoundGraph.h" />
     <ClInclude Include="NowSoundLibTypes.h" />
     <ClInclude Include="NowSoundTrack.h" />
@@ -316,6 +317,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MagicNumbers.cpp" />
     <ClCompile Include="NowSoundGraph.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

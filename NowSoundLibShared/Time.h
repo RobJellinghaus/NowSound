@@ -5,9 +5,10 @@
 
 #include "pch.h"
 
+#include "math.h"
 #include "stdint.h" // for int64_t
 
-#include "math.h"
+#include "Check.h"
 
 namespace NowSound
 {

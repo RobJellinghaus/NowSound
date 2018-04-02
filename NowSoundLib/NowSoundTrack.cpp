@@ -250,6 +250,7 @@ namespace NowSound
 
         _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
 
+        // detailed tracing of per-frame timings (for more accurate histogram if desired)
         bool x = false;
         if (x)
         {
@@ -289,7 +290,11 @@ namespace NowSound
 
             int samplesRemaining = (int)bytesRemaining / 8; // stereo float
 
-            audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            // TODO: contact Microsoft about this: why is this API taking a timespan rather than an exact sample count?
+            // And how does one ensure the timespan conversion is exactly right?
+            // For now, avoid this property altogether and tune things with the size of the audio frame;
+            // note that *creating* an audio frame takes a sample count and not a timespan duration....
+            //audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
 
             while (samplesRemaining > 0)
             {

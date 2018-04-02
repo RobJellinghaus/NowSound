@@ -7,6 +7,7 @@
 
 #include "Clock.h"
 #include "GetBuffer.h"
+#include "MagicNumbers.h"
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
@@ -92,7 +93,7 @@ NowSoundGraph::NowSoundGraph()
     : _audioGraph{ nullptr },
     _audioGraphState{ NowSoundGraphState::GraphUninitialized },
     _deviceOutputNode{ nullptr },
-    _audioAllocator{ ((int)Clock::SampleRateHz * 2 * sizeof(float)), 128 },
+    _audioAllocator{ ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float)), MagicNumbers::InitialAudioBufferCount },
     _audioFrame{ nullptr },
     _defaultInputDevice{ nullptr },
     _inputDeviceFrameOutputNode{ nullptr },
@@ -100,7 +101,7 @@ NowSoundGraph::NowSoundGraph()
     _recorders{ },
     _recorderMutex{ },
     _changingState{ false },
-    _incomingAudioStream(0, 2, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
+    _incomingAudioStream(0, MagicNumbers::AudioChannelCount, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
     _incomingAudioStreamRecorder(&_incomingAudioStream)
 { }
 
@@ -230,7 +231,7 @@ void NowSoundGraph::StartAudioGraphAsync()
     PrepareToChangeState(NowSoundGraphState::GraphCreated);
 
     // MAKE THE CLOCK NOW.
-    Clock::Initialize(60 /* BPM */, 4 /* beats per measure */, 2);
+    Clock::Initialize(MagicNumbers::InitialBeatsPerMinute, MagicNumbers::BeatsPerMeasure, MagicNumbers::AudioChannelCount);
 
     // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
     _recorders.push_back(&_incomingAudioStreamRecorder);
@@ -250,7 +251,7 @@ NowSoundTimeInfo NowSoundGraph::GetTimeInfo()
     Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
     Time<AudioSample> now = Clock::Instance().Now();
-    int completeBeats = Clock::Instance().TimeToCompleteBeats(now).Value();
+    int64_t completeBeats = Clock::Instance().TimeToCompleteBeats(now).Value();
     return NowSoundTimeInfo(
         now.Value(),
         Clock::Instance().TimeToBeats(now).Value(),
@@ -328,11 +329,14 @@ void NowSoundGraph::HandleIncomingAudio()
 {
     if (_audioFrame == nullptr)
     {
-        // 0.01 sec stereo float buffer.
         // The AudioFrame.Duration property is a TimeSpan, despite the fact that this seems an inherently
         // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
         // we fill it completely and often.
-        _audioFrame = AudioFrame(Clock::SampleRateHz / 100 * sizeof(float) * 2);
+        _audioFrame = AudioFrame(
+            (uint32_t)(Clock::SampleRateHz
+            * MagicNumbers::AudioFrameLengthSeconds.Value()
+            * sizeof(float)
+            * MagicNumbers::AudioChannelCount));
     }
 
     AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
@@ -353,8 +357,9 @@ void NowSoundGraph::HandleIncomingAudio()
         return;
     }
 
-    // Must be multiple of 8 (2 channels, 4 bytes/float)
-    Check((capacityInBytes & 0x7) == 0);
+    // Must be multiple of channels * sizeof(float)
+    int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
+    Check((capacityInBytes & (sampleSizeInBytes - 1)) == 0);
 
     uint32_t bufferStart = 0;
     if (Clock::Instance().Now().Value() == 0)
@@ -363,20 +368,20 @@ void NowSoundGraph::HandleIncomingAudio()
         // then the audio graph decided to give us a big backload of buffer content
         // as its first callback.  Not sure why it does this, but we don't want it,
         // so take only the tail of the buffer.
-        uint32_t latencyInSamples = ((uint32_t)_audioGraph.LatencyInSamples() << 3);
+        uint32_t latencyInSamples = ((uint32_t)_audioGraph.LatencyInSamples() * sampleSizeInBytes);
         if (latencyInSamples == 0)
         {
             // sorry audiograph, don't really believe you when you say zero latency.
-            latencyInSamples = Clock::SampleRateHz / 100;
+            latencyInSamples = (int)(Clock::SampleRateHz * MagicNumbers::AudioFrameLengthSeconds.Value());
         }
         if (capacityInBytes > latencyInSamples)
         {
-            bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() << 3);
-            capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() << 3);
+            bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() * sampleSizeInBytes);
+            capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() * sampleSizeInBytes);
         }
     }
 
-    Duration<AudioSample> duration(capacityInBytes >> 3);
+    Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
 
     Clock::Instance().AdvanceFromAudioGraph(duration);
 
