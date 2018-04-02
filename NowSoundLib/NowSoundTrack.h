@@ -3,28 +3,15 @@
 
 #pragma once
 
+#include <queue>
+#include <string>
+
 #include "pch.h"
 
 #include "Clock.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "Time.h"
-
-using namespace NowSound;
-using namespace concurrency;
-using namespace std;
-using namespace std::chrono;
-using namespace winrt;
-
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
@@ -35,9 +22,6 @@ namespace NowSound
 
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
-
-        // The audio graph which created this Track.
-        // HolofunkAudioGraph _audioGraph; // TODO: do we want to have graph objects? Might we want multiple graphs for different output devices?
 
         // The input the track is recording from, if recording.
         const AudioInputId _inputId;
@@ -56,7 +40,7 @@ namespace NowSound
 
         // The node this track uses for emitting data into the audio graph.
         // This is the output node for this Track, but the input node for the audio graph.
-        Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
+        winrt::Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
 
         // The stream containing this Track's data; this is an owning reference.
         BufferedSliceStream<AudioSample, float> _audioStream;
@@ -83,9 +67,14 @@ namespace NowSound
         // energy is available.
         Time<AudioSample> _localTime;
 
-        DateTime _lastQuantumTime;
+        winrt::Windows::Foundation::DateTime _lastQuantumTime;
 
         bool _isMuted;
+
+        // for debug logging; need to understand micro-behavior of the frame input node
+        std::queue<std::wstring> _debugLog;
+
+        void DebugLog(const std::wstring& entry);
 
     public:
         NowSoundTrack(TrackId trackId, AudioInputId inputId, const BufferedSliceStream<AudioSample, float>& sourceStream);
@@ -131,7 +120,9 @@ namespace NowSound
         void UnityUpdate();
 
         // The quantum has started; consume input audio for this recording.
-        void FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args);
+        void FrameInputNode_QuantumStarted(
+            winrt::Windows::Media::Audio::AudioFrameInputNode sender,
+            winrt::Windows::Media::Audio::FrameInputNodeQuantumStartedEventArgs args);
 
         // Record from (that is, copy from) the source data.
         virtual bool Record(Duration<AudioSample> duration, float* source);

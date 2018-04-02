@@ -16,15 +16,6 @@
 #include "Recorder.h"
 #include "SliceStream.h"
 
-using namespace std::chrono;
-using namespace winrt;
-
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
-
 namespace NowSound
 {
     // A single graph implementing the NowSoundGraphAPI operations.
@@ -85,13 +76,13 @@ namespace NowSound
         NowSoundGraph();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        IAsyncAction InitializeAsyncImpl();
+        winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        IAsyncAction CreateAudioGraphAsyncImpl();
+        winrt::Windows::Foundation::IAsyncAction CreateAudioGraphAsyncImpl();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
+        winrt::Windows::Foundation::IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
 
         // Check that the expected state is the current state, and that no current state change is happening;
         // then mark that a state change is now happening.
@@ -109,25 +100,25 @@ namespace NowSound
         bool _changingState;
 
         // The AudioGraph managed by this NowSoundGraph.
-        AudioGraph _audioGraph;
+        winrt::Windows::Media::Audio::AudioGraph _audioGraph;
 
         // The state of this graph.
         NowSoundGraphState _audioGraphState;
 
         // The default output device. TODO: support multiple output devices.
-        AudioDeviceOutputNode _deviceOutputNode;
+        winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 
         // Audio frame, reused for copying audio.
-        Windows::Media::AudioFrame _audioFrame;
+        winrt::Windows::Media::AudioFrame _audioFrame;
 
         // The default input device. TODO: input device selection.
-        AudioDeviceInputNode _defaultInputDevice;
+        winrt::Windows::Media::Audio::AudioDeviceInputNode _defaultInputDevice;
 
         // This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
-        AudioFrameOutputNode _inputDeviceFrameOutputNode;
+        winrt::Windows::Media::Audio::AudioFrameOutputNode _inputDeviceFrameOutputNode;
 
         // The next TrackId to be allocated.
         TrackId _trackId;
@@ -159,13 +150,13 @@ namespace NowSound
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
 
         // Get the shared audio frame.
-        Windows::Media::AudioFrame GetAudioFrame();
+        winrt::Windows::Media::AudioFrame GetAudioFrame();
 
         // The (currently singleton) AudioGraph.
-        Windows::Media::Audio::AudioGraph GetAudioGraph();
+        winrt::Windows::Media::Audio::AudioGraph GetAudioGraph();
 
         // The default audio output node.  TODO: support device selection.
-        Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
+        winrt::Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.

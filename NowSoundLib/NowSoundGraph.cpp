@@ -23,6 +23,7 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 using namespace Windows::Media;
 using namespace Windows::Media::Audio;
+using namespace Windows::Media::Render;
 using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
@@ -327,9 +328,11 @@ void NowSoundGraph::HandleIncomingAudio()
 {
     if (_audioFrame == nullptr)
     {
-        // we want to create this on the audio context, or we get E_DENIEDACCESS
-        // 0.25 sec stereo float buffer
-        _audioFrame = AudioFrame(Clock::SampleRateHz / 4 * sizeof(float) * 2);
+        // 0.01 sec stereo float buffer.
+        // The AudioFrame.Duration property is a TimeSpan, despite the fact that this seems an inherently
+        // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
+        // we fill it completely and often.
+        _audioFrame = AudioFrame(Clock::SampleRateHz / 100 * sizeof(float) * 2);
     }
 
     AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
@@ -360,7 +363,13 @@ void NowSoundGraph::HandleIncomingAudio()
         // then the audio graph decided to give us a big backload of buffer content
         // as its first callback.  Not sure why it does this, but we don't want it,
         // so take only the tail of the buffer.
-        if (capacityInBytes > ((uint32_t)_audioGraph.LatencyInSamples() << 3))
+        uint32_t latencyInSamples = ((uint32_t)_audioGraph.LatencyInSamples() << 3);
+        if (latencyInSamples == 0)
+        {
+            // sorry audiograph, don't really believe you when you say zero latency.
+            latencyInSamples = Clock::SampleRateHz / 100;
+        }
+        if (capacityInBytes > latencyInSamples)
         {
             bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() << 3);
             capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() << 3);

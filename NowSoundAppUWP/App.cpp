@@ -4,6 +4,8 @@
 #include "pch.h"
 #include "Check.h"
 #include "NowSoundLib.h"
+
+#include <string>
 #include <sstream>
 
 using namespace NowSound;
@@ -52,22 +54,28 @@ struct App : ApplicationT<App>
         Button _button;
         TextBlock _textBlock;
         std::wstring _label;
+        int64_t _recordingStartTime;
 
         void UpdateUI()
         {
-            wstringstream wstr{};
+            std::wstringstream wstr{};
             wstr << L" Track # " << _trackNumber << L": " << _label;
             hstring hstr{};
             hstr = wstr.str();
             _button.Content(IReference<hstring>(hstr));
 
-            wstr = wstringstream{};
+            wstr = std::wstringstream{};
             if (_trackId != -1)
             {
                 NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrackAPI::NowSoundTrack_TimeInfo(_trackId);
-                wstr << L"  Duration (samples): " << trackTimeInfo.DurationInSamples
+                float currentBeatInMeasure = 
+                    trackTimeInfo.CurrentTrackBeat
+                    - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
+                        * trackTimeInfo.DurationInBeats);
+                wstr << L" Start time (samples): " << _recordingStartTime
+                    << L" | Duration (samples): " << trackTimeInfo.DurationInSamples
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
-                    << L" | Current beat: " << trackTimeInfo.CurrentTrackBeat;
+                    << L" | Current beat: " << currentBeatInMeasure;
             }
             else
             {
@@ -123,7 +131,10 @@ struct App : ApplicationT<App>
             {
                 // we haven't started recording yet; time to do so!
                 _trackId = NowSoundGraphAPI::NowSoundGraph_CreateRecordingTrackAsync();
-                // don't initialize _trackState; that's Update's job
+                // don't initialize _trackState; that's Update's job.
+                // But do find out what time it is.
+                NowSoundTimeInfo timeInfo = NowSoundGraphAPI::NowSoundGraph_GetTimeInfo();
+                _recordingStartTime = timeInfo.TimeInSamples;
             }
             else if (_trackState == NowSoundTrackState::TrackRecording)
             {

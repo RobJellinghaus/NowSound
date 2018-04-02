@@ -8,27 +8,18 @@
 
 #include "pch.h"
 
-#include <future>
-
 #include "stdint.h"
 
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "NowSoundLibTypes.h"
-#include "NowSoundTrack.h"
 #include "SliceStream.h"
-
-using namespace std::chrono;
-using namespace winrt;
-
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
 
 namespace NowSound
 {
+    // forward declaration to decouple this file from the Track implementation
+    class NowSoundTrack;
+
     // All external methods here are static and use C linkage, for P/Invokability.
     // AudioGraph object references are passed by integer ID; lifecycle is documented
     // per-API.

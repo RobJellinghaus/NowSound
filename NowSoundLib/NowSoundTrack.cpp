@@ -3,6 +3,9 @@
 
 #include "pch.h"
 
+#include <string>
+#include <sstream>
+
 #include "stdint.h"
 
 #include "BufferAllocator.h"
@@ -18,13 +21,20 @@
 #include "Time.h"
 
 using namespace NowSound;
+using namespace concurrency;
 using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
+using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation;
+using namespace Windows::UI::Core;
+using namespace Windows::UI::Composition;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
+using namespace Windows::System;
+using namespace Windows::Storage;
+using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
@@ -110,7 +120,8 @@ namespace NowSound
         _beatDuration{ 1 },
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _localTime{ 0 },
-        _isMuted{ false }
+        _isMuted{ false },
+        _debugLog{}
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -118,13 +129,17 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
 
-        // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-        Duration<AudioSample> latencyCompensation = Clock::SampleRateHz / 2;
-        Interval<AudioSample> lastIntervalOfSourceStream(
-            sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensation,
-            latencyCompensation);
-        sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
-        // _localTime = _localTime + latencyCompensation;
+        bool x = false;
+        if (x) 
+        {
+            // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
+            Duration<AudioSample> latencyCompensation = Clock::SampleRateHz;
+            Interval<AudioSample> lastIntervalOfSourceStream(
+                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensation,
+                latencyCompensation);
+            sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
+            // _localTime = _localTime + latencyCompensation;
+        }
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.
@@ -135,6 +150,15 @@ namespace NowSound
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
+    }
+
+    void NowSoundTrack::DebugLog(const std::wstring& entry)
+    {
+        _debugLog.push(entry);
+        if (_debugLog.size() > 1000)
+        {
+            _debugLog.pop();
+        }
     }
     
     NowSoundTrackState NowSoundTrack::State() const { return _state; }
@@ -202,6 +226,8 @@ namespace NowSound
     {
         Check(sender == _audioFrameInputNode);
 
+        sender.DiscardQueuedFrames();
+
         DateTime dateTimeNow = DateTime::clock::now();
 
         if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
@@ -211,9 +237,15 @@ namespace NowSound
         }
 
         // we are looping; let's play!
-        // TODO: why did we have this lock statement here?  lock(this)
         Check(args.RequiredSamples() >= 0);
         uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
+
+        std::wstringstream wstr{};
+        wstr << L"Samples | " << Clock::Instance().Now().Value()
+            << L" | Time (secs) | " << ((float)(dateTimeNow.time_since_epoch().count()) / Clock::TicksPerSecond)
+            << L" | RequiredSamples | " << requiredSamples
+            << L" | LocalTime | " << _localTime.Value();
+        DebugLog(wstr.str());
 
         if (requiredSamples == 0)
         {
@@ -236,17 +268,18 @@ namespace NowSound
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
-            // To use low latency pipeline on every quantum, have this use requiredSamples rather than capacityInBytes.
-            uint32_t bytesRemaining = capacityInBytes;
-            int slicesRemaining = (int)bytesRemaining / 8; // stereo float
+            // To use low latency pipeline on every quantum, have this use requiredSamples*8 rather than capacityInBytes.
+            uint32_t bytesRemaining = capacityInBytes; // requiredSamples * 8;
 
-            audioFrame.Duration(TimeSpan(slicesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            int samplesRemaining = (int)bytesRemaining / 8; // stereo float
 
-            while (slicesRemaining > 0)
+            audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+
+            while (samplesRemaining > 0)
             {
                 // get up to one second or samplesRemaining, whichever is smaller
                 Slice<AudioSample, float> longest(
-                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, slicesRemaining)));
+                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, samplesRemaining)));
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 
@@ -260,7 +293,7 @@ namespace NowSound
 
                 dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
                 _localTime = _localTime + longest.SliceDuration();
-                slicesRemaining -= (int)longest.SliceDuration().Value();
+                samplesRemaining -= (int)longest.SliceDuration().Value();
             }
         }
 
@@ -321,8 +354,10 @@ namespace NowSound
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
 
-                // and initialize _localTime
-                _localTime = Clock::Instance().Now();
+                // and initialize _localTime -- but advance it by a certain amount, to make playback
+                // catch up with buffering.  TODO: EXPERIMENT WITH THIS
+                Duration<AudioSample> experimentalLoopTimeAdvance = Clock::SampleRateHz / 8;
+                _localTime = Clock::Instance().Now() + experimentalLoopTimeAdvance;
             }
             else
             {

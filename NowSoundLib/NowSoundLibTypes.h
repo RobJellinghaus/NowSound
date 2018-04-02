@@ -11,15 +11,6 @@
 
 #include "Check.h"
 
-using namespace std::chrono;
-using namespace winrt;
-
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
-
 namespace NowSound
 {
     // All external methods here are static and use C linkage, for P/Invokability.
