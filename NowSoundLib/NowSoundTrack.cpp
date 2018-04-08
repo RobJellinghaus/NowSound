@@ -86,17 +86,13 @@ namespace NowSound
         _tracks[static_cast<int>(trackId)] = std::unique_ptr<NowSoundTrack>{};
     }
 
-    void __declspec(dllexport) NowSoundTrackAPI::NowSoundTrack_UnityUpdate(TrackId trackId)
-    {
-        Track(trackId)->UnityUpdate();
-    }
-
     std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrackAPI::_tracks{};
 
     NowSoundTrack* NowSoundTrackAPI::Track(TrackId id)
     {
-        // TODO: concurrency hazard!!!  Should this lock tracks, or?  Probably need to lock_guard each public NowSoundTrackAPI method...
-        // or is it the case that track lifecycle is only ever driven from the API?  I think that is true, but we should ensure and check it.
+        // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
+        // The only way this will be correct is if all modifications to _tracks happen only as a result of
+        // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id >= 0 && id < _tracks.size());
         NowSoundTrack* value = _tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
@@ -218,10 +214,6 @@ namespace NowSound
             _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections().GetAt(0).Destination());
         }
         // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
-    }
-
-    void NowSoundTrack::UnityUpdate()
-    {
     }
 
     void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)

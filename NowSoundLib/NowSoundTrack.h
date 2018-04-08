@@ -117,9 +117,6 @@ namespace NowSound
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         void Delete();
 
-        // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
-        void UnityUpdate();
-
         // The quantum has started; consume input audio for this recording.
         void FrameInputNode_QuantumStarted(
             winrt::Windows::Media::Audio::AudioFrameInputNode sender,

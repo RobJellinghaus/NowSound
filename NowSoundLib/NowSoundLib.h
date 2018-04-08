@@ -28,9 +28,14 @@ namespace NowSound
     extern "C"
     {
         // Operations on the audio graph as a whole.
+        //
         // There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
+        //
         // All async methods document the state the graph must be in when called, and the state the graph
         // transitions to on completion.
+        //
+        // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially.
+        //
         // TODO: make this support multiple (non-static) graphs.
         class NowSoundGraphAPI
         {
@@ -77,6 +82,10 @@ namespace NowSound
         };
 
         // Interface used to invoke operations on a particular audio track.
+        //
+        // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially,
+        // not concurrently.
+        //
         class NowSoundTrackAPI
         {
         public:
@@ -113,9 +122,6 @@ namespace NowSound
 
             // Delete this Track; after this, all methods become invalid to call (contract failure).
             static void __declspec(dllexport) NowSoundTrack_Delete(TrackId trackId);
-
-            // TODO: Hack? Update the track to increment, e.g., its duration. (Should perhaps instead be computed whenever BeatDuration is queried???)
-            static void __declspec(dllexport) NowSoundTrack_UnityUpdate(TrackId trackId);
 
         public:
             // non-exported methods for "internal" use
