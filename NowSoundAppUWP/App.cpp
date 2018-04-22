@@ -265,9 +265,6 @@ struct App : ApplicationT<App>
         xamlWindow.Content(_stackPanel);
         xamlWindow.Activate();
 
-        // and here goes
-        NowSoundGraphAPI::NowSoundGraph_InitializeAsync();
-
         LaunchedAsync();
     }
 
@@ -324,6 +321,9 @@ fire_and_forget App::LaunchedAsync()
 {
     apartment_context ui_thread{};
     _uiThread = ui_thread;
+
+    // and here goes
+    NowSoundGraphAPI::NowSoundGraph_InitializeAsync();
 
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.

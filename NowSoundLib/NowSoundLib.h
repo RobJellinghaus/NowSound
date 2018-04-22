@@ -37,6 +37,7 @@ namespace NowSound
         // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially.
         //
         // TODO: make this support multiple (non-static) graphs.
+        // TODO: consider ditching the wrapper class here and having top-level global functions so extern "C" would actually work properly.
         class NowSoundGraphAPI
         {
         public:

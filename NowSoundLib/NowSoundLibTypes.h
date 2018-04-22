@@ -29,10 +29,8 @@ namespace NowSound
             // Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
             // Note that this does *not* own the strings; these must be owned elsewhere.
             NowSoundDeviceInfo(LPWSTR id, LPWSTR name)
-            {
-                Id = id;
-                Name = name;
-            }
+                : Id(id), Name(name)
+            { }
         };
 
         // Information about an audio graph.
@@ -41,11 +39,9 @@ namespace NowSound
             int32_t LatencyInSamples;
             int32_t SamplesPerQuantum;
 
-            NowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
-            {
-                LatencyInSamples = latencyInSamples;
-                SamplesPerQuantum = samplesPerQuantum;
-            }
+            NowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum);
+
+            NowSoundGraphInfo(const NowSoundGraphInfo& other) = default;
         };
 
         // Information about the current graph time in NowSound terms.
@@ -75,6 +71,8 @@ namespace NowSound
         // Information about a track's time in NowSound terms.
         struct NowSoundTrackTimeInfo
         {
+            // The start time of the track, in samples from the beginning of this session.
+            int64_t StartTimeInSamples;
             // The duration of the track in audio samples.
             int64_t DurationInSamples;
             // The duration of the track in beats.
@@ -93,6 +91,7 @@ namespace NowSound
             float AverageTimeSinceLastQuantum;
 
             NowSoundTrackTimeInfo(
+                int64_t startTimeInSamples,
                 int64_t durationInSamples,
                 int64_t durationInBeats,
                 float exactDuration,
@@ -101,7 +100,8 @@ namespace NowSound
                 float minSinceLastQuantum, 
                 float maxSinceLastQuantum, 
                 float averageSinceLastQuantum)
-                : DurationInSamples(durationInSamples),
+                : StartTimeInSamples(startTimeInSamples),
+                DurationInSamples(durationInSamples),
                 DurationInBeats(durationInBeats),
                 ExactDuration(exactDuration),
                 CurrentTrackTimeInSamples(currentTrackTimeInSamples),

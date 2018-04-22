@@ -29,6 +29,10 @@ using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
 
+NowSoundGraphInfo::NowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum)
+    : LatencyInSamples(latencyInSamples), SamplesPerQuantum(samplesPerQuantum)
+{}
+
 NowSoundGraphState NowSoundGraphAPI::NowSoundGraph_GetGraphState()
 {
     return NowSoundGraph::Instance()->GetGraphState();
@@ -196,7 +200,8 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await
         _audioGraph.CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
 
-    if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
+    auto deviceInputNodeResultStatus = deviceInputNodeResult.Status();
+    if (deviceInputNodeResultStatus != AudioDeviceNodeCreationStatus::Success)
     {
         // Cannot create device input node
         Check(false);
@@ -207,10 +212,12 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
     _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
+    /*
     _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
     {
         HandleIncomingAudio();
     });
+    */
 
     ChangeState(NowSoundGraphState::GraphCreated);
 }
@@ -221,7 +228,8 @@ NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
 
     Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
-    return NowSoundGraphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
+    NowSoundGraphInfo graphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
+    return graphInfo;
 }
 
 void NowSoundGraph::StartAudioGraphAsync()

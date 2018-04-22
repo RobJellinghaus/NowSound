@@ -183,6 +183,7 @@ namespace NowSound
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
         return NowSoundTrackTimeInfo(
+            this->_audioStream.InitialTime().Value(),
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
