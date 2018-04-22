@@ -212,12 +212,10 @@ IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
     _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
-    /*
     _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
     {
         HandleIncomingAudio();
     });
-    */
 
     ChangeState(NowSoundGraphState::GraphCreated);
 }
@@ -229,7 +227,7 @@ NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
     Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
     NowSoundGraphInfo graphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
-    return graphInfo;
+    return graphInfo; // TODO: why does this fail in Holofunk with "cannot write location 0x0000000000"???)
 }
 
 void NowSoundGraph::StartAudioGraphAsync()
