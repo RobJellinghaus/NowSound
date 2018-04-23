@@ -220,6 +220,8 @@ namespace NowSound
     {
         // TODO: ThreadContract.RequireUnity();
 
+        _audioFrameInputNode.Stop();
+
         while (_audioFrameInputNode.OutgoingConnections().Size() > 0)
         {
             _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections().GetAt(0).Destination());
