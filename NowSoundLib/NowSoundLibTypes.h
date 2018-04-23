@@ -21,31 +21,21 @@ namespace NowSound
     extern "C"
     {
         // Information about an audio device.
-        struct NowSoundDeviceInfo
+        typedef struct NowSoundDeviceInfo
         {
             LPWSTR Id;
             LPWSTR Name;
-
-            // Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
-            // Note that this does *not* own the strings; these must be owned elsewhere.
-            NowSoundDeviceInfo(LPWSTR id, LPWSTR name)
-                : Id(id), Name(name)
-            { }
-        };
+        } NowSoundDeviceInfo;
 
         // Information about an audio graph.
-        struct NowSoundGraphInfo
+        typedef struct NowSoundGraphInfo
         {
             int32_t LatencyInSamples;
             int32_t SamplesPerQuantum;
-
-            NowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum);
-
-            NowSoundGraphInfo(const NowSoundGraphInfo& other) = default;
-        };
+        } NowSoundGraphInfo;
 
         // Information about the current graph time in NowSound terms.
-        struct NowSoundTimeInfo
+        typedef struct NowSoundTimeInfo
         {
             // The number of samples elamsed since the audio graph started.
             int64_t TimeInSamples;
@@ -55,21 +45,10 @@ namespace NowSound
             float BeatsPerMinute;
             // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
             int32_t BeatInMeasure;
-
-            NowSoundTimeInfo(
-                int64_t timeInSamples,
-                float exactBeat,
-                float beatsPerMinute,
-                int32_t beatInMeasure)
-                : TimeInSamples(timeInSamples),
-                ExactBeat(exactBeat),
-                BeatsPerMinute(beatsPerMinute),
-                BeatInMeasure(beatInMeasure)
-            {}
-        };
+        } NowSoundTimeInfo;
 
         // Information about a track's time in NowSound terms.
-        struct NowSoundTrackTimeInfo
+        typedef struct NowSoundTrackTimeInfo
         {
             // The start time of the track, in samples from the beginning of this session.
             int64_t StartTimeInSamples;
@@ -89,28 +68,7 @@ namespace NowSound
             float MinimumTimeSinceLastQuantum;
             // The average time since last quantum over the last N seconds.
             float AverageTimeSinceLastQuantum;
-
-            NowSoundTrackTimeInfo(
-                int64_t startTimeInSamples,
-                int64_t durationInSamples,
-                int64_t durationInBeats,
-                float exactDuration,
-                int64_t currentTrackTimeInSamples,
-                float currentTrackBeat,
-                float minSinceLastQuantum, 
-                float maxSinceLastQuantum, 
-                float averageSinceLastQuantum)
-                : StartTimeInSamples(startTimeInSamples),
-                DurationInSamples(durationInSamples),
-                DurationInBeats(durationInBeats),
-                ExactDuration(exactDuration),
-                CurrentTrackTimeInSamples(currentTrackTimeInSamples),
-                CurrentTrackBeat(currentTrackBeat),
-                MinimumTimeSinceLastQuantum(minSinceLastQuantum),
-                MaximumTimeSinceLastQuantum(maxSinceLastQuantum),
-                AverageTimeSinceLastQuantum(averageSinceLastQuantum)
-            {}
-        };
+        } NowSoundTrackTimeInfo;
 
         // The states of a NowSound graph.
         // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
@@ -178,5 +136,22 @@ namespace NowSound
         // The ID of a NowSound track; avoids issues with marshaling object references.
         // Note that 0 is a valid value.
         typedef int32_t TrackId;
-    };
+
+        NowSoundDeviceInfo CreateNowSoundDeviceInfo(LPWSTR id, LPWSTR name);
+
+        NowSoundGraphInfo CreateNowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum);
+
+        NowSoundTimeInfo CreateNowSoundTimeInfo(int64_t timeInSamples, float exactBeat, float beatsPerMinute, float beatInMeasure);
+
+        NowSoundTrackTimeInfo CreateNowSoundTrackTimeInfo(
+            int64_t startTimeInSamples,
+            int64_t durationInSamples,
+            int64_t durationInBeats,
+            float exactDuration,
+            int64_t currentTrackTimeInSamples,
+            float currentTrackBeat,
+            float maximumTimeSinceLastQuantum,
+            float minimumTimeSinceLastQuantum,
+            float averageTimeSinceLastQuantum);
+    }
 }

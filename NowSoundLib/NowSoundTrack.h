@@ -18,6 +18,19 @@ namespace NowSound
 {
     class NowSoundTrack : public IRecorder<AudioSample, float>
     {
+    public:
+        // non-exported methods for "internal" use
+        static void AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track);
+
+        // Accessor for track by ID.
+        static NowSoundTrack* Track(TrackId id);
+
+        static void DeleteTrack(TrackId id);
+
+    private:
+        // The collection of all ttracks.
+        static std::map<TrackId, std::unique_ptr<NowSoundTrack>> _tracks;
+
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;
 

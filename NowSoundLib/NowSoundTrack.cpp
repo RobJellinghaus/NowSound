@@ -21,7 +21,6 @@
 #include "SliceStream.h"
 #include "Time.h"
 
-using namespace NowSound;
 using namespace concurrency;
 using namespace std;
 using namespace std::chrono;
@@ -39,56 +38,67 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-    __declspec(dllexport) NowSoundTrackState NowSoundTrackAPI::NowSoundTrack_State(TrackId trackId)
+    __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
     {
-        return Track(trackId)->State();
+        return NowSoundTrack::Track(trackId)->State();
     }
 
-    __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrackAPI::NowSoundTrack_BeatDuration(TrackId trackId)
+    __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
     {
-        return Track(trackId)->BeatDuration().Value();
+        return NowSoundTrack::Track(trackId)->BeatDuration().Value();
     }
 
-    __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrackAPI::NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
+    __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
     {
-        return Track(trackId)->BeatPositionUnityNow().Value();
+        return NowSoundTrack::Track(trackId)->BeatPositionUnityNow().Value();
     }
 
-    __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrackAPI::NowSoundTrack_ExactDuration(TrackId trackId)
+    __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId)
     {
-        return Track(trackId)->ExactDuration().Value();
+        return NowSoundTrack::Track(trackId)->ExactDuration().Value();
     }
 
-    __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrackAPI::NowSoundTrack_TimeInfo(TrackId trackId)
+    __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_TimeInfo(TrackId trackId)
     {
-        return Track(trackId)->TimeInfo();
+        return NowSoundTrack::Track(trackId)->TimeInfo();
     }
 
-    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_FinishRecording(TrackId trackId)
+    __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
     {
-        Track(trackId)->FinishRecording();
+        NowSoundTrack::Track(trackId)->FinishRecording();
     }
 
-    __declspec(dllexport) bool NowSoundTrackAPI::NowSoundTrack_IsMuted(TrackId trackId)
+    __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
     {
-        return Track(trackId)->IsMuted();
+        return NowSoundTrack::Track(trackId)->IsMuted();
     }
 
-    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
+    __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
     {
-        Track(trackId)->SetIsMuted(isMuted);
+        NowSoundTrack::Track(trackId)->SetIsMuted(isMuted);
     }
 
-    __declspec(dllexport) void NowSoundTrackAPI::NowSoundTrack_Delete(TrackId trackId)
+    __declspec(dllexport) void NowSoundTrack_Delete(TrackId trackId)
     {
+        NowSoundTrack::DeleteTrack(trackId);
+    }
+
+    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrack::_tracks{};
+
+    void NowSoundTrack::DeleteTrack(TrackId trackId)
+    {
+        Check(trackId >= 0 && trackId < _tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
         _tracks[static_cast<int>(trackId)] = std::unique_ptr<NowSoundTrack>{};
     }
 
-    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrackAPI::_tracks{};
+    void NowSoundTrack::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)
+    {
+        _tracks.emplace(id, std::move(track));
+    }
 
-    NowSoundTrack* NowSoundTrackAPI::Track(TrackId id)
+    NowSoundTrack* NowSoundTrack::Track(TrackId id)
     {
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
@@ -182,7 +192,7 @@ namespace NowSound
 
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
-        return NowSoundTrackTimeInfo(
+        return CreateNowSoundTrackTimeInfo(
             this->_audioStream.InitialTime().Value(),
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),

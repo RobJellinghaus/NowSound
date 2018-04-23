@@ -67,7 +67,7 @@ struct App : ApplicationT<App>
             wstr = std::wstringstream{};
             if (_trackId != -1)
             {
-                NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrackAPI::NowSoundTrack_TimeInfo(_trackId);
+                NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrack_TimeInfo(_trackId);
                 float currentBeatInMeasure = 
                     trackTimeInfo.CurrentTrackBeat
                     - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
@@ -95,7 +95,7 @@ struct App : ApplicationT<App>
             NowSoundTrackState currentState{};
             if (_trackId != -1)
             {
-                currentState = NowSoundTrackAPI::NowSoundTrack_State(_trackId);
+                currentState = NowSoundTrack_State(_trackId);
             }
 
             std::unique_ptr<TrackButton> returnValue{};
@@ -134,15 +134,15 @@ struct App : ApplicationT<App>
             if (_trackState == NowSoundTrackState::TrackUninitialized)
             {
                 // we haven't started recording yet; time to do so!
-                _trackId = NowSoundGraphAPI::NowSoundGraph_CreateRecordingTrackAsync();
+                _trackId = NowSoundGraph_CreateRecordingTrackAsync();
                 // don't initialize _trackState; that's Update's job.
                 // But do find out what time it is.
-                NowSoundTimeInfo timeInfo = NowSoundGraphAPI::NowSoundGraph_GetTimeInfo();
+                NowSoundTimeInfo timeInfo = NowSoundGraph_GetTimeInfo();
                 _recordingStartTime = timeInfo.TimeInSamples;
             }
             else if (_trackState == NowSoundTrackState::TrackRecording)
             {
-                NowSoundTrackAPI::NowSoundTrack_FinishRecording(_trackId);
+                NowSoundTrack_FinishRecording(_trackId);
             }
         }
 
@@ -211,7 +211,7 @@ struct App : ApplicationT<App>
     void UpdateStateLabel()
     {
         std::wstring str(AudioGraphStateString);
-        str.append(StateLabel(NowSoundGraphAPI::NowSoundGraph_GetGraphState()));
+        str.append(StateLabel(NowSoundGraph_GetGraphState()));
         _textBlockGraphStatus.Text(str);
     }
 
@@ -225,15 +225,15 @@ struct App : ApplicationT<App>
 
         // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
         // so we use polling in this example -- and to determine how it actually works in modern C++.
-        NowSoundGraphState currentState = NowSoundGraphAPI::NowSoundGraph_GetGraphState();
+        NowSoundGraphState currentState = NowSoundGraph_GetGraphState();
         // While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
-        while (expectedState != NowSoundGraphAPI::NowSoundGraph_GetGraphState()
+        while (expectedState != NowSoundGraph_GetGraphState()
             && winrt::clock::now() < timeoutTime)
         {
             // wait in intervals of 1/1000 sec
             co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.001f)));
 
-            currentState = NowSoundGraphAPI::NowSoundGraph_GetGraphState();
+            currentState = NowSoundGraph_GetGraphState();
         }
 
         // switch to UI thread to update state label, then back to background
@@ -302,7 +302,7 @@ struct App : ApplicationT<App>
             co_await _uiThread;
 
             // update time info
-            NowSoundTimeInfo timeInfo = NowSoundGraphAPI::NowSoundGraph_GetTimeInfo();
+            NowSoundTimeInfo timeInfo = NowSoundGraph_GetTimeInfo();
             std::wstringstream wstr;
             wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
                 << L" | Beat: " << timeInfo.BeatInMeasure
@@ -323,7 +323,7 @@ fire_and_forget App::LaunchedAsync()
     _uiThread = ui_thread;
 
     // and here goes
-    NowSoundGraphAPI::NowSoundGraph_InitializeAsync();
+    NowSoundGraph_InitializeAsync();
 
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.
@@ -331,13 +331,13 @@ fire_and_forget App::LaunchedAsync()
     const int timeoutInSeconds = 1000;
     co_await WaitForGraphState(NowSound::NowSoundGraphState::GraphInitialized, timeSpanFromSeconds(timeoutInSeconds));
 
-    NowSoundDeviceInfo deviceInfo = NowSoundGraphAPI::NowSoundGraph_GetDefaultRenderDeviceInfo();
+    NowSoundDeviceInfo deviceInfo = NowSoundGraph_GetDefaultRenderDeviceInfo();
 
-    NowSoundGraphAPI::NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
+    NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
     co_await WaitForGraphState(NowSoundGraphState::GraphCreated, timeSpanFromSeconds(timeoutInSeconds));
 
-    NowSoundGraphInfo graphInfo = NowSoundGraphAPI::NowSoundGraph_GetGraphInfo();
+    NowSoundGraphInfo graphInfo = NowSoundGraph_GetGraphInfo();
 
     co_await _uiThread;
     std::wstringstream wstr;
@@ -345,7 +345,7 @@ fire_and_forget App::LaunchedAsync()
     _textBlockGraphInfo.Text(wstr.str());
     co_await resume_background();
 
-    NowSoundGraphAPI::NowSoundGraph_StartAudioGraphAsync();
+    NowSoundGraph_StartAudioGraphAsync();
 
     co_await WaitForGraphState(NowSoundGraphState::GraphRunning, timeSpanFromSeconds(timeoutInSeconds));
 
