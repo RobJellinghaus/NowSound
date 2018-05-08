@@ -87,6 +87,9 @@ namespace NowSound
 
         void DebugLog(const std::wstring& entry);
 
+        // histogram of required samples count
+        Histogram _requiredSamplesHistogram;
+
         // histogram of time since last sample request
         Histogram _sinceLastSampleTimingHistogram;
 

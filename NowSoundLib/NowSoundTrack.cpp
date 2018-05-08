@@ -129,7 +129,9 @@ namespace NowSound
         _localTime{ 0 },
         _isMuted{ false },
         _debugLog{},
-        _sinceLastSampleTimingHistogram{MagicNumbers::AudioQuantumHistogramCapacity}
+        _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
+        _sinceLastSampleTimingHistogram { MagicNumbers::AudioQuantumHistogramCapacity
+    }
     {
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -150,11 +152,11 @@ namespace NowSound
         // audio thread.
         // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
         // In general, what is the most synchronous / fastest way to switch from recording to playing?
-        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
         _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
+        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
     }
 
     void NowSoundTrack::DebugLog(const std::wstring& entry)
@@ -212,6 +214,9 @@ namespace NowSound
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
             localTime.Value(),
             TrackBeats(localTime, this->_beatDuration).Value(),
+            _requiredSamplesHistogram.Min(),
+            _requiredSamplesHistogram.Max(),
+            _requiredSamplesHistogram.Average(),
             _sinceLastSampleTimingHistogram.Min(),
             _sinceLastSampleTimingHistogram.Max(),
             _sinceLastSampleTimingHistogram.Average());
@@ -246,7 +251,16 @@ namespace NowSound
     {
         Check(sender == _audioFrameInputNode);
 
-        sender.DiscardQueuedFrames();
+        Check(args.RequiredSamples() >= 0);
+        uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
+
+        if (requiredSamples == 0)
+        {
+            s_zeroByteOutgoingFrameCount++;
+            return;
+        }
+
+        // sender.DiscardQueuedFrames();
 
         DateTime dateTimeNow = DateTime::clock::now();
         TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
@@ -259,32 +273,10 @@ namespace NowSound
         }
 
         // we are looping; let's play!
-        Check(args.RequiredSamples() >= 0);
-        uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
-
         float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::SampleRateHz / Clock::TicksPerSecond);
 
+        _requiredSamplesHistogram.Add(requiredSamples);
         _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
-
-        // detailed tracing of per-frame timings (for more accurate histogram if desired)
-        bool x = false;
-        if (x)
-        {
-            std::wstringstream wstr{};
-            wstr.precision(2);
-            wstr << L"Samples | " << Clock::Instance().Now().Value()
-                << L" | RequiredSamples | " << requiredSamples
-                << L" | LocalTime | " << _localTime.Value()
-                << L" | SinceLast (samples) | " << samplesSinceLastQuantum;
-
-            DebugLog(wstr.str());
-        }
-
-        if (requiredSamples == 0)
-        {
-            s_zeroByteOutgoingFrameCount++;
-            return;
-        }
 
         Windows::Media::AudioFrame audioFrame = NowSoundGraph::Instance()->GetAudioFrame();
 

@@ -40,6 +40,9 @@ namespace NowSound
         float exactDuration,
         int64_t currentTrackTimeInSamples,
         float currentTrackBeat,
+        float minimumRequiredSamples,
+        float maximumRequiredSamples,
+        float averageRequiredSamples,
         float minimumTimeSinceLastQuantum,
         float maximumTimeSinceLastQuantum,
         float averageTimeSinceLastQuantum)
@@ -51,6 +54,9 @@ namespace NowSound
         info.ExactDuration = exactDuration;
         info.CurrentTrackTimeInSamples = currentTrackTimeInSamples;
         info.CurrentTrackBeat = currentTrackBeat;
+        info.MinimumRequiredSamples = minimumRequiredSamples;
+        info.MaximumRequiredSamples = maximumRequiredSamples;
+        info.AverageRequiredSamples = averageRequiredSamples;
         info.MinimumTimeSinceLastQuantum = minimumTimeSinceLastQuantum;
         info.MaximumTimeSinceLastQuantum = maximumTimeSinceLastQuantum;
         info.AverageTimeSinceLastQuantum = averageTimeSinceLastQuantum;
