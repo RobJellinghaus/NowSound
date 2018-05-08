@@ -44,7 +44,7 @@ namespace NowSound
             // The current BPM of the graph.
             float BeatsPerMinute;
             // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
-            int32_t BeatInMeasure;
+            float BeatInMeasure;
         } NowSoundTimeInfo;
 
         // Information about a track's time in NowSound terms.
@@ -58,9 +58,9 @@ namespace NowSound
             int64_t DurationInBeats;
             // The duration of the track in exact seconds; DurationInSamples is this, rounded up to the nearest sample.
             float ExactDuration;
-            // The current playing time of the current track, in samples.
+            // The current playing time of the current track, in samples; note that this increases without bound.
             int64_t CurrentTrackTimeInSamples;
-            // The current beat of the track (e.g. a 12 beat track = this ranges from 0 to 11).
+            // The current beat of the track (e.g. a 12 beat track = this ranges from 0 to 11.999...).
             float CurrentTrackBeat;
             // The maximum time since last quantum over the last N seconds.
             float MaximumTimeSinceLastQuantum;
@@ -134,8 +134,11 @@ namespace NowSound
         };
 
         // The ID of a NowSound track; avoids issues with marshaling object references.
-        // Note that 0 is a valid value.
-        typedef int32_t TrackId;
+        // Note that 0 is the default, undefined, invalid value.
+        enum TrackId
+        {
+            Undefined
+        };
 
         NowSoundDeviceInfo CreateNowSoundDeviceInfo(LPWSTR id, LPWSTR name);
 

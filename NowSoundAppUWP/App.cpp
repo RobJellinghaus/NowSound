@@ -149,7 +149,7 @@ struct App : ApplicationT<App>
         TrackButton(App* app)
             : _app{ app },
             _trackNumber{ _nextTrackNumber++ },
-            _trackId{ -1 },
+            _trackId{ TrackId::Undefined },
             _button{ Button() },
             _textBlock{ TextBlock() },
             _label{ L"Uninitialized" },

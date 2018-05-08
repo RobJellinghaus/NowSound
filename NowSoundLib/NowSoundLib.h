@@ -74,7 +74,7 @@ namespace NowSound
 
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        __declspec(dllexport) int NowSoundGraph_CreateRecordingTrackAsync();
+        __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync();
 
         // Interface used to invoke operations on a particular audio track.
         //

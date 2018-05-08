@@ -75,7 +75,7 @@ namespace NowSound
         NowSoundGraph::Instance()->DestroyAudioGraphAsync();
     }
 
-    int NowSoundGraph_CreateRecordingTrackAsync()
+    TrackId NowSoundGraph_CreateRecordingTrackAsync()
     {
         return NowSoundGraph::Instance()->CreateRecordingTrackAsync();
     }
@@ -98,7 +98,7 @@ namespace NowSound
         _audioFrame{ nullptr },
         _defaultInputDevice{ nullptr },
         _inputDeviceFrameOutputNode{ nullptr },
-        _trackId{ 0 },
+        _trackId{ TrackId::Undefined },
         _recorders{ },
         _recorderMutex{ },
         _changingState{ false },
@@ -259,7 +259,7 @@ namespace NowSound
             now.Value(),
             Clock::Instance().TimeToBeats(now).Value(),
             Clock::Instance().BeatsPerMinute(),
-            completeBeats % Clock::Instance().BeatsPerMeasure());
+            (float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
     }
 
     TrackId NowSoundGraph::CreateRecordingTrackAsync()
@@ -268,7 +268,9 @@ namespace NowSound
 
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
-        TrackId id = _trackId++;
+        // by construction this will be greater than TrackId::Undefined
+        TrackId id = (TrackId)((int)_trackId + 1);
+        _trackId = id;
 
         std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0, _incomingAudioStream));
 

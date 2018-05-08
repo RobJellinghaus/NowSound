@@ -69,7 +69,7 @@ namespace NowSound
 
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        int CreateRecordingTrackAsync();
+        TrackId CreateRecordingTrackAsync();
 
     private: // constructor and internal implementations
         // construct a graph, but do not yet initialize it

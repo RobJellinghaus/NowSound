@@ -87,10 +87,10 @@ namespace NowSound
 
     void NowSoundTrack::DeleteTrack(TrackId trackId)
     {
-        Check(trackId >= 0 && trackId < _tracks.size());
+        Check(trackId >= TrackId::Undefined && trackId <= _tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
-        _tracks[static_cast<int>(trackId)] = std::unique_ptr<NowSoundTrack>{};
+        _tracks[trackId] = std::unique_ptr<NowSoundTrack>{};
     }
 
     void NowSoundTrack::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)
@@ -103,7 +103,7 @@ namespace NowSound
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
-        Check(id >= 0 && id < _tracks.size());
+        Check(id >= TrackId::Undefined);
         NowSoundTrack* value = _tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
@@ -190,15 +190,28 @@ namespace NowSound
 
     Time<AudioSample> NowSoundTrack::StartTime() const { return _audioStream.InitialTime(); }
 
+    ContinuousDuration<Beat> TrackBeats(Time<AudioSample> localTime, Duration<Beat> beatDuration)
+    {
+        ContinuousDuration<Beat> totalBeats = Clock::Instance().TimeToBeats(localTime);
+        Duration<Beat> nonFractionalBeats((int)totalBeats.Value());
+
+        return (ContinuousDuration<Beat>)(
+            // total (non-fractional) beats modulo the beat duration of the track
+            (nonFractionalBeats.Value() % beatDuration.Value())
+            // fractional beats of the track
+            + (totalBeats.Value() - nonFractionalBeats.Value()));
+    }
+
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
+        Time<AudioSample> localTime = this->_localTime; // to prevent any drift from this being updated concurrently
         return CreateNowSoundTrackTimeInfo(
             this->_audioStream.InitialTime().Value(),
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
-            this->_localTime.Value(),
-            Clock::Instance().TimeToBeats(this->_localTime).Value(),
+            localTime.Value(),
+            TrackBeats(localTime, this->_beatDuration).Value(),
             _sinceLastSampleTimingHistogram.Min(),
             _sinceLastSampleTimingHistogram.Max(),
             _sinceLastSampleTimingHistogram.Average());
@@ -338,14 +351,25 @@ namespace NowSound
             // TODO: implement other quantization policies here
             if (completeBeats >= _beatDuration)
             {
-                _beatDuration = completeBeats + Duration<Beat>(1);
+                // 1/2/4* quantization, like old times. TODO: make this selectable
+                if (_beatDuration == 1)
+                {
+                    _beatDuration = 2;
+                }
+                else if (_beatDuration == 2)
+                {
+                    _beatDuration = 4;
+                }
+                else
+                {
+                    _beatDuration = _beatDuration + Duration<Beat>(4);
+                }
                 // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
                 Check(completeBeats < BeatDuration());
             }
 
             // and actually record the full amount of available data
             _audioStream.Append(duration, data);
-
             break;
         }
 
@@ -370,7 +394,6 @@ namespace NowSound
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
-                _localTime = Clock::Instance().Now();
             }
             else
             {
@@ -387,6 +410,8 @@ namespace NowSound
             return false;
         }
         }
+
+        _localTime = Clock::Instance().Now();
 
         return continueRecording;
     }

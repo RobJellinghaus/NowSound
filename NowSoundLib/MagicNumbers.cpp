@@ -8,8 +8,8 @@
 
 using namespace NowSound;
 
-// 100Hz input frame rate, to minimize latency and stress the system a bit
-const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.01 };
+// 10Hz input frame rate, because crackling too common with 100Hz
+const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
 
 // exactly one beat per second for initial testing
 const float MagicNumbers::InitialBeatsPerMinute{ 60 };
