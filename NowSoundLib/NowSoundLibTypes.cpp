@@ -40,8 +40,8 @@ namespace NowSound
         float exactDuration,
         int64_t currentTrackTimeInSamples,
         float currentTrackBeat,
-        float maximumTimeSinceLastQuantum,
         float minimumTimeSinceLastQuantum,
+        float maximumTimeSinceLastQuantum,
         float averageTimeSinceLastQuantum)
     {
         NowSoundTrackTimeInfo info;
@@ -51,8 +51,8 @@ namespace NowSound
         info.ExactDuration = exactDuration;
         info.CurrentTrackTimeInSamples = currentTrackTimeInSamples;
         info.CurrentTrackBeat = currentTrackBeat;
-        info.MaximumTimeSinceLastQuantum = maximumTimeSinceLastQuantum;
         info.MinimumTimeSinceLastQuantum = minimumTimeSinceLastQuantum;
+        info.MaximumTimeSinceLastQuantum = maximumTimeSinceLastQuantum;
         info.AverageTimeSinceLastQuantum = averageTimeSinceLastQuantum;
         return info;
     }

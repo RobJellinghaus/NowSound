@@ -103,7 +103,7 @@ namespace NowSound
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
-        Check(id >= TrackId::Undefined);
+        Check(id > TrackId::Undefined);
         NowSoundTrack* value = _tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;

@@ -65,7 +65,7 @@ struct App : ApplicationT<App>
             _button.Content(IReference<hstring>(hstr));
 
             wstr = std::wstringstream{};
-            if (_trackId != -1)
+            if (_trackId != TrackId::Undefined)
             {
                 NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrack_TimeInfo(_trackId);
                 float currentBeatInMeasure = 
@@ -93,7 +93,7 @@ struct App : ApplicationT<App>
         std::unique_ptr<TrackButton> Update()
         {
             NowSoundTrackState currentState{};
-            if (_trackId != -1)
+            if (_trackId != TrackId::Undefined)
             {
                 currentState = NowSoundTrack_State(_trackId);
             }
