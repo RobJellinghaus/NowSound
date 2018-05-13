@@ -35,6 +35,7 @@ namespace NowSound
 
     NowSoundTrackTimeInfo CreateNowSoundTrackTimeInfo(
         int64_t startTimeInSamples,
+        float startTimeInBeats,
         int64_t durationInSamples,
         int64_t durationInBeats,
         float exactDuration,
@@ -49,6 +50,7 @@ namespace NowSound
     {
         NowSoundTrackTimeInfo info;
         info.StartTimeInSamples = startTimeInSamples;
+        info.StartTimeInBeats = startTimeInBeats;
         info.DurationInSamples = durationInSamples;
         info.DurationInBeats = durationInBeats;
         info.ExactDuration = exactDuration;

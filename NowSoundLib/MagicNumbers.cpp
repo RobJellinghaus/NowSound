@@ -12,7 +12,7 @@ using namespace NowSound;
 const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
 
 // exactly one beat per second for initial testing
-const float MagicNumbers::InitialBeatsPerMinute{ 60 };
+const float MagicNumbers::InitialBeatsPerMinute{ 30 }; // TODO: back to 60, or 90 or whatever, once timing thing is sorted
 
 // 4/4 time
 const int MagicNumbers::BeatsPerMeasure{ 4 };

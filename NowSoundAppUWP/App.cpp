@@ -73,7 +73,8 @@ struct App : ApplicationT<App>
                     - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
                         * trackTimeInfo.DurationInBeats);
                 wstr.precision(2);
-                wstr << L" Start (samples): " << _recordingStartTime
+                wstr << L" Start (samples): " << trackTimeInfo.StartTimeInSamples
+                    << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
                     << L" | Duration (samples): " << trackTimeInfo.DurationInSamples
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
                     << L" | Current beat: " << currentBeatInMeasure

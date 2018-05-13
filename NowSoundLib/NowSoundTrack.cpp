@@ -192,9 +192,9 @@ namespace NowSound
 
     Time<AudioSample> NowSoundTrack::StartTime() const { return _audioStream.InitialTime(); }
 
-    ContinuousDuration<Beat> TrackBeats(Time<AudioSample> localTime, Duration<Beat> beatDuration)
+    ContinuousDuration<Beat> TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration)
     {
-        ContinuousDuration<Beat> totalBeats = Clock::Instance().TimeToBeats(localTime);
+        ContinuousDuration<Beat> totalBeats = Clock::Instance().TimeToBeats(localTime.Value());
         Duration<Beat> nonFractionalBeats((int)totalBeats.Value());
 
         return (ContinuousDuration<Beat>)(
@@ -207,13 +207,15 @@ namespace NowSound
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
         Time<AudioSample> localTime = this->_localTime; // to prevent any drift from this being updated concurrently
+        Time<AudioSample> startTime = this->_audioStream.InitialTime().Value();
         return CreateNowSoundTrackTimeInfo(
-            this->_audioStream.InitialTime().Value(),
+            startTime.Value(),
+            Clock::Instance().TimeToBeats(startTime).Value(),
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
-            localTime.Value(),
-            TrackBeats(localTime, this->_beatDuration).Value(),
+            (localTime - startTime).Value(),
+            TrackBeats((localTime - startTime), this->_beatDuration).Value(),
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
             _requiredSamplesHistogram.Average(),

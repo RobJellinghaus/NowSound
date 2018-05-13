@@ -52,6 +52,8 @@ namespace NowSound
         {
             // The start time of the track, in samples from the beginning of this session.
             int64_t StartTimeInSamples;
+            // The start time of the track, in beats.
+            float StartTimeInBeats;
             // The duration of the track in audio samples.
             int64_t DurationInSamples;
             // The duration of the track in beats.
@@ -154,6 +156,7 @@ namespace NowSound
 
         NowSoundTrackTimeInfo CreateNowSoundTrackTimeInfo(
             int64_t startTimeInSamples,
+            float startTimeInBeats,
             int64_t durationInSamples,
             int64_t durationInBeats,
             float exactDuration,
