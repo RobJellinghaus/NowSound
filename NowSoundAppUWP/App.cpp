@@ -73,13 +73,9 @@ struct App : ApplicationT<App>
                     - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
                         * trackTimeInfo.DurationInBeats);
                 wstr.precision(2);
-                wstr << L" Start (samples): " << trackTimeInfo.StartTimeInSamples
-                    << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
-                    << L" | Duration (samples): " << trackTimeInfo.DurationInSamples
+                wstr << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
                     << L" | Current beat: " << currentBeatInMeasure
-                    << L" | Min (req. samp.): " << (int)trackTimeInfo.MinimumRequiredSamples
-                    << L" | Max (r.s.): " << (int)trackTimeInfo.MaximumRequiredSamples
                     << L" | Avg (r.s.): " << (int)trackTimeInfo.AverageRequiredSamples
                     << L" | Min (samp./quant.): " << (int)trackTimeInfo.MinimumTimeSinceLastQuantum
                     << L" | Max (s/q): " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum

@@ -8,11 +8,15 @@
 
 using namespace NowSound;
 
-// 10Hz input frame rate, because crackling too common with 100Hz
+// 100Hz input frame rate
+// Also tried 0.1 (e.g. 10Hz frame rate) but still observed (with surface book realtek):
+// good looping for a few repetitions, then crackling suddenly beginning, like some kind of internal timing/buffering problem.
+// Why would it sound right and then spontaneously start sounding wrong???  Doesn't seem like it could be an algorithm bug
+// in my code?  (because then it would NEVER sound right?)
 const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
 
 // exactly one beat per second for initial testing
-const float MagicNumbers::InitialBeatsPerMinute{ 30 }; // TODO: back to 60, or 90 or whatever, once timing thing is sorted
+const float MagicNumbers::InitialBeatsPerMinute{ 60 };
 
 // 4/4 time
 const int MagicNumbers::BeatsPerMeasure{ 4 };

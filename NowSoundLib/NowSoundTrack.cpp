@@ -126,7 +126,7 @@ namespace NowSound
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
-        _localTime{ 0 },
+        _localTime{ Clock::Instance().Now() },
         _isMuted{ false },
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
@@ -295,10 +295,16 @@ namespace NowSound
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
-            // To use low latency pipeline on every quantum, have this use requiredSamples*8 rather than capacityInBytes.
-            uint32_t bytesRemaining = capacityInBytes; // requiredSamples * 8;
-
             int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
+
+            /*
+            uint32_t requiredBytes = requiredSamples * sampleSizeInBytes;
+            uint32_t maxInputBytes = MagicNumbers::MaxInputSamples * sampleSizeInBytes;
+#undef max // never never should have been a macro
+            uint32_t bytesRemaining = std::max(requiredBytes, maxInputBytes);
+            */
+            uint32_t bytesRemaining = capacityInBytes;
+            Check((bytesRemaining % sampleSizeInBytes) == 0);
 
             int samplesRemaining = (int)bytesRemaining / sampleSizeInBytes;
 
