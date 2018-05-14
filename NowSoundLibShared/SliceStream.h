@@ -43,7 +43,7 @@ namespace NowSound
         // 
         // This allows streams to have lengths measured in fractional samples, which prevents roundoff error from
         // causing clock drift when using unevenly divisible BPM values and looping for long periods.
-        ContinuousDuration<AudioSample> _continuousDuration;
+        ContinuousDuration<TTime> _continuousDuration;
 
         // As with Slice<typeparam name="TValue"></typeparam>, this defines the number of T values in an
         // individual slice.
@@ -66,7 +66,7 @@ namespace NowSound
         // The floating-point-accurate duration of this stream; only valid once shut.
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
         // the sample rate.
-        virtual ContinuousDuration<AudioSample> ExactDuration() const { return _continuousDuration; }
+        virtual ContinuousDuration<TTime> ExactDuration() const { return _continuousDuration; }
 
         // The number of T values in each sliver of this slice.
         // SliceDuration.Value() is the number of slivers in the slice;
@@ -77,7 +77,7 @@ namespace NowSound
         // 
         // finalDuration is the possibly fractional duration to be associated with the stream;
         // must be strictly equal to, or less than one sample smaller than, the discrete duration.
-        virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
+        virtual void Shut(ContinuousDuration<TTime> finalDuration)
         {
             Check(!IsShut());
             _isShut = true;
@@ -289,9 +289,9 @@ namespace NowSound
             _useExactLoopingMapper{ other._useExactLoopingMapper }
         {
             Check(_allocator != nullptr);
-            Check(InitialTime() == other.InitialTime());
+            Check(this->InitialTime() == other.InitialTime());
             Time<TTime> finalTime = other.InitialTime() + other.DiscreteDuration();
-            Check(InitialTime() + DiscreteDuration() == finalTime);
+            Check(this->InitialTime() + this->DiscreteDuration() == finalTime);
         }
 
         BufferedSliceStream(const BufferedSliceStream<TTime, TValue>& other) = delete;
@@ -397,7 +397,7 @@ namespace NowSound
         {
             Check(source != nullptr);
             int neededLength = startOffset + stride * (height - 1) + width;
-            Check(SliverCount() == width * height);
+            Check(this->SliverCount() == width * height);
             Check(stride >= width);
 
             EnsureFreeSlice();

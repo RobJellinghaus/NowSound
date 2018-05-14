@@ -4,7 +4,6 @@
 // Licensed under the MIT license
 
 #include "pch.h"
-#include "SliceStream.h"
 #include "Time.h"
 
 namespace NowSound
