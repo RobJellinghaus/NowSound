@@ -111,9 +111,6 @@ namespace NowSound
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 
-        // Audio frame, reused for copying audio.
-        winrt::Windows::Media::AudioFrame _audioFrame;
-
         // The default input device. TODO: input device selection.
         winrt::Windows::Media::Audio::AudioDeviceInputNode _defaultInputDevice;
 
@@ -149,8 +146,10 @@ namespace NowSound
 
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
 
+#if STATIC_AUDIO_FRAME
         // Get the shared audio frame.
         winrt::Windows::Media::AudioFrame GetAudioFrame();
+#endif
 
         // The (currently singleton) AudioGraph.
         winrt::Windows::Media::Audio::AudioGraph GetAudioGraph();

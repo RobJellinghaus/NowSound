@@ -8,12 +8,8 @@
 
 using namespace NowSound;
 
-// 100Hz input frame rate
-// Also tried 0.1 (e.g. 10Hz frame rate) but still observed (with surface book realtek):
-// good looping for a few repetitions, then crackling suddenly beginning, like some kind of internal timing/buffering problem.
-// Why would it sound right and then spontaneously start sounding wrong???  Doesn't seem like it could be an algorithm bug
-// in my code?  (because then it would NEVER sound right?)
-const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
+// 0.1Hz frame rate leads to clicking that worsens with sustained looping.
+const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)2 };
 
 // exactly one beat per second for initial testing
 const float MagicNumbers::InitialBeatsPerMinute{ 60 };
@@ -24,8 +20,12 @@ const int MagicNumbers::BeatsPerMeasure{ 4 };
 // Stereo
 const int MagicNumbers::AudioChannelCount{ 2 };
 
-// 128 secs preallocated buffers
-const int MagicNumbers::InitialAudioBufferCount{ 128 };
+// 8 preallocated buffers
+const int MagicNumbers::InitialAudioBufferCount{ 8 };
+
+// Each buffer is 30 seconds long
+// TODO: reduce this after playback issues are sorted out
+const int MagicNumbers::AudioBufferSizeInSeconds{ 1 };
 
 // 1/10 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
 const Duration<AudioSample> MagicNumbers::TrackLatencyCompensation{ 0 /*Clock::SampleRateHz / 8*/ };

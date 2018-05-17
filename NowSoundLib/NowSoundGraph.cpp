@@ -94,8 +94,9 @@ namespace NowSound
         : _audioGraph{ nullptr },
         _audioGraphState{ NowSoundGraphState::GraphUninitialized },
         _deviceOutputNode{ nullptr },
-        _audioAllocator{ ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float)), MagicNumbers::InitialAudioBufferCount },
-        _audioFrame{ nullptr },
+        _audioAllocator{
+            ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float) * MagicNumbers::AudioBufferSizeInSeconds),
+            MagicNumbers::InitialAudioBufferCount },
         _defaultInputDevice{ nullptr },
         _inputDeviceFrameOutputNode{ nullptr },
         _trackId{ TrackId::Undefined },
@@ -105,8 +106,6 @@ namespace NowSound
         _incomingAudioStream(0, MagicNumbers::AudioChannelCount, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
         _incomingAudioStreamRecorder(&_incomingAudioStream)
     { }
-
-    AudioFrame NowSoundGraph::GetAudioFrame() { return _audioFrame; }
 
     AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
 
@@ -332,18 +331,6 @@ namespace NowSound
 
     void NowSoundGraph::HandleIncomingAudio()
     {
-        if (_audioFrame == nullptr)
-        {
-            // The AudioFrame.Duration property is a TimeSpan, despite the fact that this seems an inherently
-            // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
-            // we fill it completely and often.
-            _audioFrame = AudioFrame(
-                (uint32_t)(Clock::SampleRateHz
-                    * MagicNumbers::AudioFrameLengthSeconds.Value()
-                    * sizeof(float)
-                    * MagicNumbers::AudioChannelCount));
-        }
-
         AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
 
         uint8_t* dataInBytes{};

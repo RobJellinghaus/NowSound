@@ -35,6 +35,9 @@ namespace NowSound
         // Not much downside to allocating many; stereo float 48Khz = only 384KB per one-sec buffer
         static const int InitialAudioBufferCount;
 
+        // How many seconds long is each audio buffer?
+        static const int AudioBufferSizeInSeconds;
+
         // The amount of time by which to "pre-record" already-heard audio at the start of a new track.
         static const Duration<AudioSample> TrackLatencyCompensation;
 

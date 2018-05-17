@@ -83,19 +83,21 @@ namespace NowSound
         NowSoundTrack::DeleteTrack(trackId);
     }
 
-    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrack::_tracks{};
+    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrack::s_tracks{};
+
+    Windows::Media::AudioFrame NowSoundTrack::s_audioFrame{ nullptr };
 
     void NowSoundTrack::DeleteTrack(TrackId trackId)
     {
-        Check(trackId >= TrackId::Undefined && trackId <= _tracks.size());
+        Check(trackId >= TrackId::Undefined && trackId <= s_tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
-        _tracks[trackId] = std::unique_ptr<NowSoundTrack>{};
+        s_tracks[trackId] = std::unique_ptr<NowSoundTrack>{};
     }
 
     void NowSoundTrack::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)
     {
-        _tracks.emplace(id, std::move(track));
+        s_tracks.emplace(id, std::move(track));
     }
 
     NowSoundTrack* NowSoundTrack::Track(TrackId id)
@@ -104,7 +106,7 @@ namespace NowSound
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id > TrackId::Undefined);
-        NowSoundTrack* value = _tracks.at(id).get();
+        NowSoundTrack* value = s_tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
@@ -133,6 +135,8 @@ namespace NowSound
         _sinceLastSampleTimingHistogram { MagicNumbers::AudioQuantumHistogramCapacity
     }
     {
+        Check(_localTime.Value() >= 0);
+
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
 
@@ -207,6 +211,7 @@ namespace NowSound
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
         Time<AudioSample> localTime = this->_localTime; // to prevent any drift from this being updated concurrently
+        Check(_localTime.Value() >= 0);
         Time<AudioSample> startTime = this->_audioStream.InitialTime().Value();
         return CreateNowSoundTrackTimeInfo(
             startTime.Value(),
@@ -280,7 +285,25 @@ namespace NowSound
         _requiredSamplesHistogram.Add(requiredSamples);
         _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
 
-        Windows::Media::AudioFrame audioFrame = NowSoundGraph::Instance()->GetAudioFrame();
+#if STATIC_AUDIO_FRAME
+        if (s_audioFrame == nullptr)
+        {
+            // The AudioFrame.Duration property is a TimeSpan, despite the fact that this seems an inherently
+            // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
+            // we fill it completely and often.
+            s_audioFrame = Windows::Media::AudioFrame(
+                (uint32_t)(Clock::SampleRateHz
+                    * MagicNumbers::AudioFrameLengthSeconds.Value()
+                    * sizeof(float)
+                    * MagicNumbers::AudioChannelCount));
+        }
+        Windows::Media::AudioFrame audioFrame = s_audioFrame;
+#else
+        Windows::Media::AudioFrame audioFrame((uint32_t)(Clock::SampleRateHz
+            * MagicNumbers::AudioFrameLengthSeconds.Value()
+            * sizeof(float)
+            * MagicNumbers::AudioChannelCount));
+#endif
 
         {
             // This nested scope sets the extent of the LockBuffer call below, which must close before the AddFrame call.
@@ -326,6 +349,7 @@ namespace NowSound
 
                 dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
                 _localTime = _localTime + longest.SliceDuration();
+                Check(_localTime.Value() >= 0);
                 samplesRemaining -= (int)longest.SliceDuration().Value();
             }
         }
@@ -412,6 +436,7 @@ namespace NowSound
         }
 
         _localTime = Clock::Instance().Now();
+        Check(_localTime.Value() >= 0);
 
         return continueRecording;
     }

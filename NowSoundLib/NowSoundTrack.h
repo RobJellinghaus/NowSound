@@ -14,6 +14,9 @@
 #include "Recorder.h"
 #include "Time.h"
 
+// set to 1 to reuse a static AudioFrame; 0 will allocate a new AudioFrame in each audio quantum event handler
+#define STATIC_AUDIO_FRAME 1
+
 namespace NowSound
 {
     class NowSoundTrack : public IRecorder<AudioSample, float>
@@ -29,10 +32,15 @@ namespace NowSound
 
     private:
         // The collection of all ttracks.
-        static std::map<TrackId, std::unique_ptr<NowSoundTrack>> _tracks;
+        static std::map<TrackId, std::unique_ptr<NowSoundTrack>> s_tracks;
 
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;
+
+#if STATIC_AUDIO_FRAME
+        // Audio frame, reused for copying audio.
+        static winrt::Windows::Media::AudioFrame s_audioFrame;
+#endif
 
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
