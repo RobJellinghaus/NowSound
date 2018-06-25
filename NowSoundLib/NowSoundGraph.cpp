@@ -99,6 +99,7 @@ namespace NowSound
             MagicNumbers::InitialAudioBufferCount },
         _defaultInputDevice{ nullptr },
         _inputDeviceFrameOutputNode{ nullptr },
+        _submixNode{ nullptr },
         _trackId{ TrackId::Undefined },
         _recorders{ },
         _recorderMutex{ },
@@ -206,7 +207,10 @@ namespace NowSound
 
         _defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
         _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
+
         _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
+
+        _submixNode = _audioGraph.CreateSubmixNode();
 
         _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
         {
