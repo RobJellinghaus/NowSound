@@ -33,4 +33,9 @@ sysinfo.txt
 
 # Windows generated folders
 Debug/
+Release/
 Generated Files/
+NowSoundAppUWP/Debug/
+NowSoundAppUWP/Release/
+NowSoundLib/Debug/
+NowSoundLib/Release/
