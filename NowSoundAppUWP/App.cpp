@@ -68,14 +68,11 @@ struct App : ApplicationT<App>
             if (_trackId != TrackId::Undefined)
             {
                 NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrack_TimeInfo(_trackId);
-                float currentBeatInMeasure = 
-                    trackTimeInfo.CurrentTrackBeat
-                    - (((int)trackTimeInfo.CurrentTrackBeat / trackTimeInfo.DurationInBeats)
-                        * trackTimeInfo.DurationInBeats);
-                wstr.precision(2);
+                wstr.precision(3);
                 wstr << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
-                    << L" | Current beat: " << currentBeatInMeasure
+                    << L" | Current beat: " << trackTimeInfo.LocalClockBeat
+					<< L" | Last sample time: " << trackTimeInfo.LastSampleTime
                     << L" | Avg (r.s.): " << (int)trackTimeInfo.AverageRequiredSamples
                     << L" | Min (samp./quant.): " << (int)trackTimeInfo.MinimumTimeSinceLastQuantum
                     << L" | Max (s/q): " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum

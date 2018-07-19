@@ -128,14 +128,14 @@ namespace NowSound
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
         _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
-        _localTime{ Clock::Instance().Now() },
+        _lastSampleTime{ Clock::Instance().Now() },
         _isMuted{ false },
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
         _sinceLastSampleTimingHistogram { MagicNumbers::AudioQuantumHistogramCapacity
     }
     {
-        Check(_localTime.Value() >= 0);
+        Check(_lastSampleTime.Value() >= 0);
 
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
@@ -210,17 +210,19 @@ namespace NowSound
 
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
-        Time<AudioSample> localTime = this->_localTime; // to prevent any drift from this being updated concurrently
-        Check(_localTime.Value() >= 0);
+        Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
+        Check(_lastSampleTime.Value() >= 0);
         Time<AudioSample> startTime = this->_audioStream.InitialTime().Value();
+		Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
         return CreateNowSoundTrackTimeInfo(
             startTime.Value(),
             Clock::Instance().TimeToBeats(startTime).Value(),
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
-            (localTime - startTime).Value(),
-            TrackBeats((localTime - startTime), this->_beatDuration).Value(),
+			localClockTime.Value(),
+			TrackBeats(localClockTime, this->_beatDuration).Value(),
+			(lastSampleTime - startTime).Value(),
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
             _requiredSamplesHistogram.Average(),
@@ -282,7 +284,7 @@ namespace NowSound
         // we are looping; let's play!
         float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::SampleRateHz / Clock::TicksPerSecond);
 
-        _requiredSamplesHistogram.Add(requiredSamples);
+        _requiredSamplesHistogram.Add((float)requiredSamples);
         _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
 
 #if STATIC_AUDIO_FRAME
@@ -341,15 +343,15 @@ namespace NowSound
             {
                 // get up to one second or samplesRemaining, whichever is smaller
                 Slice<AudioSample, float> longest(
-                    _audioStream.GetSliceContaining(Interval<AudioSample>(_localTime, samplesRemaining)));
+                    _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
 
                 Time<AudioSample> now(Clock::Instance().Now());
 
                 dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
-                _localTime = _localTime + longest.SliceDuration();
-                Check(_localTime.Value() >= 0);
+                _lastSampleTime = _lastSampleTime + longest.SliceDuration();
+                Check(_lastSampleTime.Value() >= 0);
                 samplesRemaining -= (int)longest.SliceDuration().Value();
             }
         }
@@ -369,7 +371,7 @@ namespace NowSound
         {
             // How many complete beats after we record this data?
             Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
-            Duration<Beat> completeBeats = Clock::Instance().TimeToCompleteBeats(durationAsTime);
+            Duration<Beat> completeBeats = (Duration<Beat>)((int)Clock::Instance().TimeToBeats(durationAsTime).Value());
 
             // If it's more than our _beatDuration, bump our _beatDuration
             // TODO: implement other quantization policies here
@@ -435,8 +437,8 @@ namespace NowSound
         }
         }
 
-        _localTime = Clock::Instance().Now();
-        Check(_localTime.Value() >= 0);
+        _lastSampleTime = Clock::Instance().Now();
+        Check(_lastSampleTime.Value() >= 0);
 
         return continueRecording;
     }

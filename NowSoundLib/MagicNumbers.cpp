@@ -8,8 +8,9 @@
 
 using namespace NowSound;
 
-// 0.1Hz frame rate leads to clicking that worsens with sustained looping.
-const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)2 };
+// All values should work for this down to small multiples of a single audio frame, but one second is a
+// nice round number, especially for hearing buffer clicks or other driver glitches.
+const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)1 };
 
 // exactly one beat per second for initial testing
 const float MagicNumbers::InitialBeatsPerMinute{ 60 };
@@ -23,8 +24,7 @@ const int MagicNumbers::AudioChannelCount{ 2 };
 // 8 preallocated buffers
 const int MagicNumbers::InitialAudioBufferCount{ 8 };
 
-// Each buffer is 30 seconds long
-// TODO: reduce this after playback issues are sorted out
+// Duration of each audio buffer in seconds
 const int MagicNumbers::AudioBufferSizeInSeconds{ 1 };
 
 // 1/10 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...

@@ -97,13 +97,6 @@ namespace NowSound
                 Clock::Instance().BeatDuration().Value());
         }
 
-        // Exactly how many complete beats?
-        // Beats are represented by ints as it's hard to justify longs; 2G beats = VERY LONG TRACK</remarks>
-        Duration<Beat> TimeToCompleteBeats(Time<AudioSample> time) const
-        {
-            return Duration<Beat>((int)TimeToBeats(time).Value());
-        }
-
         // empirically seen some Beats values come too close to this
         const double Epsilon = 0.0001; 
         

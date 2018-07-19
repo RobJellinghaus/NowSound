@@ -257,10 +257,11 @@ namespace NowSound
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
         Time<AudioSample> now = Clock::Instance().Now();
-        int64_t completeBeats = Clock::Instance().TimeToCompleteBeats(now).Value();
+		ContinuousDuration<Beat> durationBeats = Clock::Clock::Instance().TimeToBeats(now);
+        int64_t completeBeats = (int64_t)durationBeats.Value();
         return CreateNowSoundTimeInfo(
             now.Value(),
-            Clock::Instance().TimeToBeats(now).Value(),
+            durationBeats.Value(),
             Clock::Instance().BeatsPerMinute(),
             (float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
     }

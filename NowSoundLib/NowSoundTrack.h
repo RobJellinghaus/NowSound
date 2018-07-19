@@ -64,27 +64,10 @@ namespace NowSound
         // The stream containing this Track's data; this is an owning reference.
         BufferedSliceStream<AudioSample, float> _audioStream;
 
-        // Local time is based on the Now when the track started looping, and advances strictly
+        // Last sample time is based on the Now when the track started looping, and advances strictly
         // based on what the Track has pushed during looping; this variable should be unused except
         // in Looping state.
-        // 
-        // HISTORICAL EXPLANATION FROM ASIO ERA:
-        // 
-        // This is because BASS doesn't have rock-solid consistency between the MixerToOutputAsioProc
-        // and the Track's SyncProc.  We would expect that if at time T we push N samples from this
-        // track, that the SyncProc would then be called back at exactly time T+N.  However, this is not
-        // in fact the case -- there is some nontrivial variability of +/- one sample buffer.  So we
-        // use a local time to avoid requiring this exact timing behavior from BASS.
-        // 
-        // The previous code just pushed one sample buffer after another based on their indices; it paid
-        // no attention to "global time" at all.
-        // 
-        // CURRENT NOTE FROM AUDIOGRAPH ERA:
-        // 
-        // It will be interesting to see whether this complexity is still warranted, but since it seems
-        // a reasonably robust strategy, we will stick with it at this point; future testing possible if
-        // energy is available.
-        Time<AudioSample> _localTime;
+        Time<AudioSample> _lastSampleTime;
 
         winrt::Windows::Foundation::DateTime _lastQuantumTime;
 

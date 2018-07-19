@@ -39,9 +39,10 @@ namespace NowSound
         int64_t durationInSamples,
         int64_t durationInBeats,
         float exactDuration,
-        int64_t currentTrackTimeInSamples,
-        float currentTrackBeat,
-        float minimumRequiredSamples,
+		int64_t localClockTime,
+		float localClockBeat,
+		int64_t lastSampleTime,
+		float minimumRequiredSamples,
         float maximumRequiredSamples,
         float averageRequiredSamples,
         float minimumTimeSinceLastQuantum,
@@ -54,8 +55,9 @@ namespace NowSound
         info.DurationInSamples = durationInSamples;
         info.DurationInBeats = durationInBeats;
         info.ExactDuration = exactDuration;
-        info.CurrentTrackTimeInSamples = currentTrackTimeInSamples;
-        info.CurrentTrackBeat = currentTrackBeat;
+		info.LocalClockTime = localClockTime;
+		info.LastSampleTime = lastSampleTime;
+		info.LocalClockBeat = localClockBeat;
         info.MinimumRequiredSamples = minimumRequiredSamples;
         info.MaximumRequiredSamples = maximumRequiredSamples;
         info.AverageRequiredSamples = averageRequiredSamples;
