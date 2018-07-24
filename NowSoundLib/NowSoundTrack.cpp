@@ -38,12 +38,31 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-    __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->State();
-    }
+	__declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_GetStaticTrackTimeInfo()
+	{
+		return CreateNowSoundTrackTimeInfo(
+			1,
+			(float)2,
+			3,
+			4,
+			(float)5,
+			6,
+			(float)7,
+			8,
+			(float)9,
+			(float)10,
+			(float)11,
+			(float)12,
+			(float)13,
+			(float)14);
+	}
 
-    __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
+	__declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
+	{
+		return NowSoundTrack::Track(trackId)->State();
+	}
+
+	__declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
     {
         return NowSoundTrack::Track(trackId)->BeatDuration().Value();
     }
@@ -211,8 +230,7 @@ namespace NowSound
     NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
     {
         Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
-        Check(_lastSampleTime.Value() >= 0);
-        Time<AudioSample> startTime = this->_audioStream.InitialTime().Value();
+        Time<AudioSample> startTime = this->_audioStream.InitialTime();
 		Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
         return CreateNowSoundTrackTimeInfo(
             startTime.Value(),

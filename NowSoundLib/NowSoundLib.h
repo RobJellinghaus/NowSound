@@ -81,6 +81,9 @@ namespace NowSound
         // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially,
         // not concurrently.
 
+		// Test method only: get a predefined NowSoundTrack_TrackTimeInfo instance to test P/Invoke serialization.
+		__declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_GetStaticTrackTimeInfo();
+
         // In what state is this track?
         __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId);
 

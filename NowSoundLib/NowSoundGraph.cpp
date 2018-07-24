@@ -378,9 +378,9 @@ namespace NowSound
             }
         }
 
-        Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
+		Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
 
-        Clock::Instance().AdvanceFromAudioGraph(duration);
+		Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
 
         // iterate through all active Recorders
         // note that Recorders must be added or removed only inside the audio graph

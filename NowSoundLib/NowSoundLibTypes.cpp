@@ -56,9 +56,9 @@ namespace NowSound
         info.DurationInBeats = durationInBeats;
         info.ExactDuration = exactDuration;
 		info.LocalClockTime = localClockTime;
-		info.LastSampleTime = lastSampleTime;
 		info.LocalClockBeat = localClockBeat;
-        info.MinimumRequiredSamples = minimumRequiredSamples;
+		info.LastSampleTime = lastSampleTime;
+		info.MinimumRequiredSamples = minimumRequiredSamples;
         info.MaximumRequiredSamples = maximumRequiredSamples;
         info.AverageRequiredSamples = averageRequiredSamples;
         info.MinimumTimeSinceLastQuantum = minimumTimeSinceLastQuantum;
