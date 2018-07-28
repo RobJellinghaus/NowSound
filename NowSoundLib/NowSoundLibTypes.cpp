@@ -33,7 +33,7 @@ namespace NowSound
         return info;
     }
 
-    NowSoundTrackTimeInfo CreateNowSoundTrackTimeInfo(
+    NowSoundTrackInfo CreateNowSoundTrackInfo(
         int64_t startTimeInSamples,
         float startTimeInBeats,
         int64_t durationInSamples,
@@ -42,6 +42,7 @@ namespace NowSound
 		int64_t localClockTime,
 		float localClockBeat,
 		int64_t lastSampleTime,
+		float recentVolume,
 		float minimumRequiredSamples,
         float maximumRequiredSamples,
         float averageRequiredSamples,
@@ -49,7 +50,7 @@ namespace NowSound
         float maximumTimeSinceLastQuantum,
         float averageTimeSinceLastQuantum)
     {
-        NowSoundTrackTimeInfo info;
+        NowSoundTrackInfo info;
         info.StartTimeInSamples = startTimeInSamples;
         info.StartTimeInBeats = startTimeInBeats;
         info.DurationInSamples = durationInSamples;
@@ -58,6 +59,7 @@ namespace NowSound
 		info.LocalClockTime = localClockTime;
 		info.LocalClockBeat = localClockBeat;
 		info.LastSampleTime = lastSampleTime;
+		info.RecentVolume = recentVolume;
 		info.MinimumRequiredSamples = minimumRequiredSamples;
         info.MaximumRequiredSamples = maximumRequiredSamples;
         info.AverageRequiredSamples = averageRequiredSamples;

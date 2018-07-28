@@ -25,8 +25,8 @@ public:
 
     // Add a new value to this histogram.
     // Return true if the histogram is not yet at capacity; false if it is at capacity.
-    // (In the case of More can still be added if it is at capacity, but earlier values will be dropped
-    // and max/min values must be recomputed.)
+    // (More can still be added if it is at capacity, but earlier values will be dropped
+    // and max/min values must be recomputed at O(n) cost.)
     virtual bool Add(float value) = 0;
 };
 

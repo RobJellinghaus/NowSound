@@ -36,3 +36,7 @@ const int MagicNumbers::DebugLogCapacity{ 1000 };
 // 200 histogram values at 100Hz = two seconds of history, enough to follow transient crackling/breakup
 // (due to losing foreground execution status, for example)
 const int MagicNumbers::AudioQuantumHistogramCapacity{ 200 };
+
+// Reciprocal of the amount of time over which to measure volume (e.g. 30 = 1/30 second)
+// (this avoids irritating float issues)
+const int MagicNumbers::RecentVolumeSecondsFraction{ 30 };

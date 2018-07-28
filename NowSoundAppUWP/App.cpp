@@ -67,7 +67,7 @@ struct App : ApplicationT<App>
             wstr = std::wstringstream{};
             if (_trackId != TrackId::Undefined)
             {
-                NowSoundTrackTimeInfo trackTimeInfo = NowSoundTrack_TimeInfo(_trackId);
+                NowSoundTrackInfo trackTimeInfo = NowSoundTrack_Info(_trackId);
                 wstr.precision(3);
                 wstr << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
                     << L" | Duration (beats): " << trackTimeInfo.DurationInBeats

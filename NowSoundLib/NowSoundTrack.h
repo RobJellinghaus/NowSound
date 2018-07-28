@@ -84,6 +84,9 @@ namespace NowSound
         // histogram of time since last sample request
         Histogram _sinceLastSampleTimingHistogram;
 
+		// histogram of volume
+		Histogram _recentVolumeHistogram;
+
     public:
         NowSoundTrack(TrackId trackId, AudioInputId inputId, const BufferedSliceStream<AudioSample, float>& sourceStream);
 
@@ -108,7 +111,7 @@ namespace NowSound
         Time<AudioSample> StartTime() const;
 
         // The full time info for this track (to allow just one call per track for all this info).
-        NowSoundTrackTimeInfo TimeInfo() const;
+        NowSoundTrackInfo Info() const;
 
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.

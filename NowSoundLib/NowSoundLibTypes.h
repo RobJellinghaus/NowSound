@@ -48,7 +48,7 @@ namespace NowSound
         } NowSoundTimeInfo;
 
         // Information about a track's time in NowSound terms.
-        typedef struct NowSoundTrackTimeInfo
+        typedef struct NowSoundTrackInfo
         {
             // The start time of the track, in samples from the beginning of this session.
             int64_t StartTimeInSamples;
@@ -66,6 +66,8 @@ namespace NowSound
             float LocalClockBeat;
 			// The time at which the track last delivered samples (depends on current audio frame size).
 			int64_t LastSampleTime;
+			// The volume, averaged over the last N samples.
+			float RecentVolume;
 			// The minimum count of required samples over the last N seconds.
             float MinimumRequiredSamples;
             // The maximum count of required samples over the last N seconds.
@@ -156,7 +158,7 @@ namespace NowSound
 
         NowSoundTimeInfo CreateNowSoundTimeInfo(int64_t timeInSamples, float exactBeat, float beatsPerMinute, float beatInMeasure);
 
-        NowSoundTrackTimeInfo CreateNowSoundTrackTimeInfo(
+        NowSoundTrackInfo CreateNowSoundTrackInfo(
             int64_t startTimeInSamples,
             float startTimeInBeats,
             int64_t durationInSamples,
@@ -165,11 +167,12 @@ namespace NowSound
 			int64_t localClockTime,
 			float localClockBeat,
 			int64_t lastSampleTime,
-			float maximumRequiredSamples,
+			float recentVolume,
             float minimumRequiredSamples,
-            float averageRequiredSamples,
-            float maximumTimeSinceLastQuantum,
+			float maximumRequiredSamples,
+			float averageRequiredSamples,
             float minimumTimeSinceLastQuantum,
-            float averageTimeSinceLastQuantum);
+			float maximumTimeSinceLastQuantum,
+			float averageTimeSinceLastQuantum);
     }
 }

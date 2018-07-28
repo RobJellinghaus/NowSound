@@ -38,9 +38,9 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-	__declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_GetStaticTrackTimeInfo()
+	__declspec(dllexport) NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo()
 	{
-		return CreateNowSoundTrackTimeInfo(
+		return CreateNowSoundTrackInfo(
 			1,
 			(float)2,
 			3,
@@ -54,7 +54,8 @@ namespace NowSound
 			(float)11,
 			(float)12,
 			(float)13,
-			(float)14);
+			(float)14,
+			(float)15);
 	}
 
 	__declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
@@ -77,9 +78,9 @@ namespace NowSound
         return NowSoundTrack::Track(trackId)->ExactDuration().Value();
     }
 
-    __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_TimeInfo(TrackId trackId)
+    __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId)
     {
-        return NowSoundTrack::Track(trackId)->TimeInfo();
+        return NowSoundTrack::Track(trackId)->Info();
     }
 
     __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
@@ -151,9 +152,9 @@ namespace NowSound
         _isMuted{ false },
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
-        _sinceLastSampleTimingHistogram { MagicNumbers::AudioQuantumHistogramCapacity
-    }
-    {
+		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
+		_recentVolumeHistogram{ Clock::Instance().SampleRateHz / MagicNumbers::RecentVolumeSecondsFraction }
+	{
         Check(_lastSampleTime.Value() >= 0);
 
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
@@ -227,12 +228,12 @@ namespace NowSound
             + (totalBeats.Value() - nonFractionalBeats.Value()));
     }
 
-    NowSoundTrackTimeInfo NowSoundTrack::TimeInfo() const
+    NowSoundTrackInfo NowSoundTrack::Info() const
     {
         Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
         Time<AudioSample> startTime = this->_audioStream.InitialTime();
 		Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
-        return CreateNowSoundTrackTimeInfo(
+        return CreateNowSoundTrackInfo(
             startTime.Value(),
             Clock::Instance().TimeToBeats(startTime).Value(),
             this->_audioStream.DiscreteDuration().Value(),
@@ -241,6 +242,7 @@ namespace NowSound
 			localClockTime.Value(),
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
+			_recentVolumeHistogram.Average(),
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
             _requiredSamplesHistogram.Average(),

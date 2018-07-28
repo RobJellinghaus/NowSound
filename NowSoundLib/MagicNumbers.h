@@ -47,5 +47,9 @@ namespace NowSound
         // How many audio frames' duration will the per-track histogram follow?
         // The histogram helps detect spikes in the latency observed by the FrameInputNode_QuantumStarted method.
         static const int AudioQuantumHistogramCapacity;
+
+		// Reciprocal of the amount of time over which to measure volume (e.g. 30 = 1/30 second)
+		// (this avoids irritating float issues)
+		static const int RecentVolumeSecondsFraction;
     };
 }

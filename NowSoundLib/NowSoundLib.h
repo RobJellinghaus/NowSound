@@ -82,7 +82,7 @@ namespace NowSound
         // not concurrently.
 
 		// Test method only: get a predefined NowSoundTrack_TrackTimeInfo instance to test P/Invoke serialization.
-		__declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_GetStaticTrackTimeInfo();
+		__declspec(dllexport) NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo();
 
         // In what state is this track?
         __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId);
@@ -102,7 +102,7 @@ namespace NowSound
         __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId);
 
         // The current timing information for this Track.
-        __declspec(dllexport) NowSoundTrackTimeInfo NowSoundTrack_TimeInfo(TrackId trackId);
+        __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId);
 
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State.Recording.
