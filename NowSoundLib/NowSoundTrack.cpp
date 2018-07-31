@@ -140,7 +140,7 @@ namespace NowSound
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
-            Clock::Instance().Now() - MagicNumbers::TrackLatencyCompensation,
+            Clock::Instance().Now() - Clock::Instance().LatencyCompensationDuration(),
             MagicNumbers::AudioChannelCount,
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
@@ -163,12 +163,13 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
 
-        if (MagicNumbers::TrackLatencyCompensation > 0)
+        if (MagicNumbers::TrackLatencyCompensation.Value() > 0)
         {
             // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
+			Duration<AudioSample> latencyCompensationDuration = (int64_t)(MagicNumbers::TrackLatencyCompensation.Value() * Clock::Instance().SampleRateHz);
             Interval<AudioSample> lastIntervalOfSourceStream(
-                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - MagicNumbers::TrackLatencyCompensation,
-                MagicNumbers::TrackLatencyCompensation);
+                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensationDuration,
+                latencyCompensationDuration);
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
 
@@ -180,7 +181,7 @@ namespace NowSound
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
-        _audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
+		_audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
     }
 
     void NowSoundTrack::DebugLog(const std::wstring& entry)
@@ -366,6 +367,14 @@ namespace NowSound
                     _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
 
                 longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
+
+				// add to volume histogram
+				/* whoa why does this make everything break so badly
+				for (int i = 0; i < longest.SliceDuration().Value(); i++)
+				{
+					_recentVolumeHistogram.Add(std::abs(longest.Get(i, 0)));
+				}
+				*/
 
                 Time<AudioSample> now(Clock::Instance().Now());
 

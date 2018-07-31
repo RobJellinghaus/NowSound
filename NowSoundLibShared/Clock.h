@@ -25,12 +25,12 @@ namespace NowSound
 
     public:
 
-        Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount, ContinuousDuration<Second> latencyCompensation);
 
         // Construct a Clock and initialize Clock.Instance.
         // This must be called exactly once per process; multiple calls will be contract failure (unless closely
         // overlapped in time in which case they will race).
-        static void Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        static void Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount, ContinuousDuration<Second> latencyCompensation);
 
         // The singleton Clock used by the application.
         static Clock& Instance()
@@ -61,6 +61,9 @@ namespace NowSound
         // This will be a non-integer value if the BPM does not exactly divide the sample rate.
         ContinuousDuration<AudioSample> _beatDuration;
 
+		// The number of seconds by which to pre-record when starting a new track.
+		ContinuousDuration<Second> _latencyCompensation;
+
         // Calculate the _beatDuration based on _beatsPerMinute.
         // TODO: this doesn't seem like a good way to do this -- why not do this at construction?
         void CalculateBeatDuration();
@@ -88,6 +91,8 @@ namespace NowSound
         int BeatsPerMeasure() { return _beatsPerMeasure; }
 
         Time<AudioSample> Now() { return _audioTime; }
+
+		Duration<AudioSample> LatencyCompensationDuration() { return (int64_t)(_latencyCompensation.Value() * SampleRateHz); }
 
         // Approximately how many beats?
         ContinuousDuration<Beat> TimeToBeats(Time<AudioSample> time) const

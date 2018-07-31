@@ -108,9 +108,6 @@ namespace NowSound
         // The default output device. TODO: support multiple output devices.
         winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
 
-        // The submix node that collects output for the output device.
-        winrt::Windows::Media::Audio::AudioSubmixNode _submixNode;
-
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 

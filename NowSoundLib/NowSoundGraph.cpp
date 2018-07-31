@@ -99,7 +99,6 @@ namespace NowSound
             MagicNumbers::InitialAudioBufferCount },
         _defaultInputDevice{ nullptr },
         _inputDeviceFrameOutputNode{ nullptr },
-        _submixNode{ nullptr },
         _trackId{ TrackId::Undefined },
         _recorders{ },
         _recorderMutex{ },
@@ -210,8 +209,6 @@ namespace NowSound
 
         _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
 
-        _submixNode = _audioGraph.CreateSubmixNode();
-
         _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
         {
             HandleIncomingAudio();
@@ -237,7 +234,11 @@ namespace NowSound
         PrepareToChangeState(NowSoundGraphState::GraphCreated);
 
         // MAKE THE CLOCK NOW.
-        Clock::Initialize(MagicNumbers::InitialBeatsPerMinute, MagicNumbers::BeatsPerMeasure, MagicNumbers::AudioChannelCount);
+        Clock::Initialize(
+			MagicNumbers::InitialBeatsPerMinute, 
+			MagicNumbers::BeatsPerMeasure, 
+			MagicNumbers::AudioChannelCount,
+			MagicNumbers::TrackLatencyCompensation);
 
         // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
         _recorders.push_back(&_incomingAudioStreamRecorder);

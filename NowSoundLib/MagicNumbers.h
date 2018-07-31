@@ -39,7 +39,7 @@ namespace NowSound
         static const int AudioBufferSizeInSeconds;
 
         // The amount of time by which to "pre-record" already-heard audio at the start of a new track.
-        static const Duration<AudioSample> TrackLatencyCompensation;
+        static const ContinuousDuration<Second> TrackLatencyCompensation;
 
         // The number of strings to buffer in the per-track debug log.
         static const int DebugLogCapacity;
