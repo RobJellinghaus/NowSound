@@ -87,20 +87,6 @@ namespace NowSound
         // In what state is this track?
         __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId);
 
-        // Duration in beats of current Clock.
-        // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
-        __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId);
-
-        // What beat position is playing right now?
-        // This uses Clock.Instance.Now to determine the current time, and is continuous because we may be
-        // playing a fraction of a beat right now.  It will always be strictly less than BeatDuration.
-        __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId);
-
-        // How long is this track, in samples?
-        // This is increased during recording.  It may in general have fractional numbers of samples if 
-        // Clock.Instance.BeatsPerMinute does not evenly divide Clock.Instance.SampleRateHz.
-        __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId);
-
         // The current timing information for this Track.
         __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId);
 
