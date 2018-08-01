@@ -15,19 +15,18 @@ using namespace Windows::Media::Render;
 
 std::unique_ptr<NowSound::Clock> NowSound::Clock::s_instance;
 
-void NowSound::Clock::Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount, ContinuousDuration<Second> latencyCompensation)
+void NowSound::Clock::Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount)
 {
-    std::unique_ptr<Clock> clock(new Clock(beatsPerMinute, beatsPerMeasure, inputChannelCount, latencyCompensation));
+    std::unique_ptr<Clock> clock(new Clock(beatsPerMinute, beatsPerMeasure, inputChannelCount));
     Clock::s_instance = std::move(clock);
 }
 
-NowSound::Clock::Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount, ContinuousDuration<Second> latencyCompensation)
+NowSound::Clock::Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount)
     : _beatsPerMinute(beatsPerMinute),
 	_beatsPerMeasure(beatsPerMeasure),
 	_inputChannelCount(inputChannelCount),
 	_audioTime(0),
-	_beatDuration(0),
-	_latencyCompensation(latencyCompensation)
+	_beatDuration(0)
 {
     Check(s_instance == nullptr); // No Clock yet
     CalculateBeatDuration();

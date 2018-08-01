@@ -36,10 +36,10 @@ namespace NowSound
         static const int InitialAudioBufferCount;
 
         // How many seconds long is each audio buffer?
-        static const int AudioBufferSizeInSeconds;
+        static const Duration<Second> AudioBufferSizeInSeconds;
 
         // The amount of time by which to "pre-record" already-heard audio at the start of a new track.
-        static const ContinuousDuration<Second> TrackLatencyCompensation;
+        static const ContinuousDuration<Second> PreRecordingDuration;
 
         // The number of strings to buffer in the per-track debug log.
         static const int DebugLogCapacity;
@@ -48,8 +48,7 @@ namespace NowSound
         // The histogram helps detect spikes in the latency observed by the FrameInputNode_QuantumStarted method.
         static const int AudioQuantumHistogramCapacity;
 
-		// Reciprocal of the amount of time over which to measure volume (e.g. 30 = 1/30 second)
-		// (this avoids irritating float issues)
-		static const int RecentVolumeSecondsFraction;
+		// Amount of time over which to measure volume.
+		static const ContinuousDuration<Second> RecentVolumeDuration;
     };
 }

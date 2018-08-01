@@ -25,10 +25,10 @@ const int MagicNumbers::AudioChannelCount{ 2 };
 const int MagicNumbers::InitialAudioBufferCount{ 8 };
 
 // Duration of each audio buffer in seconds
-const int MagicNumbers::AudioBufferSizeInSeconds{ 1 };
+const Duration<Second> MagicNumbers::AudioBufferSizeInSeconds{ 1 };
 
 // 1/5 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
-const ContinuousDuration<Second> MagicNumbers::TrackLatencyCompensation{ (float)0.1 };
+const ContinuousDuration<Second> MagicNumbers::PreRecordingDuration{ (float)0.2 };
 
 // This could easily be huge but 1000 is fine for getting at least a second's worth of per-track history at audio rate.
 const int MagicNumbers::DebugLogCapacity{ 1000 };
@@ -37,6 +37,5 @@ const int MagicNumbers::DebugLogCapacity{ 1000 };
 // (due to losing foreground execution status, for example)
 const int MagicNumbers::AudioQuantumHistogramCapacity{ 200 };
 
-// Reciprocal of the amount of time over which to measure volume (e.g. 30 = 1/30 second)
-// (this avoids irritating float issues)
-const int MagicNumbers::RecentVolumeSecondsFraction{ 30 };
+// The amount of time over which to measure volume
+const ContinuousDuration<Second> MagicNumbers::RecentVolumeDuration{ (float)0.1 };

@@ -140,7 +140,7 @@ namespace NowSound
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
-            Clock::Instance().Now() - Clock::Instance().LatencyCompensationDuration(),
+            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration),
             MagicNumbers::AudioChannelCount,
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
@@ -153,7 +153,7 @@ namespace NowSound
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
-		_recentVolumeHistogram{ Clock::Instance().SampleRateHz / MagicNumbers::RecentVolumeSecondsFraction }
+		_recentVolumeHistogram{ Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -163,15 +163,17 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
 
-        if (MagicNumbers::TrackLatencyCompensation.Value() > 0)
+		/* HACK: try NOT pre-recording any data... just push the start time back
+        if (MagicNumbers::PreRecordingDuration.Value() > 0)
         {
             // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-			Duration<AudioSample> latencyCompensationDuration = (int64_t)(MagicNumbers::TrackLatencyCompensation.Value() * Clock::Instance().SampleRateHz);
+			Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
                 sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensationDuration,
                 latencyCompensationDuration);
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
+		*/
 
         // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
         // audio thread.

@@ -304,8 +304,12 @@
     </PreBuildEvent>
     <Link>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
-      <AdditionalDependencies>WindowsApp.lib;NowSound.lib</AdditionalDependencies>
+      <AdditionalDependencies>WindowsApp.lib;NowSoundLib.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\NowSoundLib\Release\x64</AdditionalLibraryDirectories>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
