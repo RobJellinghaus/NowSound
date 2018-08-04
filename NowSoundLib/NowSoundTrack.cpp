@@ -231,7 +231,7 @@ namespace NowSound
             + (totalBeats.Value() - nonFractionalBeats.Value()));
     }
 
-    NowSoundTrackInfo NowSoundTrack::Info() const
+    NowSoundTrackInfo NowSoundTrack::Info() 
     {
         Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
         Time<AudioSample> startTime = this->_audioStream.InitialTime();

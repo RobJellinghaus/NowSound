@@ -50,5 +50,8 @@ namespace NowSound
 
 		// Amount of time over which to measure volume.
 		static const ContinuousDuration<Second> RecentVolumeDuration;
+
+		// How many input devices?
+		static const int InputDeviceCount;
     };
 }

@@ -12,6 +12,7 @@
 
 #include "BufferAllocator.h"
 #include "Check.h"
+#include "Histogram.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "SliceStream.h"
@@ -69,7 +70,7 @@ namespace NowSound
 
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        TrackId CreateRecordingTrackAsync();
+		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
     private: // constructor and internal implementations
         // construct a graph, but do not yet initialize it
@@ -111,7 +112,7 @@ namespace NowSound
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 
-        // The default input device. TODO: input device selection.
+        // The input device(s?).
         winrt::Windows::Media::Audio::AudioDeviceInputNode _defaultInputDevice;
 
         // This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
@@ -139,6 +140,9 @@ namespace NowSound
 
         // Adapter to record incoming data into _incomingAudioStream.
         StreamRecorder<AudioSample, float> _incomingAudioStreamRecorder;
+
+		// Histograms on the input device(s?) -- one per channel (stereo input gets two histograms).
+		std::vector<std::unique_ptr<Histogram>> _incomingAudioHistograms;
 
     public: // Implementation methods used from elsewhere in the library
         // The static instance of the graph.  We may eventually have multiple.

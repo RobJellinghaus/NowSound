@@ -8,8 +8,9 @@
 
 using namespace NowSound;
 
-// All values should work for this down to small multiples of a single audio frame, but one second is a
-// nice round number, especially for hearing buffer clicks or other driver glitches.
+// This is a balance between small (lower latency but more risk of crackling if AudioGraph is moody)
+// and large (lower CPU, but more latency in some situations... at least I'm pretty sure... need to
+// confirm this)
 const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
 
 // exactly one beat per second for initial testing
@@ -21,10 +22,11 @@ const int MagicNumbers::BeatsPerMeasure{ 4 };
 // Stereo
 const int MagicNumbers::AudioChannelCount{ 2 };
 
-// 8 preallocated buffers
+// Could be much larger but not really any reason to
 const int MagicNumbers::InitialAudioBufferCount{ 8 };
 
-// Duration of each audio buffer in seconds
+// 1 second is a reasonable length for each preallocated audio buffer; not too much fragmentation (not that it matters,
+// each 1 sec buffer is only 384KB)
 const Duration<Second> MagicNumbers::AudioBufferSizeInSeconds{ 1 };
 
 // 1/5 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
@@ -37,5 +39,6 @@ const int MagicNumbers::DebugLogCapacity{ 1000 };
 // (due to losing foreground execution status, for example)
 const int MagicNumbers::AudioQuantumHistogramCapacity{ 200 };
 
-// The amount of time over which to measure volume
 const ContinuousDuration<Second> MagicNumbers::RecentVolumeDuration{ (float)0.1 };
+
+const int MagicNumbers::InputDeviceCount{ 1 };

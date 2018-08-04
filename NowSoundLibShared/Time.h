@@ -46,7 +46,6 @@ namespace NowSound
 
         Time(int64_t value) : _value(value)
         {
-            Check(value >= 0); // no negative times!!!
         }
 
         int64_t Value() const { return _value; }

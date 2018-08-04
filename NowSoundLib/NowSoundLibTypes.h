@@ -32,7 +32,9 @@ namespace NowSound
         {
             int32_t LatencyInSamples;
             int32_t SamplesPerQuantum;
-        } NowSoundGraphInfo;
+			float AudioInput0LeftVolume;
+			float AudioInput0RightVolume;
+		} NowSoundGraphInfo;
 
         // Information about the current graph time in NowSound terms.
         typedef struct NowSoundTimeInfo

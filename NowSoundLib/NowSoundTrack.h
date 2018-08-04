@@ -111,7 +111,8 @@ namespace NowSound
         Time<AudioSample> StartTime() const;
 
         // The full time info for this track (to allow just one call per track for all this info).
-        NowSoundTrackInfo Info() const;
+		// Note that this is not const because it may recalculate histograms etc. when called.
+        NowSoundTrackInfo Info();
 
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.

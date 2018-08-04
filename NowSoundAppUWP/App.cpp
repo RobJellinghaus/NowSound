@@ -132,7 +132,7 @@ struct App : ApplicationT<App>
             if (_trackState == NowSoundTrackState::TrackUninitialized)
             {
                 // we haven't started recording yet; time to do so!
-                _trackId = NowSoundGraph_CreateRecordingTrackAsync();
+                _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)0);
                 // don't initialize _trackState; that's Update's job.
                 // But do find out what time it is.
                 NowSoundTimeInfo timeInfo = NowSoundGraph_GetTimeInfo();

@@ -1,46 +1,49 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+#pragma once
+
 #include "stdint.h"
 
 #include <deque>
 
-// Simple histogram class for tracking a bounded history of data values.
-class HistogramBase
-{
-protected:
-    int _capacity;
-
-    float _max;
-    float _min;
-    float _average;
-
-    HistogramBase(int capacity) : _capacity{ capacity }, _max{}, _min{}, _average{}
-    {}
-
-public:
-    float Max() const { return _max; }
-    float Min() const { return _min; }
-    float Average() const { return _average; }
-
-    // Add a new value to this histogram.
-    // Return true if the histogram is not yet at capacity; false if it is at capacity.
-    // (More can still be added if it is at capacity, but earlier values will be dropped
-    // and max/min values must be recomputed at O(n) cost.)
-    virtual bool Add(float value) = 0;
-};
-
-// Basic implementation of HistogramBase, keeping a deque of floats.
-// TODO: possible other implementations (histogram of histograms) if scalability becomes an issue.
-class Histogram : public HistogramBase
+// Simple histogram structure for tracking statistics over a bounded set of float values.
+// Average() is always available with O(1) performance.  Max() and Min() are calculated lazily on demand.
+class Histogram
 {
 private:
-    std::deque<float> _values;
+	int _capacity;
+
+	// The possibly stale values of _min and _max (if !_minMaxKnown).
+	float _min;
+	float _max;
+
+	// The always accurate total of all values.
+	float _total;
+
+	// The always accurate average of all values.
+	// This is precomputed in order to be readable thread-safely (assuming float writes are atomic...).
+	float _average;
+
+	// If _max and _min are known to be accurate with respect to _valuesInInsertionOrder, then this is true.
+	bool _minMaxKnown;
+	
+	// This deque simply tracks the values in the order they entered the histogram.
+	std::deque<float> _valuesInInsertionOrder;
+
+	// Mutex to prevent collision between Add() and EnsureMinMaxKnown().
+	std::mutex _mutex;
+
+	// Recalculate min/max if necessary.
+	void EnsureMinMaxKnown();
 
 public:
-    Histogram(int capacity) : HistogramBase(capacity), _values{}
-    {}
+	Histogram(int capacity);
 
-    // TODO: this shouldn't be in header
-    virtual bool Add(float value);
+	float Min();
+	float Max();
+	float Average() const;
+
+	// Add a new value to this histogram.
+	virtual void Add(float value);
 };

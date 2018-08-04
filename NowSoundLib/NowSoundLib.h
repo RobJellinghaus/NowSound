@@ -74,7 +74,7 @@ namespace NowSound
 
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync();
+        __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
 
         // Interface used to invoke operations on a particular audio track.
         //
@@ -90,7 +90,7 @@ namespace NowSound
         // The current timing information for this Track.
         __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId);
 
-        // The user wishes the track to finish recording now.
+        // The user wishes the track to finish recording now, or at least when its quantized duration is reached.
         // Contractually requires State == NowSoundTrack_State.Recording.
         __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 

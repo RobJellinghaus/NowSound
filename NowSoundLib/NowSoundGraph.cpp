@@ -7,6 +7,7 @@
 
 #include "Clock.h"
 #include "GetBuffer.h"
+#include "Histogram.h"
 #include "MagicNumbers.h"
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
@@ -75,9 +76,9 @@ namespace NowSound
         NowSoundGraph::Instance()->DestroyAudioGraphAsync();
     }
 
-    TrackId NowSoundGraph_CreateRecordingTrackAsync()
+    TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId)
     {
-        return NowSoundGraph::Instance()->CreateRecordingTrackAsync();
+        return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
     }
 
     TimeSpan timeSpanFromSeconds(int seconds)
@@ -104,7 +105,8 @@ namespace NowSound
         _recorderMutex{ },
         _changingState{ false },
         _incomingAudioStream(0, MagicNumbers::AudioChannelCount, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
-        _incomingAudioStreamRecorder(&_incomingAudioStream)
+        _incomingAudioStreamRecorder(&_incomingAudioStream),
+		_incomingAudioHistograms{ }
     { }
 
     AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
@@ -144,6 +146,13 @@ namespace NowSound
 
     IAsyncAction NowSoundGraph::InitializeAsyncImpl()
     {
+		// first set up the histograms.
+		for (int i = 0; i < MagicNumbers::InputDeviceCount * MagicNumbers::AudioChannelCount; i++)
+		{
+			std::unique_ptr<Histogram> newHistogram{ new Histogram(Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
+			_incomingAudioHistograms.push_back(std::move(newHistogram));
+		}
+
         AudioGraphSettings settings(AudioRenderCategory::Media);
         settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
         settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
@@ -266,7 +275,7 @@ namespace NowSound
             (float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
     }
 
-    TrackId NowSoundGraph::CreateRecordingTrackAsync()
+    TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)
     {
         // TODO: verify not on audio graph thread
 
@@ -276,7 +285,7 @@ namespace NowSound
         TrackId id = (TrackId)((int)_trackId + 1);
         _trackId = id;
 
-        std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, AudioInputId::Input0, _incomingAudioStream));
+        std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, audioInput, _incomingAudioStream));
 
         // new tracks are created as recording; lock the _recorders collection and add this new track
         {
@@ -381,6 +390,18 @@ namespace NowSound
 		Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
 
 		Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
+
+		// update input volume histograms
+		float* dataInFloats = (float*)dataInBytes;
+		for (int i = 0; i < duration.Value(); i++)
+		{
+			for (int j = 0; j < MagicNumbers::AudioChannelCount; j++)
+			{
+				float value = dataInFloats[i * MagicNumbers::AudioChannelCount + j];
+				// add the absolute value because for volume purposes we don't want negatives to cancel positives
+				_incomingAudioHistograms[j]->Add(std::abs(value));
+			}
+		}
 
         // iterate through all active Recorders
         // note that Recorders must be added or removed only inside the audio graph
