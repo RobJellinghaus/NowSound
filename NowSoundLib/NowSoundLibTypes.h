@@ -35,10 +35,6 @@ namespace NowSound
 			// The number of samples per audio graph quantum, also reported by the graph itself.
             int32_t SamplesPerQuantum;
 
-			// Volume indicators for audio input (if any is running yet).
-			float VolumeInput0Channel0;
-			float VolumeInput0Channel1;
-
 			// The number of samples elamsed since the audio graph started.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
@@ -48,6 +44,13 @@ namespace NowSound
 			// The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
 			float BeatInMeasure;
 		} NowSoundGraphInfo;
+
+		typedef struct NowSoundInputInfo
+		{
+			// Volume for the two channels.  TODO: generalize to N channels.
+			float Channel0Volume;
+			float Channel1Volume;
+		} NowSoundInputInfo;
 
         // Information about a track's time in NowSound terms.
         typedef struct NowSoundTrackInfo
@@ -154,17 +157,21 @@ namespace NowSound
             Undefined
         };
 
-        NowSoundDeviceInfo CreateNowSoundDeviceInfo(LPWSTR id, LPWSTR name);
+        NowSoundDeviceInfo CreateNowSoundDeviceInfo(
+			LPWSTR id,
+			LPWSTR name);
 
         NowSoundGraphInfo CreateNowSoundGraphInfo(
 			int32_t latencyInSamples,
 			int32_t samplesPerQuantum,
-			float volumeInput0Channel0,
-			float volumeInput0Channel1,
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,
 			float beatInMeasure);
+
+		NowSoundInputInfo CreateNowSoundInputInfo(
+			float channel0Volume,
+			float channel1Volume);
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             int64_t startTimeInSamples,

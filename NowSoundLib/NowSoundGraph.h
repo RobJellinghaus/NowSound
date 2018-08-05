@@ -13,6 +13,7 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
+#include "NowSoundInput.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "SliceStream.h"
@@ -46,6 +47,9 @@ namespace NowSound
         // Get the graph info for the created graph.
         // Graph must be Created or Running.
         NowSoundGraphInfo Info();
+
+		// Info about the given input.
+		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
         // Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Started.
@@ -103,37 +107,18 @@ namespace NowSound
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
 
-        // The input device(s?).
-        winrt::Windows::Media::Audio::AudioDeviceInputNode _defaultInputDevice;
-
-        // This FrameOutputNode delivers the data from the (default) input device. TODO: support multiple input devices.
-        winrt::Windows::Media::Audio::AudioFrameOutputNode _inputDeviceFrameOutputNode;
-
         // The next TrackId to be allocated.
         TrackId _trackId;
 
-        // Vector of active Recorders; these are non-owning pointers borrowed from the collection of Tracks
-        // held by NowSoundTrackAPI.
-        std::vector<IRecorder<AudioSample, float>*> _recorders;
+		// The audio inputs we have.
+		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
 
-        // Mutex for the collection of recorders; taken when adding to or traversing the recorder collection.
-        std::mutex _recorderMutex;
+        // Mutex for the collection of inputs; taken when adding to or traversing the recorder collection.
+        std::mutex _audioInputsMutex;
 
         // Mutex for the state of the graph.
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
         std::mutex _stateMutex;
-
-        // Stream that buffers the last second of input audio, for latency compensation.
-        // (Not really clear why latency compensation should be needed for NowSoundApp which shouldn't really
-        // have any problematic latency... but this was needed for gesture latency compensation with Kinect,
-        // so let's at least experiment with it.)
-        BufferedSliceStream<AudioSample, float> _incomingAudioStream;
-
-        // Adapter to record incoming data into _incomingAudioStream.
-        StreamRecorder<AudioSample, float> _incomingAudioStreamRecorder;
-
-		// Histograms on the input device(s?) -- one per channel (stereo input gets two histograms).
-		std::vector<std::unique_ptr<Histogram>> _incomingAudioHistograms;
 
     public: // Implementation methods used from elsewhere in the library
         // The static instance of the graph.  We may eventually have multiple.
@@ -147,10 +132,10 @@ namespace NowSound
 #endif
 
         // The (currently singleton) AudioGraph.
-        winrt::Windows::Media::Audio::AudioGraph GetAudioGraph();
+        winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
 
         // The default audio output node.  TODO: support device selection.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode();
+        winrt::Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode() const;
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
@@ -159,5 +144,4 @@ namespace NowSound
         // A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();
     };
-
 }

@@ -302,13 +302,14 @@ struct App : ApplicationT<App>
 
             // update time info
             NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
+			NowSoundInputInfo input0Info = NowSoundGraph_InputInfo(AudioInputId::Input0);
             std::wstringstream wstr;
 			wstr << L"Time (in audio samples): " << graphInfo.TimeInSamples
 				<< std::fixed << std::setprecision(2)
 				<< L" | Beat: " << graphInfo.BeatInMeasure
 				<< L" | Total beats: " << graphInfo.ExactBeat
-				<< L" | I0C0 volume: " << graphInfo.VolumeInput0Channel0
-				<< L" | I0C1 volume: " << graphInfo.VolumeInput0Channel1;
+				<< L" | I0C0 volume: " << input0Info.Channel0Volume
+				<< L" | I0C1 volume: " << input0Info.Channel1Volume;
             _textBlockTimeInfo.Text(wstr.str());
 
             // update all buttons

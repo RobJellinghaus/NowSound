@@ -59,6 +59,10 @@ namespace NowSound
         // Graph must be Created or Running.
         __declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
+		// Get the info for the specified input.
+		// Graph must be Running.
+		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId id);
+
         // Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Started.
         __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();

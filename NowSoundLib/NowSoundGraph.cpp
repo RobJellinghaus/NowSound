@@ -36,12 +36,10 @@ namespace NowSound
 		return CreateNowSoundGraphInfo(
 			1,
 			2,
-			(float)3,
+			3,
 			(float)4,
-			5,
-			(float)6,
-			(float)7,
-			(float)8);
+			(float)5,
+			(float)6);
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
@@ -64,12 +62,17 @@ namespace NowSound
         return NowSoundGraph::Instance()->CreateAudioGraphAsync();
     }
 
-    NowSoundGraphInfo NowSoundGraph_Info()
-    {
-        return NowSoundGraph::Instance()->Info();
-    }
+	NowSoundGraphInfo NowSoundGraph_Info()
+	{
+		return NowSoundGraph::Instance()->Info();
+	}
 
-    void NowSoundGraph_StartAudioGraphAsync()
+	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
+	{
+		return NowSoundGraph::Instance()->InputInfo(audioInputId);
+	}
+
+	void NowSoundGraph_StartAudioGraphAsync()
     {
         NowSoundGraph::Instance()->StartAudioGraphAsync();
     }
@@ -106,20 +109,15 @@ namespace NowSound
         _audioAllocator{
             ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float) * MagicNumbers::AudioBufferSizeInSeconds.Value()),
             MagicNumbers::InitialAudioBufferCount },
-        _defaultInputDevice{ nullptr },
-        _inputDeviceFrameOutputNode{ nullptr },
         _trackId{ TrackId::Undefined },
-        _recorders{ },
-        _recorderMutex{ },
-        _changingState{ false },
-        _incomingAudioStream(0, MagicNumbers::AudioChannelCount, &_audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false),
-        _incomingAudioStreamRecorder(&_incomingAudioStream),
-		_incomingAudioHistograms{ }
+        _audioInputs{ },
+        _audioInputsMutex{ },
+        _changingState{ false }
     { }
 
-    AudioGraph NowSoundGraph::GetAudioGraph() { return _audioGraph; }
+    AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
-    AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() { return _deviceOutputNode; }
+    AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() const { return _deviceOutputNode; }
 
     BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return &_audioAllocator; }
 
@@ -159,13 +157,6 @@ namespace NowSound
 			MagicNumbers::InitialBeatsPerMinute,
 			MagicNumbers::BeatsPerMeasure,
 			MagicNumbers::AudioChannelCount);
-
-		// Now that we have a clock, we can set up the histograms.
-		for (int i = 0; i < MagicNumbers::InputDeviceCount * MagicNumbers::AudioChannelCount; i++)
-		{
-			std::unique_ptr<Histogram> newHistogram{ new Histogram(Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
-			_incomingAudioHistograms.push_back(std::move(newHistogram));
-		}
 
         AudioGraphSettings settings(AudioRenderCategory::Media);
         settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
@@ -215,27 +206,19 @@ namespace NowSound
 
         _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
-        // Create a device input node
-        CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await
-            _audioGraph.CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
+		// Add the default audio input (don't need to lock yet since not *quite* running).
+		std::unique_ptr<NowSoundInput> input(new NowSoundInput(this, AudioInputId::Input0, &_audioAllocator));
+		_audioInputs.emplace_back(std::move(input));
+		// now that we've moved it, take a new ref to it inside the collection
+		std::unique_ptr<NowSoundInput>& inputRef = _audioInputs[0];
 
-        auto deviceInputNodeResultStatus = deviceInputNodeResult.Status();
-        if (deviceInputNodeResultStatus != AudioDeviceNodeCreationStatus::Success)
-        {
-            // Cannot create device input node
-            Check(false);
-            return;
-        }
+		_audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
+		{
+			HandleIncomingAudio();
+		});
 
-        _defaultInputDevice = deviceInputNodeResult.DeviceInputNode();
-        _inputDeviceFrameOutputNode = _audioGraph.CreateFrameOutputNode();
-
-        _defaultInputDevice.AddOutgoingConnection(_inputDeviceFrameOutputNode);
-
-        _audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
-        {
-            HandleIncomingAudio();
-        });
+		// now asynchronously complete initializing the audio input
+		co_await inputRef->InitializeAsync();
 
         ChangeState(NowSoundGraphState::GraphCreated);
     }
@@ -250,16 +233,9 @@ namespace NowSound
 		ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
 		int64_t completeBeats = (int64_t)durationBeats.Value();
 
-		const std::unique_ptr<Histogram>& input0Channel0 = _incomingAudioHistograms[0];
-		const std::unique_ptr<Histogram>& input0Channel1 = _incomingAudioHistograms[1];
-		float input0Channel0Volume = input0Channel0->Average();
-		float input0Channel1Volume = input0Channel1->Average();
-
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
 			_audioGraph.LatencyInSamples(),
 			_audioGraph.SamplesPerQuantum(),
-			input0Channel0Volume,
-			input0Channel1Volume,
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),
@@ -268,14 +244,21 @@ namespace NowSound
 		return graphInfo;
     }
 
+	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
+	{
+		Check(_audioGraphState >= NowSoundGraphState::GraphRunning);
+		Check(audioInputId >= 0);
+		Check(audioInputId < _audioInputs.size());
+
+		std::unique_ptr<NowSoundInput>& input = _audioInputs[(int)audioInputId];
+		return input->Info();
+	}
+
     void NowSoundGraph::StartAudioGraphAsync()
     {
         // TODO: verify not on audio graph thread
 
         PrepareToChangeState(NowSoundGraphState::GraphCreated);
-
-        // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
-        _recorders.push_back(&_incomingAudioStreamRecorder);
 
         // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
         _audioGraph.Start();
@@ -288,25 +271,17 @@ namespace NowSound
     TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)
     {
         // TODO: verify not on audio graph thread
-
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
+		Check(audioInput >= 0);
+		Check(audioInput < _audioInputs.size());
 
         // by construction this will be greater than TrackId::Undefined
         TrackId id = (TrackId)((int)_trackId + 1);
         _trackId = id;
 
-        std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, audioInput, _incomingAudioStream));
+		_audioInputs[(int)audioInput]->CreateRecordingTrack(id);
 
-        // new tracks are created as recording; lock the _recorders collection and add this new track
-        {
-            std::lock_guard<std::mutex> guard(_recorderMutex);
-            _recorders.push_back(newTrack.get());
-        }
-
-        // move the new track over to the collection of tracks in NowSoundTrackAPI
-        NowSoundTrack::AddTrack(id, std::move(newTrack));
-
-        return id;
+		return id;
     }
 
     IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
@@ -355,89 +330,9 @@ namespace NowSound
 
     void NowSoundGraph::HandleIncomingAudio()
     {
-        AudioFrame frame = _inputDeviceFrameOutputNode.GetFrame();
-
-        uint8_t* dataInBytes{};
-        uint32_t capacityInBytes{};
-
-        // OMG KENNY KERR WINS AGAIN:
-        // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-        Windows::Media::AudioBuffer buffer(frame.LockBuffer(Windows::Media::AudioBufferAccessMode::Read));
-        IMemoryBufferReference reference(buffer.CreateReference());
-        winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-        check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
-
-        if (capacityInBytes == 0)
-        {
-            // we don't count zero-byte frames... and why do they ever happen???
-            return;
-        }
-
-        // Must be multiple of channels * sizeof(float)
-        int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
-        Check((capacityInBytes & (sampleSizeInBytes - 1)) == 0);
-
-        uint32_t bufferStart = 0;
-        if (Clock::Instance().Now().Value() == 0)
-        {
-            // if maxCapacityEncountered is greater than the audio graph buffer size, 
-            // then the audio graph decided to give us a big backload of buffer content
-            // as its first callback.  Not sure why it does this, but we don't want it,
-            // so take only the tail of the buffer.
-            uint32_t latencyInSamples = ((uint32_t)_audioGraph.LatencyInSamples() * sampleSizeInBytes);
-            if (latencyInSamples == 0)
-            {
-                // sorry audiograph, don't really believe you when you say zero latency.
-                latencyInSamples = (int)(Clock::SampleRateHz * MagicNumbers::AudioFrameLengthSeconds.Value());
-            }
-            if (capacityInBytes > latencyInSamples)
-            {
-                bufferStart = capacityInBytes - (uint32_t)(_audioGraph.LatencyInSamples() * sampleSizeInBytes);
-                capacityInBytes = (uint32_t)(_audioGraph.LatencyInSamples() * sampleSizeInBytes);
-            }
-        }
-
-		Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
-
-		Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
-
-		// update input volume histograms
-		float* dataInFloats = (float*)dataInBytes;
-		for (int i = 0; i < duration.Value(); i++)
+		for (std::unique_ptr<NowSoundInput>& input : _audioInputs)
 		{
-			for (int j = 0; j < MagicNumbers::AudioChannelCount; j++)
-			{
-				float value = dataInFloats[i * MagicNumbers::AudioChannelCount + j];
-				// add the absolute value because for volume purposes we don't want negatives to cancel positives
-				_incomingAudioHistograms[j]->Add(std::abs(value));
-			}
+			input->HandleIncomingAudio();
 		}
-
-        // iterate through all active Recorders
-        // note that Recorders must be added or removed only inside the audio graph
-        // (e.g. QuantumStarted or FrameInputAvailable)
-        std::vector<IRecorder<AudioSample, float>*> _completedRecorders{};
-        {
-            std::lock_guard<std::mutex> guard(_recorderMutex);
-
-            // Give the new audio to each Recorder, collecting the ones that are done.
-            for (IRecorder<AudioSample, float>* recorder : _recorders)
-            {
-                bool stillRecording =
-                    recorder->Record(duration, (float*)(dataInBytes + bufferStart));
-
-                if (!stillRecording)
-                {
-                    _completedRecorders.push_back(recorder);
-                }
-            }
-
-            // Now remove all the done ones.
-            for (IRecorder<AudioSample, float>* completedRecorder : _completedRecorders)
-            {
-                // not optimally efficient but we will only ever have one or two completed per incoming audio frame
-                _recorders.erase(std::find(_recorders.begin(), _recorders.end(), completedRecorder));
-            }
-        }
     }
 }
