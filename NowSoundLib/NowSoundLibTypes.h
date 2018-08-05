@@ -30,24 +30,24 @@ namespace NowSound
         // Information about an audio graph.
         typedef struct NowSoundGraphInfo
         {
+			// The latency of the graph in samples, as reported by the graph itself.
             int32_t LatencyInSamples;
+			// The number of samples per audio graph quantum, also reported by the graph itself.
             int32_t SamplesPerQuantum;
-			float AudioInput0LeftVolume;
-			float AudioInput0RightVolume;
-		} NowSoundGraphInfo;
 
-        // Information about the current graph time in NowSound terms.
-        typedef struct NowSoundTimeInfo
-        {
-            // The number of samples elamsed since the audio graph started.
-            int64_t TimeInSamples;
-            // The exact current beat (including fractional part; truncate to get integral beat count).
-            float ExactBeat;
-            // The current BPM of the graph.
-            float BeatsPerMinute;
-            // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
-            float BeatInMeasure;
-        } NowSoundTimeInfo;
+			// Volume indicators for audio input (if any is running yet).
+			float VolumeInput0Channel0;
+			float VolumeInput0Channel1;
+
+			// The number of samples elamsed since the audio graph started.
+			int64_t TimeInSamples;
+			// The exact current beat (including fractional part; truncate to get integral beat count).
+			float ExactBeat;
+			// The current BPM of the graph.
+			float BeatsPerMinute;
+			// The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
+			float BeatInMeasure;
+		} NowSoundGraphInfo;
 
         // Information about a track's time in NowSound terms.
         typedef struct NowSoundTrackInfo
@@ -156,9 +156,15 @@ namespace NowSound
 
         NowSoundDeviceInfo CreateNowSoundDeviceInfo(LPWSTR id, LPWSTR name);
 
-        NowSoundGraphInfo CreateNowSoundGraphInfo(int32_t latencyInSamples, int32_t samplesPerQuantum);
-
-        NowSoundTimeInfo CreateNowSoundTimeInfo(int64_t timeInSamples, float exactBeat, float beatsPerMinute, float beatInMeasure);
+        NowSoundGraphInfo CreateNowSoundGraphInfo(
+			int32_t latencyInSamples,
+			int32_t samplesPerQuantum,
+			float volumeInput0Channel0,
+			float volumeInput0Channel1,
+			int64_t timeInSamples,
+			float exactBeat,
+			float beatsPerMinute,
+			float beatInMeasure);
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             int64_t startTimeInSamples,

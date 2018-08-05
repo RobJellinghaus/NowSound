@@ -29,12 +29,7 @@ namespace NowSound
         // the method transitions the graph to once the asynchronous action is complete.
         // TODO: consider having some separate mutual exclusion to prevent multiple concurrent methods
         // from firing (don't want the graph to, e.g., get started twice in a race).
-        NowSoundGraphState GetGraphState();
-
-        // If this returns true, the graph is currently in an asynchronous activity that is not yet complete.
-        // The graph should be polled until this becomes false, at which time GetGraphState() will be updated.
-        // All methods which change graph state have an implicit precondition that this method returns false.
-        bool GetGraphChangingState();
+        NowSoundGraphState State();
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
@@ -50,15 +45,11 @@ namespace NowSound
 
         // Get the graph info for the created graph.
         // Graph must be Created or Running.
-        NowSoundGraphInfo GetGraphInfo();
+        NowSoundGraphInfo Info();
 
         // Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Started.
         void StartAudioGraphAsync();
-
-        // Get the time of the created graph.
-        // Graph must be Running.
-        NowSoundTimeInfo GetTimeInfo();
 
         // Play a user-selected sound file.
         // Graph must be Started.

@@ -31,9 +31,22 @@ using namespace Windows::Storage::Pickers;
 
 namespace NowSound
 {
-    NowSoundGraphState NowSoundGraph_GetGraphState()
+	__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo()
+	{
+		return CreateNowSoundGraphInfo(
+			1,
+			2,
+			(float)3,
+			(float)4,
+			5,
+			(float)6,
+			(float)7,
+			(float)8);
+	}
+
+	NowSoundGraphState NowSoundGraph_State()
     {
-        return NowSoundGraph::Instance()->GetGraphState();
+        return NowSoundGraph::Instance()->State();
     }
 
     void NowSoundGraph_InitializeAsync()
@@ -51,19 +64,14 @@ namespace NowSound
         return NowSoundGraph::Instance()->CreateAudioGraphAsync();
     }
 
-    NowSoundGraphInfo NowSoundGraph_GetGraphInfo()
+    NowSoundGraphInfo NowSoundGraph_Info()
     {
-        return NowSoundGraph::Instance()->GetGraphInfo();
+        return NowSoundGraph::Instance()->Info();
     }
 
     void NowSoundGraph_StartAudioGraphAsync()
     {
         NowSoundGraph::Instance()->StartAudioGraphAsync();
-    }
-
-    NowSoundTimeInfo NowSoundGraph_GetTimeInfo()
-    {
-        return NowSoundGraph::Instance()->GetTimeInfo();
     }
 
     void NowSoundGraph_PlayUserSelectedSoundFileAsync()
@@ -131,7 +139,7 @@ namespace NowSound
         _audioGraphState = newState;
     }
 
-    NowSoundGraphState NowSoundGraph::GetGraphState()
+    NowSoundGraphState NowSoundGraph::State()
     {
         std::lock_guard<std::mutex> guard(_stateMutex);
         return _audioGraphState;
@@ -146,7 +154,13 @@ namespace NowSound
 
     IAsyncAction NowSoundGraph::InitializeAsyncImpl()
     {
-		// first set up the histograms.
+		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
+		Clock::Initialize(
+			MagicNumbers::InitialBeatsPerMinute,
+			MagicNumbers::BeatsPerMeasure,
+			MagicNumbers::AudioChannelCount);
+
+		// Now that we have a clock, we can set up the histograms.
 		for (int i = 0; i < MagicNumbers::InputDeviceCount * MagicNumbers::AudioChannelCount; i++)
 		{
 			std::unique_ptr<Histogram> newHistogram{ new Histogram(Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
@@ -189,7 +203,7 @@ namespace NowSound
 
     IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
     {
-        // Create a device output node
+		// Create a device output node
         CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
 
         if (deviceOutputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
@@ -226,14 +240,32 @@ namespace NowSound
         ChangeState(NowSoundGraphState::GraphCreated);
     }
 
-    NowSoundGraphInfo NowSoundGraph::GetGraphInfo()
+    NowSoundGraphInfo NowSoundGraph::Info()
     {
         // TODO: verify not on audio graph thread
 
         Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
-        NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(_audioGraph.LatencyInSamples(), _audioGraph.SamplesPerQuantum());
-        return graphInfo; // TODO: why does this fail in Holofunk with "cannot write location 0x0000000000"???)
+		Time<AudioSample> now = Clock::Instance().Now();
+		ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
+		int64_t completeBeats = (int64_t)durationBeats.Value();
+
+		const std::unique_ptr<Histogram>& input0Channel0 = _incomingAudioHistograms[0];
+		const std::unique_ptr<Histogram>& input0Channel1 = _incomingAudioHistograms[1];
+		float input0Channel0Volume = input0Channel0->Average();
+		float input0Channel1Volume = input0Channel1->Average();
+
+		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
+			_audioGraph.LatencyInSamples(),
+			_audioGraph.SamplesPerQuantum(),
+			input0Channel0Volume,
+			input0Channel1Volume,
+			now.Value(),
+			durationBeats.Value(),
+			Clock::Instance().BeatsPerMinute(),
+			(float)(completeBeats % Clock::Instance().BeatsPerMeasure())
+		);
+		return graphInfo;
     }
 
     void NowSoundGraph::StartAudioGraphAsync()
@@ -241,12 +273,6 @@ namespace NowSound
         // TODO: verify not on audio graph thread
 
         PrepareToChangeState(NowSoundGraphState::GraphCreated);
-
-        // MAKE THE CLOCK NOW.
-        Clock::Initialize(
-			MagicNumbers::InitialBeatsPerMinute, 
-			MagicNumbers::BeatsPerMeasure, 
-			MagicNumbers::AudioChannelCount);
 
         // Add the input stream recorder (don't need to lock _recorders quiiiite yet...)
         _recorders.push_back(&_incomingAudioStreamRecorder);
@@ -257,22 +283,6 @@ namespace NowSound
         // As of now, we will start getting HandleIncomingAudio() callbacks.
 
         ChangeState(NowSoundGraphState::GraphRunning);
-    }
-
-    NowSoundTimeInfo NowSoundGraph::GetTimeInfo()
-    {
-        // TODO: verify not on audio graph thread
-
-        Check(_audioGraphState == NowSoundGraphState::GraphRunning);
-
-        Time<AudioSample> now = Clock::Instance().Now();
-		ContinuousDuration<Beat> durationBeats = Clock::Clock::Instance().TimeToBeats(now);
-        int64_t completeBeats = (int64_t)durationBeats.Value();
-        return CreateNowSoundTimeInfo(
-            now.Value(),
-            durationBeats.Value(),
-            Clock::Instance().BeatsPerMinute(),
-            (float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
     }
 
     TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)

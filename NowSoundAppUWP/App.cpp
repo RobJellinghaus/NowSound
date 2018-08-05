@@ -7,6 +7,7 @@
 
 #include <string>
 #include <sstream>
+#include <iomanip>
 
 using namespace NowSound;
 
@@ -135,8 +136,8 @@ struct App : ApplicationT<App>
                 _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)0);
                 // don't initialize _trackState; that's Update's job.
                 // But do find out what time it is.
-                NowSoundTimeInfo timeInfo = NowSoundGraph_GetTimeInfo();
-                _recordingStartTime = timeInfo.TimeInSamples;
+                NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
+                _recordingStartTime = graphInfo.TimeInSamples;
             }
             else if (_trackState == NowSoundTrackState::TrackRecording)
             {
@@ -209,7 +210,7 @@ struct App : ApplicationT<App>
     void UpdateStateLabel()
     {
         std::wstring str(AudioGraphStateString);
-        str.append(StateLabel(NowSoundGraph_GetGraphState()));
+        str.append(StateLabel(NowSoundGraph_State()));
         _textBlockGraphStatus.Text(str);
     }
 
@@ -223,15 +224,15 @@ struct App : ApplicationT<App>
 
         // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
         // so we use polling in this example -- and to determine how it actually works in modern C++.
-        NowSoundGraphState currentState = NowSoundGraph_GetGraphState();
+        NowSoundGraphState currentState = NowSoundGraph_State();
         // While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
-        while (expectedState != NowSoundGraph_GetGraphState()
+        while (expectedState != NowSoundGraph_State()
             && winrt::clock::now() < timeoutTime)
         {
             // wait in intervals of 1/1000 sec
             co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.001f)));
 
-            currentState = NowSoundGraph_GetGraphState();
+            currentState = NowSoundGraph_State();
         }
 
         // switch to UI thread to update state label, then back to background
@@ -300,11 +301,14 @@ struct App : ApplicationT<App>
             co_await _uiThread;
 
             // update time info
-            NowSoundTimeInfo timeInfo = NowSoundGraph_GetTimeInfo();
+            NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
             std::wstringstream wstr;
-            wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
-                << L" | Beat: " << timeInfo.BeatInMeasure
-                << L" | Total beats: " << timeInfo.ExactBeat;
+			wstr << L"Time (in audio samples): " << graphInfo.TimeInSamples
+				<< std::fixed << std::setprecision(2)
+				<< L" | Beat: " << graphInfo.BeatInMeasure
+				<< L" | Total beats: " << graphInfo.ExactBeat
+				<< L" | I0C0 volume: " << graphInfo.VolumeInput0Channel0
+				<< L" | I0C1 volume: " << graphInfo.VolumeInput0Channel1;
             _textBlockTimeInfo.Text(wstr.str());
 
             // update all buttons
@@ -335,7 +339,7 @@ fire_and_forget App::LaunchedAsync()
 
     co_await WaitForGraphState(NowSoundGraphState::GraphCreated, timeSpanFromSeconds(timeoutInSeconds));
 
-    NowSoundGraphInfo graphInfo = NowSoundGraph_GetGraphInfo();
+    NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
 
     co_await _uiThread;
     std::wstringstream wstr;

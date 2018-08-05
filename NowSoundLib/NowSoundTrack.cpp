@@ -161,7 +161,7 @@ namespace NowSound
         // TODO: thread contracts.
 
         // should only ever call this when graph is fully up and running
-        Check(NowSoundGraph::Instance()->GetGraphState() == NowSoundGraphState::GraphRunning);
+        Check(NowSoundGraph::Instance()->State() == NowSoundGraphState::GraphRunning);
 
 		/* HACK: try NOT pre-recording any data... just push the start time back
         if (MagicNumbers::PreRecordingDuration.Value() > 0)
