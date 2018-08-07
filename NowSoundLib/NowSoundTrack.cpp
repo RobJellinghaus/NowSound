@@ -109,7 +109,7 @@ namespace NowSound
 
     void NowSoundTrack::DeleteTrack(TrackId trackId)
     {
-        Check(trackId >= TrackId::Undefined && trackId <= s_tracks.size());
+        Check(trackId >= TrackId::TrackIdUndefined && trackId <= s_tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
         s_tracks[trackId] = std::unique_ptr<NowSoundTrack>{};
@@ -125,7 +125,7 @@ namespace NowSound
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
-        Check(id > TrackId::Undefined);
+        Check(id > TrackId::TrackIdUndefined);
         NowSoundTrack* value = s_tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;

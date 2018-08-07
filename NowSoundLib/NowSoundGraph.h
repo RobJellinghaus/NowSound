@@ -7,6 +7,7 @@
 
 #include <future>
 #include <vector>
+#include <string>
 
 #include "stdint.h"
 
@@ -23,7 +24,8 @@ namespace NowSound
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
-    public: // API methods
+    public: // API methods called by the NowSoundGraphAPI P/Invoke bridge methods
+
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is one of the only two methods that may be called in any state whatoever.
         // All other methods declare which state the graph must be in to call the method, and the state
@@ -36,23 +38,30 @@ namespace NowSound
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
         void InitializeAsync();
 
-        // Get the device info for the default render device.
-        // Graph must not be Uninitialized or InError.
-        NowSoundDeviceInfo GetDefaultRenderDeviceInfo();
-
-        // Create the audio graph.
-        // Graph must be Initialized.  On completion, graph becomes Created.
-        void CreateAudioGraphAsync();
-
         // Get the graph info for the created graph.
-        // Graph must be Created or Running.
+        // Graph must be at least Initialized.
         NowSoundGraphInfo Info();
 
+		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
+		BSTR InputDeviceId(int deviceIndex);
+
+		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
+		BSTR InputDeviceName(int deviceIndex);
+
+		// Create the given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
+		// Note that the method is truly async in that it finishes device creation after the method returns.
+		AudioInputId CreateInputDeviceAsync(int deviceIndex);
+
+		// Create the audio graph.
+		// Graph must be Initialized.  On completion, graph becomes Created.
+		void CreateAudioGraphAsync();
+
 		// Info about the given input.
+		// Graph must be Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
         // Start the audio graph.
-        // Graph must be Created.  On completion, graph becomes Started.
+        // Graph must be Created.  On completion, graph becomes Running.
         void StartAudioGraphAsync();
 
         // Play a user-selected sound file.
@@ -67,14 +76,18 @@ namespace NowSound
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
-    private: // constructor and internal implementations
+    private: // Constructor and internal implementations
+
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
 
-        // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
+		// Async helper method, to work around compiler bug with lambdas which await and capture this.
+		winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
 
-        // Async helper method, to work around compiler bug with lambdas which await and capture this.
+		// Async helper method, to work around compiler bug with lambdas which await and capture this.
+		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsyncImpl(int deviceIndex);
+
+		// Async helper method, to work around compiler bug with lambdas which await and capture this.
         winrt::Windows::Foundation::IAsyncAction CreateAudioGraphAsyncImpl();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
@@ -89,8 +102,9 @@ namespace NowSound
         void ChangeState(NowSoundGraphState newState);
 
     private: // instance variables
+
         // The singleton (for now) graph.
-        static std::unique_ptr<NowSoundGraph> s_instance;
+        static ::std::unique_ptr<NowSoundGraph> s_instance;
 
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;
@@ -103,6 +117,9 @@ namespace NowSound
 
         // The default output device. TODO: support multiple output devices.
         winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
+
+		// The AudioGraph DeviceInformation structures for all input devices.
+		::std::vector<winrt::Windows::Devices::Enumeration::DeviceInformation> _inputDeviceInfos;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         BufferAllocator<float> _audioAllocator;
@@ -121,6 +138,7 @@ namespace NowSound
         std::mutex _stateMutex;
 
     public: // Implementation methods used from elsewhere in the library
+
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();
 

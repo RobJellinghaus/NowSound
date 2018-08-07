@@ -26,10 +26,11 @@ namespace NowSound
 	NowSoundInput::NowSoundInput(
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
+		AudioDeviceInputNode inputNode,
 		BufferAllocator<float>* audioAllocator)
 		: _nowSoundGraph{ nowSoundGraph },
 		_audioInputId{ inputId },
-		_inputDevice{ nullptr },
+		_inputDevice{ inputNode },
 		_frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
 		_recorders{},
 		_incomingAudioStream{ 0, MagicNumbers::AudioChannelCount, audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false },

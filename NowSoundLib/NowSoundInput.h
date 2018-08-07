@@ -60,6 +60,7 @@ namespace NowSound
 		NowSoundInput(
 			NowSoundGraph* audioGraph,
 			AudioInputId audioInputId,
+			winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
 			BufferAllocator<float>* audioAllocator);
 
 		// Initialize this NowSoundInput by actually creating the requisite device nodes (an async operation).

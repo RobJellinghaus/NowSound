@@ -19,15 +19,16 @@ using namespace std::chrono;
 using namespace winrt;
 
 using namespace Windows::ApplicationModel::Core;
+using namespace Windows::Devices::Enumeration;
 using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
 using namespace Windows::Media;
 using namespace Windows::Media::Audio;
 using namespace Windows::Media::Render;
 using namespace Windows::System;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
+using namespace Windows::UI::Core;
+using namespace Windows::UI::Composition;
 
 namespace NowSound
 {
@@ -37,9 +38,10 @@ namespace NowSound
 			1,
 			2,
 			3,
-			(float)4,
+			4,
 			(float)5,
-			(float)6);
+			(float)6,
+			(float)7);
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
@@ -52,20 +54,30 @@ namespace NowSound
         NowSoundGraph::Instance()->InitializeAsync();
     }
 
-    NowSoundDeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo()
-    {
-        return NowSoundGraph::Instance()->GetDefaultRenderDeviceInfo();
-    }
-
-    void NowSoundGraph_CreateAudioGraphAsync()
-    {
-        return NowSoundGraph::Instance()->CreateAudioGraphAsync();
-    }
-
 	NowSoundGraphInfo NowSoundGraph_Info()
 	{
 		return NowSoundGraph::Instance()->Info();
 	}
+
+	BSTR NowSoundGraph_InputDeviceId(int deviceIndex)
+	{
+		return NowSoundGraph::Instance()->InputDeviceId(deviceIndex);
+	}
+
+	BSTR NowSoundGraph_InputDeviceName(int deviceIndex)
+	{
+		return NowSoundGraph::Instance()->InputDeviceName(deviceIndex);
+	}
+
+	AudioInputId NowSoundGraph_CreateInputDeviceAsync(int deviceIndex)
+	{
+		return NowSoundGraph::Instance()->CreateInputDeviceAsync(deviceIndex);
+	}
+
+	void NowSoundGraph_CreateAudioGraphAsync()
+    {
+        NowSoundGraph::Instance()->CreateAudioGraphAsync();
+    }
 
 	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
 	{
@@ -109,7 +121,7 @@ namespace NowSound
         _audioAllocator{
             ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float) * MagicNumbers::AudioBufferSizeInSeconds.Value()),
             MagicNumbers::InitialAudioBufferCount },
-        _trackId{ TrackId::Undefined },
+        _trackId{ TrackId::TrackIdUndefined },
         _audioInputs{ },
         _audioInputsMutex{ },
         _changingState{ false }
@@ -150,41 +162,99 @@ namespace NowSound
         create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
     }
 
-    IAsyncAction NowSoundGraph::InitializeAsyncImpl()
-    {
+	IAsyncAction NowSoundGraph::InitializeAsyncImpl()
+	{
 		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
 		Clock::Initialize(
 			MagicNumbers::InitialBeatsPerMinute,
 			MagicNumbers::BeatsPerMeasure,
 			MagicNumbers::AudioChannelCount);
 
-        AudioGraphSettings settings(AudioRenderCategory::Media);
-        settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
-        settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
-        // leaving PrimaryRenderDevice uninitialized will use default output device
-        CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
+		AudioGraphSettings settings(AudioRenderCategory::Media);
+		settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
+		settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
+		// leaving PrimaryRenderDevice uninitialized will use default output device
+		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
 
-        if (result.Status() != AudioGraphCreationStatus::Success)
-        {
-            // Cannot create graph
-            Check(false);
-            return;
-        }
+		if (result.Status() != AudioGraphCreationStatus::Success)
+		{
+			// Cannot create graph
+			Check(false);
+			return;
+		}
 
-        // NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
-        // this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
-        // Probable compiler bug?  TODO: replicate the bug in test app.
-        _audioGraph = result.Graph();
+		// NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
+		// this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
+		// Probable compiler bug?  TODO: replicate the bug in test app.
+		_audioGraph = result.Graph();
 
-        ChangeState(NowSoundGraphState::GraphInitialized);
-    }
+		// save the local across the co_await statement
+		std::vector<DeviceInformation>& inputDeviceInfoRef = _inputDeviceInfos;
 
-    NowSoundDeviceInfo NowSoundGraph::GetDefaultRenderDeviceInfo()
-    {
-        return CreateNowSoundDeviceInfo(nullptr, nullptr);
-    }
+		DeviceInformationCollection devices =
+			co_await DeviceInformation::FindAllAsync(Windows::Media::Devices::MediaDevice::GetAudioCaptureSelector());
 
-    void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
+		// Translate all into _inputDeviceInfo entries
+		for (Windows::Devices::Enumeration::DeviceInformation device : devices)
+		{
+			inputDeviceInfoRef.push_back(device);
+		}
+
+		ChangeState(NowSoundGraphState::GraphInitialized);
+	}
+
+	BSTR NowSoundGraph::InputDeviceId(int deviceIndex)
+	{
+		BSTR returnedBstr = ::SysAllocString(_inputDeviceInfos[deviceIndex].Id().c_str());
+		return returnedBstr;
+	}
+
+	BSTR NowSoundGraph::InputDeviceName(int deviceIndex)
+	{
+		BSTR returnedBstr = ::SysAllocString(_inputDeviceInfos[deviceIndex].Name().c_str());
+		return returnedBstr;
+	}
+
+	AudioInputId NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
+	{
+		std::lock_guard<std::mutex> guard(_audioInputsMutex);
+		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
+
+		// hope no possibility of reordering between these tasks... just don't race to create audio input devices OK???
+		// (yes there are various ways to serialize this if it is REALLY NECESSARY)
+		create_task([this, deviceIndex]() -> IAsyncAction { co_await CreateInputDeviceAsyncImpl(deviceIndex); });
+
+		return nextAudioInputId;
+	}
+
+	IAsyncAction NowSoundGraph::CreateInputDeviceAsyncImpl(int deviceIndex)
+	{
+		// Create a device input node
+		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
+			Windows::Media::Capture::MediaCategory::Media,
+			_audioGraph.EncodingProperties(),
+			_inputDeviceInfos[deviceIndex]);
+
+		if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
+		{
+			// Cannot create device output node
+			Check(false);
+			return;
+		}
+
+		std::lock_guard<std::mutex> guard(_audioInputsMutex);
+		AudioDeviceInputNode inputNode = deviceInputNodeResult.DeviceInputNode();
+
+		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
+
+		std::unique_ptr<NowSoundInput> input(new NowSoundInput(this, nextAudioInputId, inputNode, &_audioAllocator));
+		_audioInputs.emplace_back(std::move(input));
+
+		// now asynchronously complete initializing the audio input
+		co_await input->InitializeAsync();
+	}
+
+	void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
     {
         // TODO: verify not on audio graph thread
 
@@ -207,18 +277,11 @@ namespace NowSound
         _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
 		// Add the default audio input (don't need to lock yet since not *quite* running).
-		std::unique_ptr<NowSoundInput> input(new NowSoundInput(this, AudioInputId::Input0, &_audioAllocator));
-		_audioInputs.emplace_back(std::move(input));
-		// now that we've moved it, take a new ref to it inside the collection
-		std::unique_ptr<NowSoundInput>& inputRef = _audioInputs[0];
 
 		_audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
 		{
 			HandleIncomingAudio();
 		});
-
-		// now asynchronously complete initializing the audio input
-		co_await inputRef->InitializeAsync();
 
         ChangeState(NowSoundGraphState::GraphCreated);
     }
@@ -227,7 +290,7 @@ namespace NowSound
     {
         // TODO: verify not on audio graph thread
 
-        Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
+        Check(_audioGraphState >= NowSoundGraphState::GraphInitialized);
 
 		Time<AudioSample> now = Clock::Instance().Now();
 		ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
@@ -236,6 +299,7 @@ namespace NowSound
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
 			_audioGraph.LatencyInSamples(),
 			_audioGraph.SamplesPerQuantum(),
+			_inputDeviceInfos.size(),
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),
@@ -330,6 +394,9 @@ namespace NowSound
 
     void NowSoundGraph::HandleIncomingAudio()
     {
+		// ensure no interference from starting a recording, for the duration of the quantum
+		std::lock_guard<std::mutex> guard(_audioInputsMutex);
+
 		for (std::unique_ptr<NowSoundInput>& input : _audioInputs)
 		{
 			input->HandleIncomingAudio();

@@ -7,17 +7,10 @@
 
 namespace NowSound
 {
-    NowSoundDeviceInfo CreateNowSoundDeviceInfo(LPWSTR id, LPWSTR name)
-    {
-        NowSoundDeviceInfo info;
-        info.Id = id;
-        info.Name = name;
-        return info;
-    }
-
     NowSoundGraphInfo CreateNowSoundGraphInfo(
 		int32_t latencyInSamples,
 		int32_t samplesPerQuantum,
+		int32_t inputDeviceCount,
 		int64_t timeInSamples,
 		float exactBeat,
 		float beatsPerMinute,
@@ -26,6 +19,7 @@ namespace NowSound
         NowSoundGraphInfo info;
         info.LatencyInSamples = latencyInSamples;
         info.SamplesPerQuantum = samplesPerQuantum;
+		info.InputDeviceCount = inputDeviceCount;
 		info.TimeInSamples = timeInSamples;
         info.ExactBeat = exactBeat;
         info.BeatsPerMinute = beatsPerMinute;

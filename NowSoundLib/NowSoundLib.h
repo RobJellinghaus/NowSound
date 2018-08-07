@@ -47,24 +47,32 @@ namespace NowSound
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
         __declspec(dllexport) void NowSoundGraph_InitializeAsync();
 
-        // Get the device info for the default render device.
-        // Graph must not be Uninitialized or InError.
-        __declspec(dllexport) NowSoundDeviceInfo NowSoundGraph_GetDefaultRenderDeviceInfo();
+		// Get the info for the created graph.
+		// Graph must be at least Created.
+		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
-        // Create the audio graph.
+		// Get the ID of the given device.
+		// Graph must be at least Initialized.
+		__declspec(dllexport) BSTR NowSoundGraph_InputDeviceId(int deviceIndex);
+
+		// Get the name of the given device.
+		// Graph must be at least Initialized.
+		__declspec(dllexport) BSTR NowSoundGraph_InputDeviceName(int deviceIndex);
+
+		// Instantiate the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the instantiated device.
+		// Graph must be at least Initialized.
+		__declspec(dllexport) AudioInputId NowSoundGraph_CreateInputDeviceAsync(int deviceIndex);
+
+		// Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.
         __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();
-
-        // Get the info for the created graph.
-        // Graph must be Created or Running.
-        __declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
 		// Get the info for the specified input.
 		// Graph must be Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId id);
 
         // Start the audio graph.
-        // Graph must be Created.  On completion, graph becomes Started.
+        // Graph must be Created.  On completion, graph becomes Running.
         __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
 
         // Play a user-selected sound file.

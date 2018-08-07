@@ -20,28 +20,30 @@ namespace NowSound
     // together with callback IDs.
     extern "C"
     {
-        // Information about an audio device.
-        typedef struct NowSoundDeviceInfo
-        {
-            LPWSTR Id;
-            LPWSTR Name;
-        } NowSoundDeviceInfo;
-
         // Information about an audio graph.
         typedef struct NowSoundGraphInfo
         {
 			// The latency of the graph in samples, as reported by the graph itself.
-            int32_t LatencyInSamples;
+			// This field is populated once the graph is Initialized.
+			int32_t LatencyInSamples;
 			// The number of samples per audio graph quantum, also reported by the graph itself.
-            int32_t SamplesPerQuantum;
+			// This field is populated once the graph is Initialized.
+			int32_t SamplesPerQuantum;
+			// The number of input devices.
+			// This field is populated once the graph is Initialized.
+			int32_t InputDeviceCount;
 
 			// The number of samples elamsed since the audio graph started.
+			// This field is populated once the graph is Running.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
+			// This field is populated once the graph is Running.
 			float ExactBeat;
 			// The current BPM of the graph.
+			// This field is populated once the graph is Running.
 			float BeatsPerMinute;
 			// The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
+			// This field is populated once the graph is Running.
 			float BeatInMeasure;
 		} NowSoundGraphInfo;
 
@@ -133,37 +135,36 @@ namespace NowSound
             TrackLooping,
         };
 
-        // The audio inputs known to the app.
+        // The indices for audio inputs created by the app.
         /// Prevents confusing an audio input with some other int value.
         // 
         // The predefined values are really irrelevant; it can be cast to and from int as necessary.
         // But, used in parameters, the type helps with making the code self-documenting.
+		// Note that zero is the default, undefined, invalid value.
         enum AudioInputId
         {
-            Input0,
-            Input1,
-            Input2,
-            Input3,
-            Input4,
-            Input5,
-            Input6,
-            Input7,
+			AudioInputUndefined,
+			AudioInput0,
+            AudioInput1,
+            AudioInput2,
+            AudioInput3,
+            AudioInput4,
+            AudioInput5,
+            AudioInput6,
+            AudioInput7,
         };
 
         // The ID of a NowSound track; avoids issues with marshaling object references.
         // Note that 0 is the default, undefined, invalid value.
         enum TrackId
         {
-            Undefined
+            TrackIdUndefined
         };
-
-        NowSoundDeviceInfo CreateNowSoundDeviceInfo(
-			LPWSTR id,
-			LPWSTR name);
 
         NowSoundGraphInfo CreateNowSoundGraphInfo(
 			int32_t latencyInSamples,
 			int32_t samplesPerQuantum,
+			int32_t inputDeviceCount,
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,
