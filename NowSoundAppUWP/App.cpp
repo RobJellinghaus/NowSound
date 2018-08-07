@@ -66,7 +66,7 @@ struct App : ApplicationT<App>
             _button.Content(IReference<hstring>(hstr));
 
             wstr = std::wstringstream{};
-            if (_trackId != TrackId::Undefined)
+            if (_trackId != TrackId::TrackIdUndefined)
             {
                 NowSoundTrackInfo trackTimeInfo = NowSoundTrack_Info(_trackId);
                 wstr.precision(3);
@@ -92,7 +92,7 @@ struct App : ApplicationT<App>
         std::unique_ptr<TrackButton> Update()
         {
             NowSoundTrackState currentState{};
-            if (_trackId != TrackId::Undefined)
+            if (_trackId != TrackId::TrackIdUndefined)
             {
                 currentState = NowSoundTrack_State(_trackId);
             }
@@ -148,7 +148,7 @@ struct App : ApplicationT<App>
         TrackButton(App* app)
             : _app{ app },
             _trackNumber{ _nextTrackNumber++ },
-            _trackId{ TrackId::Undefined },
+            _trackId{ TrackId::TrackIdUndefined },
             _button{ Button() },
             _textBlock{ TextBlock() },
             _label{ L"Uninitialized" },
@@ -181,6 +181,10 @@ struct App : ApplicationT<App>
     TextBlock _textBlockTimeInfo{ nullptr };
 
     StackPanel _stackPanel{ nullptr };
+
+	StackPanel _inputDeviceSelectionStackPanel{ nullptr };
+
+	std::vector<int> _checkedInputDevices{};
 
     static int _nextTrackNumber;
 
@@ -244,6 +248,7 @@ struct App : ApplicationT<App>
     }
 
     fire_and_forget LaunchedAsync();
+	fire_and_forget InputDevicesSelectedAsync();
 
     void OnLaunched(LaunchActivatedEventArgs const&)
     {
@@ -257,6 +262,7 @@ struct App : ApplicationT<App>
         Window xamlWindow = Window::Current();
 
         _stackPanel = StackPanel();
+		_stackPanel.Children().Append(_inputDeviceSelectionStackPanel);
         _stackPanel.Children().Append(_textBlockGraphStatus);
         _stackPanel.Children().Append(_textBlockGraphInfo);
         _stackPanel.Children().Append(_textBlockTimeInfo);
@@ -302,7 +308,7 @@ struct App : ApplicationT<App>
 
             // update time info
             NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
-			NowSoundInputInfo input0Info = NowSoundGraph_InputInfo(AudioInputId::Input0);
+			NowSoundInputInfo input0Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput0);
             std::wstringstream wstr;
 			wstr << L"Time (in audio samples): " << graphInfo.TimeInSamples
 				<< std::fixed << std::setprecision(2)
@@ -320,21 +326,72 @@ struct App : ApplicationT<App>
 
 int App::_nextTrackNumber{ 1 };
 
+std::wstring&& BSTRToWString(BSTR bstr)
+{
+	std::wstring ret{ bstr };
+	::SysReleaseString(bstr);
+	return std::move(ret);
+}
+
 fire_and_forget App::LaunchedAsync()
 {
-    apartment_context ui_thread{};
-    _uiThread = ui_thread;
+	apartment_context ui_thread{};
+	_uiThread = ui_thread;
 
-    // and here goes
-    NowSoundGraph_InitializeAsync();
+	co_await resume_background();
 
+	// and here goes
+	NowSoundGraph_InitializeAsync();
+
+	// wait only one second (and hopefully much less) for graph to become initialized.
+	// 1000 second timeout is for early stage debugging.
+	const int timeoutInSeconds = 1000;
+	co_await WaitForGraphState(NowSound::NowSoundGraphState::GraphInitialized, timeSpanFromSeconds(timeoutInSeconds));
+
+	// how many input devices?
+	NowSoundGraphInfo info = NowSoundGraph_Info();
+
+	co_await _uiThread;
+
+	// populate the UI
+	std::unique_ptr<std::vector<int>> checkedEntries{new std::vector<int>()};
+	for (int i = 0; i < info.InputDeviceCount; i++)
+	{
+		std::wstring id{ BSTRToWString(NowSoundGraph_InputDeviceId(i)) };
+		std::wstring name{ BSTRToWString(NowSoundGraph_InputDeviceName(i)) };
+		CheckBox box = CheckBox();
+		box.Content(winrt::box_value(name));
+		int j = i;
+		box.Checked([this, j](IInspectable const&, RoutedEventArgs const&)
+		{
+			// TODO: fix this to handle unchecked also
+			_checkedInputDevices.push_back(j);
+		});
+		_inputDeviceSelectionStackPanel.Children().Append(box);
+	}
+	Button okButton = Button();
+	okButton.Content(winrt::box_value(L"OK"));
+	okButton.Click([this](IInspectable const&, RoutedEventArgs const&)
+	{
+		for (int deviceIndex : _checkedInputDevices)
+		{
+			NowSoundGraph_CreateInputDeviceAsync(deviceIndex);
+		}
+		// and hide the selections
+		_inputDeviceSelectionStackPanel.Visibility(Visibility::Collapsed);
+		// and go on with the flow
+		InputDevicesSelectedAsync();
+	});
+	_inputDeviceSelectionStackPanel.Children().Append(okButton);
+}
+
+fire_and_forget App::InputDevicesSelectedAsync()
+{
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.
     // 1000 second timeout is for early stage debugging.
     const int timeoutInSeconds = 1000;
     co_await WaitForGraphState(NowSound::NowSoundGraphState::GraphInitialized, timeSpanFromSeconds(timeoutInSeconds));
-
-    NowSoundDeviceInfo deviceInfo = NowSoundGraph_GetDefaultRenderDeviceInfo();
 
     NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
