@@ -36,9 +36,12 @@ namespace NowSound
         // TODO: make this support multiple (non-static) graphs.
         // TODO: consider ditching the wrapper class here and having top-level global functions so extern "C" would actually work properly.
 
-		// Test method only: get a predefined NowSoundTrack_TrackTimeInfo instance to test P/Invoke serialization.
+		// Test method only: get a predefined NowSound_GraphInfo instance to test P/Invoke serialization.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo();
-		
+
+		// Test method only: get a predefined NowSound_TimeInfo instance to test P/Invoke serialization.
+		__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo();
+
 		// Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is the only method that may be called in any state whatoever.
         __declspec(dllexport) NowSoundGraphState NowSoundGraph_State();
@@ -68,8 +71,12 @@ namespace NowSound
         // Graph must be Initialized.  On completion, graph becomes Created.
         __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();
 
+		// Get the time info for the created graph.
+		// Graph must be at least Created; time will not be running until the graph is Running.
+		__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_TimeInfo();
+
 		// Get the info for the specified input.
-		// Graph must be Running.
+		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId id);
 
         // Start the audio graph.

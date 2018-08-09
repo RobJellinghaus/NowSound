@@ -39,9 +39,17 @@ namespace NowSound
 			2,
 			3,
 			4,
-			(float)5,
-			(float)6,
-			(float)7);
+			5,
+			6);
+	}
+
+	__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo()
+	{
+		return CreateNowSoundTimeInfo(
+			1,
+			(float)2,
+			(float)3,
+			(float)4);
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
@@ -78,6 +86,11 @@ namespace NowSound
     {
         NowSoundGraph::Instance()->CreateAudioGraphAsync();
     }
+
+	NowSoundTimeInfo NowSoundGraph_TimeInfo()
+	{
+		return NowSoundGraph::Instance()->TimeInfo();
+	}
 
 	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
 	{
@@ -203,6 +216,23 @@ namespace NowSound
 		ChangeState(NowSoundGraphState::GraphInitialized);
 	}
 
+	NowSoundGraphInfo NowSoundGraph::Info()
+	{
+		// TODO: verify not on audio graph thread
+
+		Check(_audioGraphState >= NowSoundGraphState::GraphInitialized);
+
+		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
+			_audioGraph.EncodingProperties().SampleRate(),
+			_audioGraph.EncodingProperties().ChannelCount(),
+			_audioGraph.EncodingProperties().BitsPerSample(),
+			_audioGraph.LatencyInSamples(),
+			_audioGraph.SamplesPerQuantum(),
+			_inputDeviceInfos.size());
+
+		return graphInfo;
+	}
+
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
 		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Id().c_str(), _TRUNCATE);
@@ -284,35 +314,34 @@ namespace NowSound
         ChangeState(NowSoundGraphState::GraphCreated);
     }
 
-    NowSoundGraphInfo NowSoundGraph::Info()
-    {
-        // TODO: verify not on audio graph thread
+	NowSoundTimeInfo NowSoundGraph::TimeInfo()
+	{
+		// TODO: verify not on audio graph thread
 
-        Check(_audioGraphState >= NowSoundGraphState::GraphInitialized);
+		Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
 		Time<AudioSample> now = Clock::Instance().Now();
 		ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
 		int64_t completeBeats = (int64_t)durationBeats.Value();
 
-		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
-			_audioGraph.LatencyInSamples(),
-			_audioGraph.SamplesPerQuantum(),
-			_inputDeviceInfos.size(),
+		NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),
-			(float)(completeBeats % Clock::Instance().BeatsPerMeasure())
-		);
-		return graphInfo;
-    }
+			(float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
+
+		return timeInfo;
+	}
 
 	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
 	{
-		Check(_audioGraphState >= NowSoundGraphState::GraphRunning);
-		Check(audioInputId >= 0);
-		Check(audioInputId < _audioInputs.size());
+		Check(_audioGraphState >= NowSoundGraphState::GraphCreated);
 
-		std::unique_ptr<NowSoundInput>& input = _audioInputs[(int)audioInputId];
+		Check(audioInputId > AudioInputId::AudioInputUndefined);
+		// Input IDs are one-based
+		Check((audioInputId - 1) < _audioInputs.size());
+
+		std::unique_ptr<NowSoundInput>& input = _audioInputs[(int)audioInputId - 1];
 		return input->Info();
 	}
 
@@ -330,7 +359,7 @@ namespace NowSound
         ChangeState(NowSoundGraphState::GraphRunning);
     }
 
-    TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)
+	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)
     {
         // TODO: verify not on audio graph thread
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);

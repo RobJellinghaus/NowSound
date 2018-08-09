@@ -136,7 +136,7 @@ struct App : ApplicationT<App>
                 _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)0);
                 // don't initialize _trackState; that's Update's job.
                 // But do find out what time it is.
-                NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
+                NowSoundTimeInfo graphInfo = NowSoundGraph_TimeInfo();
                 _recordingStartTime = graphInfo.TimeInSamples;
             }
             else if (_trackState == NowSoundTrackState::TrackRecording)
@@ -308,16 +308,19 @@ struct App : ApplicationT<App>
             co_await _uiThread;
 
             // update time info
-            NowSoundGraphInfo graphInfo = NowSoundGraph_Info();
-			NowSoundInputInfo input0Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput0);
-            std::wstringstream wstr;
-			wstr << L"Time (in audio samples): " << graphInfo.TimeInSamples
+            NowSoundTimeInfo timeInfo = NowSoundGraph_TimeInfo();
+			NowSoundInputInfo input1Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput1);
+			NowSoundInputInfo input2Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput2);
+			std::wstringstream wstr;
+			wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
 				<< std::fixed << std::setprecision(2)
-				<< L" | Beat: " << graphInfo.BeatInMeasure
-				<< L" | Total beats: " << graphInfo.ExactBeat
-				<< L" | I0C0 volume: " << input0Info.Channel0Volume
-				<< L" | I0C1 volume: " << input0Info.Channel1Volume;
-            _textBlockTimeInfo.Text(wstr.str());
+				<< L" | Beat: " << timeInfo.BeatInMeasure
+				<< L" | Total beats: " << timeInfo.ExactBeat
+				<< L" | I1C0 volume: " << input1Info.Channel0Volume
+				<< L" | I1C1 volume: " << input1Info.Channel1Volume
+				<< L" | I2C0 volume: " << input2Info.Channel0Volume
+				<< L" | I2C1 volume: " << input2Info.Channel1Volume;
+			_textBlockTimeInfo.Text(wstr.str());
 
             // update all buttons
             UpdateButtons();
@@ -347,8 +350,9 @@ fire_and_forget App::LaunchedAsync()
 
 	co_await _uiThread;
 
-	// populate the UI
+	// Fill out the list of input devices and require the user to select at least one.
 	std::unique_ptr<std::vector<int>> checkedEntries{new std::vector<int>()};
+	Button okButton = Button();
 	for (int i = 0; i < info.InputDeviceCount; i++)
 	{
 		// Two bounded character buffers.
@@ -363,16 +367,23 @@ fire_and_forget App::LaunchedAsync()
 		std::wstring nameWStr{ nameBuf };
 
 		CheckBox box = CheckBox();
+
 		box.Content(winrt::box_value(nameBuf));
 		int j = i;
-		box.Checked([this, j](IInspectable const&, RoutedEventArgs const&)
+		box.Checked([this, j, okButton](IInspectable const&, RoutedEventArgs const&)
 		{
-			// TODO: fix this to handle unchecked also
 			_checkedInputDevices.push_back(j);
+
+			okButton.IsEnabled(_checkedInputDevices.size() > 0);
+		});
+		box.Unchecked([this, j, okButton](IInspectable const&, RoutedEventArgs const&)
+		{
+			_checkedInputDevices.erase(std::find(_checkedInputDevices.begin(), _checkedInputDevices.end(), j));
+
+			okButton.IsEnabled(_checkedInputDevices.size() > 0);
 		});
 		_inputDeviceSelectionStackPanel.Children().Append(box);
 	}
-	Button okButton = Button();
 	okButton.Content(winrt::box_value(L"OK"));
 	okButton.Click([this](IInspectable const&, RoutedEventArgs const&)
 	{
@@ -404,7 +415,11 @@ fire_and_forget App::InputDevicesSelectedAsync()
 
     co_await _uiThread;
     std::wstringstream wstr;
-    wstr << L"Latency in samples: " << graphInfo.LatencyInSamples << " | Samples per quantum: " << graphInfo.SamplesPerQuantum;
+    wstr << L"Sample rate in hz: " << graphInfo.SampleRateHz
+		<< L" | Channel count: " << graphInfo.ChannelCount
+		<< L" | Bits per sample: " << graphInfo.BitsPerSample
+		<< L" | Latency in samples: " << graphInfo.LatencyInSamples
+		<< L" | Samples per quantum: " << graphInfo.SamplesPerQuantum;
     _textBlockGraphInfo.Text(wstr.str());
     co_await resume_background();
 
@@ -417,8 +432,7 @@ fire_and_forget App::InputDevicesSelectedAsync()
     // let's create our first TrackButton!
     _trackButtons.push_back(std::unique_ptr<TrackButton>(new TrackButton(this)));
 
-    // and start our update loop!  Strangely, don't seem to need to await this....
-    // TODO: uncomment
+    // and start our update loop!
     co_await resume_background();
     co_await UpdateLoop();
 }

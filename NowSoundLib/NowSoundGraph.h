@@ -38,9 +38,9 @@ namespace NowSound
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
         void InitializeAsync();
 
-        // Get the graph info for the created graph.
-        // Graph must be at least Initialized.
-        NowSoundGraphInfo Info();
+		// Get the graph info for the created graph.
+		// Graph must be at least Initialized.
+		NowSoundGraphInfo Info();
 
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
 		void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
@@ -57,8 +57,12 @@ namespace NowSound
 		// Graph must be Initialized.  On completion, graph becomes Created.
 		void CreateAudioGraphAsync();
 
+		// Info about the current graph time.
+		// Graph must be Created or Running.
+		NowSoundTimeInfo TimeInfo();
+
 		// Info about the given input.
-		// Graph must be Running.
+		// Graph must be Created or Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
         // Start the audio graph.

@@ -20,10 +20,19 @@ namespace NowSound
     // together with callback IDs.
     extern "C"
     {
-        // Information about an audio graph.
-        typedef struct NowSoundGraphInfo
-        {
-			// The latency of the graph in samples, as reported by the graph itself.
+        // Static information about an Initialized audio graph.
+		typedef struct NowSoundGraphInfo
+		{
+			// The sample rate of the graph in hertz.
+			// This field is populated once the graph is Initialized.
+			int32_t SampleRateHz;
+			// The number of output channels
+			// This field is populated once the graph is Initialized.
+			int32_t ChannelCount;
+			// The number of bits per sample.
+			// This field is populated once the graph is Initialized.
+			int32_t BitsPerSample;
+			// The latency of the graph, in samples, as reported by the graph itself.
 			// This field is populated once the graph is Initialized.
 			int32_t LatencyInSamples;
 			// The number of samples per audio graph quantum, also reported by the graph itself.
@@ -32,20 +41,20 @@ namespace NowSound
 			// The number of input devices.
 			// This field is populated once the graph is Initialized.
 			int32_t InputDeviceCount;
+		} NowSoundGraphInfo;
 
+		// Time information from a Running graph.
+		typedef struct NowSoundTimeInfo
+		{
 			// The number of samples elamsed since the audio graph started.
-			// This field is populated once the graph is Running.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
-			// This field is populated once the graph is Running.
 			float ExactBeat;
 			// The current BPM of the graph.
-			// This field is populated once the graph is Running.
 			float BeatsPerMinute;
 			// The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
-			// This field is populated once the graph is Running.
 			float BeatInMeasure;
-		} NowSoundGraphInfo;
+		} NowSoundTimeInfo;
 
 		typedef struct NowSoundInputInfo
 		{
@@ -140,19 +149,20 @@ namespace NowSound
         // 
         // The predefined values are really irrelevant; it can be cast to and from int as necessary.
         // But, used in parameters, the type helps with making the code self-documenting.
-		// Note that zero is the default, undefined, invalid value.
+		// Note that zero is the default, undefined, invalid value, and that the actual inputs
+		// are 1-based (to ensure zero is not mentioned).
         enum AudioInputId
         {
 			AudioInputUndefined,
-			AudioInput0,
             AudioInput1,
             AudioInput2,
             AudioInput3,
             AudioInput4,
             AudioInput5,
             AudioInput6,
-            AudioInput7,
-        };
+			AudioInput7,
+			AudioInput8,
+		};
 
         // The ID of a NowSound track; avoids issues with marshaling object references.
         // Note that 0 is the default, undefined, invalid value.
@@ -161,10 +171,15 @@ namespace NowSound
             TrackIdUndefined
         };
 
-        NowSoundGraphInfo CreateNowSoundGraphInfo(
+		NowSoundGraphInfo CreateNowSoundGraphInfo(
+			int32_t sampleRateHz,
+			int32_t channelCount,
+			int32_t bitsPerSample,
 			int32_t latencyInSamples,
 			int32_t samplesPerQuantum,
-			int32_t inputDeviceCount,
+			int32_t inputDeviceCount);
+
+		NowSoundTimeInfo CreateNowSoundTimeInfo(
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,

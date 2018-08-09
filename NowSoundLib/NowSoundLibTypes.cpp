@@ -7,25 +7,37 @@
 
 namespace NowSound
 {
-    NowSoundGraphInfo CreateNowSoundGraphInfo(
+	NowSoundGraphInfo CreateNowSoundGraphInfo(
+		int32_t sampleRateHz,
+		int32_t channelCount,
+		int32_t bitsPerSample,
 		int32_t latencyInSamples,
 		int32_t samplesPerQuantum,
-		int32_t inputDeviceCount,
+		int32_t inputDeviceCount)
+	{
+		NowSoundGraphInfo info;
+		info.SampleRateHz = sampleRateHz;
+		info.ChannelCount = channelCount;
+		info.BitsPerSample = bitsPerSample;
+		info.LatencyInSamples = latencyInSamples;
+		info.SamplesPerQuantum = samplesPerQuantum;
+		info.InputDeviceCount = inputDeviceCount;
+		return info;
+	}
+
+	NowSoundTimeInfo CreateNowSoundTimeInfo(
 		int64_t timeInSamples,
 		float exactBeat,
 		float beatsPerMinute,
 		float beatInMeasure)
-    {
-        NowSoundGraphInfo info;
-        info.LatencyInSamples = latencyInSamples;
-        info.SamplesPerQuantum = samplesPerQuantum;
-		info.InputDeviceCount = inputDeviceCount;
+	{
+		NowSoundTimeInfo info;
 		info.TimeInSamples = timeInSamples;
-        info.ExactBeat = exactBeat;
-        info.BeatsPerMinute = beatsPerMinute;
-        info.BeatInMeasure = beatInMeasure;
-        return info;
-    }
+		info.ExactBeat = exactBeat;
+		info.BeatsPerMinute = beatsPerMinute;
+		info.BeatInMeasure = beatInMeasure;
+		return info;
+	}
 
 	NowSoundInputInfo CreateNowSoundInputInfo(
 		float channel0Volume,
