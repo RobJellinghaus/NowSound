@@ -43,10 +43,10 @@ namespace NowSound
         NowSoundGraphInfo Info();
 
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		BSTR InputDeviceId(int deviceIndex);
+		void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		BSTR InputDeviceName(int deviceIndex);
+		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Create the given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
 		// Note that the method is truly async in that it finishes device creation after the method returns.

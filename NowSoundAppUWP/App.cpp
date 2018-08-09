@@ -84,7 +84,7 @@ struct App : ApplicationT<App>
             {
                 wstr << L"";
             }
-            _textBlock.Text(wstr.str());
+            _textBlock.Text(winrt::hstring(wstr.str()));
         }
 
         // Update this track button.  If this track button just started looping, then make and return
@@ -258,6 +258,7 @@ struct App : ApplicationT<App>
         _textBlockGraphInfo.Text(L"");
         _textBlockTimeInfo = TextBlock();
         _textBlockTimeInfo.Text(L"");
+		_inputDeviceSelectionStackPanel = StackPanel();
 
         Window xamlWindow = Window::Current();
 
@@ -326,13 +327,6 @@ struct App : ApplicationT<App>
 
 int App::_nextTrackNumber{ 1 };
 
-std::wstring&& BSTRToWString(BSTR bstr)
-{
-	std::wstring ret{ bstr };
-	::SysReleaseString(bstr);
-	return std::move(ret);
-}
-
 fire_and_forget App::LaunchedAsync()
 {
 	apartment_context ui_thread{};
@@ -357,10 +351,19 @@ fire_and_forget App::LaunchedAsync()
 	std::unique_ptr<std::vector<int>> checkedEntries{new std::vector<int>()};
 	for (int i = 0; i < info.InputDeviceCount; i++)
 	{
-		std::wstring id{ BSTRToWString(NowSoundGraph_InputDeviceId(i)) };
-		std::wstring name{ BSTRToWString(NowSoundGraph_InputDeviceName(i)) };
+		// Two bounded character buffers.
+		const int bufSize = 512;
+		wchar_t idBuf[bufSize];
+		wchar_t nameBuf[bufSize];
+			
+		NowSoundGraph_InputDeviceId(i, idBuf, bufSize);
+		NowSoundGraph_InputDeviceName(i, nameBuf, bufSize);
+
+		std::wstring idWStr{ idBuf };
+		std::wstring nameWStr{ nameBuf };
+
 		CheckBox box = CheckBox();
-		box.Content(winrt::box_value(name));
+		box.Content(winrt::box_value(nameBuf));
 		int j = i;
 		box.Checked([this, j](IInspectable const&, RoutedEventArgs const&)
 		{

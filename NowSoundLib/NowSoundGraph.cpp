@@ -59,14 +59,14 @@ namespace NowSound
 		return NowSoundGraph::Instance()->Info();
 	}
 
-	BSTR NowSoundGraph_InputDeviceId(int deviceIndex)
+	void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		return NowSoundGraph::Instance()->InputDeviceId(deviceIndex);
+		NowSoundGraph::Instance()->InputDeviceId(deviceIndex, wcharBuffer, bufferCapacity);
 	}
 
-	BSTR NowSoundGraph_InputDeviceName(int deviceIndex)
+	void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		return NowSoundGraph::Instance()->InputDeviceName(deviceIndex);
+		NowSoundGraph::Instance()->InputDeviceName(deviceIndex, wcharBuffer, bufferCapacity);
 	}
 
 	AudioInputId NowSoundGraph_CreateInputDeviceAsync(int deviceIndex)
@@ -203,16 +203,14 @@ namespace NowSound
 		ChangeState(NowSoundGraphState::GraphInitialized);
 	}
 
-	BSTR NowSoundGraph::InputDeviceId(int deviceIndex)
+	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		BSTR returnedBstr = ::SysAllocString(_inputDeviceInfos[deviceIndex].Id().c_str());
-		return returnedBstr;
+		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Id().c_str(), _TRUNCATE);
 	}
 
-	BSTR NowSoundGraph::InputDeviceName(int deviceIndex)
+	void NowSoundGraph::InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		BSTR returnedBstr = ::SysAllocString(_inputDeviceInfos[deviceIndex].Name().c_str());
-		return returnedBstr;
+		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
 	AudioInputId NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)

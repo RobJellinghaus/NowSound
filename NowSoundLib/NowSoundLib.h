@@ -53,11 +53,11 @@ namespace NowSound
 
 		// Get the ID of the given device.
 		// Graph must be at least Initialized.
-		__declspec(dllexport) BSTR NowSoundGraph_InputDeviceId(int deviceIndex);
+		__declspec(dllexport) void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Get the name of the given device.
 		// Graph must be at least Initialized.
-		__declspec(dllexport) BSTR NowSoundGraph_InputDeviceName(int deviceIndex);
+		__declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Instantiate the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the instantiated device.
 		// Graph must be at least Initialized.
