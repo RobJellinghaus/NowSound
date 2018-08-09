@@ -48,9 +48,10 @@ namespace NowSound
 		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
 		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
-		// Create the given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
-		// Note that the method is truly async in that it finishes device creation after the method returns.
-		AudioInputId CreateInputDeviceAsync(int deviceIndex);
+		// Initialize given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
+		// This must be called only in Initialized state (for now; could relax this later perhaps).
+		// (Note that actual device creation happens at audio graph creation time, to allow proper synchronization.)
+		AudioInputId InitializeInputDevice(int deviceIndex);
 
 		// Create the audio graph.
 		// Graph must be Initialized.  On completion, graph becomes Created.
@@ -83,9 +84,6 @@ namespace NowSound
 
 		// Async helper method, to work around compiler bug with lambdas which await and capture this.
 		winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
-
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsyncImpl(int deviceIndex);
 
 		// Async helper method, to work around compiler bug with lambdas which await and capture this.
         winrt::Windows::Foundation::IAsyncAction CreateAudioGraphAsyncImpl();
@@ -127,11 +125,12 @@ namespace NowSound
         // The next TrackId to be allocated.
         TrackId _trackId;
 
-		// The audio inputs we have.
-		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
+		// The audio device indices to initialize.
+		::std::vector<int> _inputDeviceIndicesToInitialize;
 
-        // Mutex for the collection of inputs; taken when adding to or traversing the recorder collection.
-        std::mutex _audioInputsMutex;
+		// The audio inputs we have; currently unchanging after graph creation.
+		// TODO: vaguely consider supporting dynamically added/removed inputs.
+		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
 
         // Mutex for the state of the graph.
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
@@ -159,7 +158,10 @@ namespace NowSound
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* GetAudioAllocator();
 
-        // A graph quantum has started; handle any available input audio.
+		// Create an input device.
+		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
+
+		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();
     };
 }

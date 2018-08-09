@@ -378,7 +378,7 @@ fire_and_forget App::LaunchedAsync()
 	{
 		for (int deviceIndex : _checkedInputDevices)
 		{
-			NowSoundGraph_CreateInputDeviceAsync(deviceIndex);
+			NowSoundGraph_InitializeInputDevice(deviceIndex);
 		}
 		// and hide the selections
 		_inputDeviceSelectionStackPanel.Visibility(Visibility::Collapsed);

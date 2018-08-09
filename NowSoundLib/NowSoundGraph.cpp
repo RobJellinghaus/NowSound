@@ -69,9 +69,9 @@ namespace NowSound
 		NowSoundGraph::Instance()->InputDeviceName(deviceIndex, wcharBuffer, bufferCapacity);
 	}
 
-	AudioInputId NowSoundGraph_CreateInputDeviceAsync(int deviceIndex)
+	AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex)
 	{
-		return NowSoundGraph::Instance()->CreateInputDeviceAsync(deviceIndex);
+		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex);
 	}
 
 	void NowSoundGraph_CreateAudioGraphAsync()
@@ -122,8 +122,8 @@ namespace NowSound
             ((int)Clock::SampleRateHz * MagicNumbers::AudioChannelCount * sizeof(float) * MagicNumbers::AudioBufferSizeInSeconds.Value()),
             MagicNumbers::InitialAudioBufferCount },
         _trackId{ TrackId::TrackIdUndefined },
+		_inputDeviceIndicesToInitialize{},
         _audioInputs{ },
-        _audioInputsMutex{ },
         _changingState{ false }
     { }
 
@@ -213,19 +213,16 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
-	AudioInputId NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
+	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex)
 	{
-		std::lock_guard<std::mutex> guard(_audioInputsMutex);
-		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
+		Check(State() == NowSoundGraphState::GraphInitialized);
 
-		// hope no possibility of reordering between these tasks... just don't race to create audio input devices OK???
-		// (yes there are various ways to serialize this if it is REALLY NECESSARY)
-		create_task([this, deviceIndex]() -> IAsyncAction { co_await CreateInputDeviceAsyncImpl(deviceIndex); });
-
+		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
+		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_inputDeviceIndicesToInitialize.size())));
 		return nextAudioInputId;
 	}
 
-	IAsyncAction NowSoundGraph::CreateInputDeviceAsyncImpl(int deviceIndex)
+	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
 	{
 		// Create a device input node
 		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
@@ -240,7 +237,6 @@ namespace NowSound
 			return;
 		}
 
-		std::lock_guard<std::mutex> guard(_audioInputsMutex);
 		AudioDeviceInputNode inputNode = deviceInputNodeResult.DeviceInputNode();
 
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
@@ -249,7 +245,7 @@ namespace NowSound
 		_audioInputs.emplace_back(std::move(input));
 
 		// now asynchronously complete initializing the audio input
-		co_await input->InitializeAsync();
+		co_await _audioInputs[_audioInputs.size() - 1]->InitializeAsync();
 	}
 
 	void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
@@ -274,12 +270,16 @@ namespace NowSound
 
         _deviceOutputNode = deviceOutputNodeResult.DeviceOutputNode();
 
-		// Add the default audio input (don't need to lock yet since not *quite* running).
-
 		_audioGraph.QuantumStarted([&](AudioGraph, IInspectable)
 		{
 			HandleIncomingAudio();
 		});
+
+		// add in all inputs
+		for (int deviceIndex : _inputDeviceIndicesToInitialize)
+		{
+			co_await CreateInputDeviceAsync(deviceIndex);
+		}
 
         ChangeState(NowSoundGraphState::GraphCreated);
     }
@@ -392,9 +392,6 @@ namespace NowSound
 
     void NowSoundGraph::HandleIncomingAudio()
     {
-		// ensure no interference from starting a recording, for the duration of the quantum
-		std::lock_guard<std::mutex> guard(_audioInputsMutex);
-
 		for (std::unique_ptr<NowSoundInput>& input : _audioInputs)
 		{
 			input->HandleIncomingAudio();

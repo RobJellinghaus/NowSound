@@ -59,9 +59,10 @@ namespace NowSound
 		// Graph must be at least Initialized.
 		__declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
-		// Instantiate the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the instantiated device.
-		// Graph must be at least Initialized.
-		__declspec(dllexport) AudioInputId NowSoundGraph_CreateInputDeviceAsync(int deviceIndex);
+		// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
+		// input device.
+		// Graph must be in Initialized state.
+		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex);
 
 		// Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.
@@ -84,7 +85,6 @@ namespace NowSound
         __declspec(dllexport) void NowSoundGraph_DestroyAudioGraphAsync();
 
         // Create a new track and begin recording.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
 
         // Interface used to invoke operations on a particular audio track.
