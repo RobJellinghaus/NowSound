@@ -141,7 +141,7 @@ namespace NowSound
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
             Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration),
-            MagicNumbers::AudioChannelCount,
+            Clock::Instance().ChannelCount(),
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
             /*useContinuousLoopingMapper*/ false),
@@ -305,7 +305,7 @@ namespace NowSound
         }
 
         // we are looping; let's play!
-        float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::SampleRateHz / Clock::TicksPerSecond);
+        float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::Instance().SampleRateHz() / Clock::TicksPerSecond);
 
         _requiredSamplesHistogram.Add((float)requiredSamples);
         _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
@@ -317,17 +317,17 @@ namespace NowSound
             // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
             // we fill it completely and often.
             s_audioFrame = Windows::Media::AudioFrame(
-                (uint32_t)(Clock::SampleRateHz
+                (uint32_t)(Clock::Instance().SampleRateHz()
                     * MagicNumbers::AudioFrameLengthSeconds.Value()
                     * sizeof(float)
-                    * MagicNumbers::AudioChannelCount));
+                    * Clock::Instance().ChannelCount()));
         }
         Windows::Media::AudioFrame audioFrame = s_audioFrame;
 #else
-        Windows::Media::AudioFrame audioFrame((uint32_t)(Clock::SampleRateHz
+        Windows::Media::AudioFrame audioFrame((uint32_t)(Clock::Instance().SampleRateHz()
             * MagicNumbers::AudioFrameLengthSeconds.Value()
             * sizeof(float)
-            * MagicNumbers::AudioChannelCount));
+            * Clock::Instance().ChannelCount()));
 #endif
 
         {
@@ -343,7 +343,7 @@ namespace NowSound
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
             check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
 
-            int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
+            int sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
 
             /*
             uint32_t requiredBytes = requiredSamples * sampleSizeInBytes;
@@ -360,7 +360,7 @@ namespace NowSound
             // And how does one ensure the timespan conversion is exactly right?
             // For now, avoid this property altogether and tune things with the size of the audio frame;
             // note that *creating* an audio frame takes a sample count and not a timespan duration....
-            //audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::SampleRateHz));
+            //audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::Instance().SampleRateHz()));
 
             while (samplesRemaining > 0)
             {

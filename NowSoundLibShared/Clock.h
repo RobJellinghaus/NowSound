@@ -25,12 +25,12 @@ namespace NowSound
 
     public:
 
-        Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        Clock(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure);
 
         // Construct a Clock and initialize Clock.Instance.
         // This must be called exactly once per process; multiple calls will be contract failure (unless closely
         // overlapped in time in which case they will race).
-        static void Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount);
+        static void Initialize(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure);
 
         // The singleton Clock used by the application.
         static Clock& Instance()
@@ -39,12 +39,14 @@ namespace NowSound
             return *(s_instance.get());
         }
 
-        // The rate of sound measurements (individual sample data points) per second.
-        // TODO: don't hardcode this!
-        static const uint32_t SampleRateHz = 48000;
-
     private:
-        // The current BPM of this Clock.
+		// The sample rate.
+		const int _sampleRateHz;
+		
+		// How many channels are there?
+		const int _channelCount;
+
+		// The current BPM of this Clock. (NOT const; can be changed while running.
         float _beatsPerMinute;
 
         // The beats per MEASURE.  e.g. 3/4 time = 3 beats per measure.
@@ -52,10 +54,7 @@ namespace NowSound
         const int _beatsPerMeasure;
 
         // The number of samples since the beginning of Holofunk; incremented by the audio quantum.
-        Time<AudioSample> _audioTime;
-
-        // How many input channels are there?
-        const int _inputChannelCount;
+        Time<AudioSample> _now;
 
         // What is the floating-point duration of a beat, in samples?
         // This will be a non-integer value if the BPM does not exactly divide the sample rate.
@@ -79,7 +78,11 @@ namespace NowSound
         float BeatsPerMinute() const { return _beatsPerMinute; }
         void BeatsPerMinute(float value);
 
-        int BytesPerSecond() const { return SampleRateHz * _inputChannelCount * sizeof(float); }
+		int SampleRateHz() const { return _sampleRateHz; }
+
+		int ChannelCount() const { return _channelCount; }
+
+        int BytesPerSecond() const { return SampleRateHz() * _channelCount * sizeof(float); }
 
         double BeatsPerSecond() const { return ((double)_beatsPerMinute) / 60.0; }
 
@@ -87,9 +90,9 @@ namespace NowSound
 
         int BeatsPerMeasure() { return _beatsPerMeasure; }
 
-        Time<AudioSample> Now() { return _audioTime; }
+        Time<AudioSample> Now() { return _now; }
 
-		Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return (int64_t)(SampleRateHz * seconds.Value()); }
+		Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return (int64_t)(SampleRateHz() * seconds.Value()); }
 
         // Approximately how many beats?
         ContinuousDuration<Beat> TimeToBeats(Time<AudioSample> time) const

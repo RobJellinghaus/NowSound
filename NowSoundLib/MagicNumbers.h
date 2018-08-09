@@ -27,10 +27,6 @@ namespace NowSound
         // TODO: make this no longer constant; fun with time signatures!
         static const int BeatsPerMeasure;
 
-        // The number of audio channels.  (e.g. 2 for stereo.)
-        // TODO: make this no longer constant; support 7.1 systems!
-        static const int AudioChannelCount;
-
         // How many (one-second, for now) audio buffers do we initially want to allocate?
         // Not much downside to allocating many; stereo float 48Khz = only 384KB per one-sec buffer
         static const int InitialAudioBufferCount;
@@ -50,8 +46,5 @@ namespace NowSound
 
 		// Amount of time over which to measure volume.
 		static const ContinuousDuration<Second> RecentVolumeDuration;
-
-		// How many input devices?
-		static const int InputDeviceCount;
     };
 }

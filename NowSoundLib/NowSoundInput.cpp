@@ -33,32 +33,15 @@ namespace NowSound
 		_inputDevice{ inputNode },
 		_frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
 		_recorders{},
-		_incomingAudioStream{ 0, MagicNumbers::AudioChannelCount, audioAllocator, Clock::SampleRateHz, /*useExactLoopingMapper:*/false },
+		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
 		_incomingAudioStreamRecorder{ &_incomingAudioStream },
 		_incomingAudioHistograms{}
 	{
-		for (int i = 0; i < MagicNumbers::InputDeviceCount * MagicNumbers::AudioChannelCount; i++)
+		for (int i = 0; i < Clock::Instance().ChannelCount(); i++)
 		{
 			std::unique_ptr<Histogram> newHistogram{ new Histogram(Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
 			_incomingAudioHistograms.push_back(std::move(newHistogram));
 		}
-	}
-
-	IAsyncAction NowSoundInput::InitializeAsync()
-	{
-		// Create a device input node
-		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await
-			_nowSoundGraph->GetAudioGraph().CreateDeviceInputNodeAsync(Windows::Media::Capture::MediaCategory::Media);
-
-		auto deviceInputNodeResultStatus = deviceInputNodeResult.Status();
-		if (deviceInputNodeResultStatus != AudioDeviceNodeCreationStatus::Success)
-		{
-			// Cannot create device input node
-			Check(false);
-			return;
-		}
-
-		_inputDevice = deviceInputNodeResult.DeviceInputNode();
 
 		_inputDevice.AddOutgoingConnection(_frameOutputNode);
 	}
@@ -111,7 +94,7 @@ namespace NowSound
 		}
 
 		// Must be multiple of channels * sizeof(float)
-		int sampleSizeInBytes = MagicNumbers::AudioChannelCount * sizeof(float);
+		int sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
 		Check((capacityInBytes & (sampleSizeInBytes - 1)) == 0);
 
 		uint32_t bufferStart = 0;
@@ -125,7 +108,7 @@ namespace NowSound
 			if (latencyInSamples == 0)
 			{
 				// sorry audiograph, don't really believe you when you say zero latency.
-				latencyInSamples = (int)(Clock::SampleRateHz * MagicNumbers::AudioFrameLengthSeconds.Value());
+				latencyInSamples = (int)(Clock::Instance().SampleRateHz() * MagicNumbers::AudioFrameLengthSeconds.Value());
 			}
 			if (capacityInBytes > latencyInSamples)
 			{
@@ -134,17 +117,15 @@ namespace NowSound
 			}
 		}
 
-		Clock::Instance().AdvanceFromAudioGraph(_nowSoundGraph->GetAudioGraph().SamplesPerQuantum());
-
 		Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
 
 		// update input volume histograms
 		float* dataInFloats = (float*)dataInBytes;
 		for (int i = 0; i < duration.Value(); i++)
 		{
-			for (int j = 0; j < MagicNumbers::AudioChannelCount; j++)
+			for (int j = 0; j < Clock::Instance().ChannelCount(); j++)
 			{
-				float value = dataInFloats[i * MagicNumbers::AudioChannelCount + j];
+				float value = dataInFloats[i * Clock::Instance().ChannelCount() + j];
 				// add the absolute value because for volume purposes we don't want negatives to cancel positives
 				_incomingAudioHistograms[j]->Add(std::abs(value));
 			}

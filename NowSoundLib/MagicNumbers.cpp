@@ -19,9 +19,6 @@ const float MagicNumbers::InitialBeatsPerMinute{ 60 };
 // 4/4 time
 const int MagicNumbers::BeatsPerMeasure{ 4 };
 
-// Stereo
-const int MagicNumbers::AudioChannelCount{ 2 };
-
 // Could be much larger but not really any reason to
 const int MagicNumbers::InitialAudioBufferCount{ 8 };
 
@@ -40,5 +37,3 @@ const int MagicNumbers::DebugLogCapacity{ 1000 };
 const int MagicNumbers::AudioQuantumHistogramCapacity{ 200 };
 
 const ContinuousDuration<Second> MagicNumbers::RecentVolumeDuration{ (float)0.1 };
-
-const int MagicNumbers::InputDeviceCount{ 1 };

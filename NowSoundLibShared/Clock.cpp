@@ -15,17 +15,18 @@ using namespace Windows::Media::Render;
 
 std::unique_ptr<NowSound::Clock> NowSound::Clock::s_instance;
 
-void NowSound::Clock::Initialize(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount)
+void NowSound::Clock::Initialize(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure)
 {
-    std::unique_ptr<Clock> clock(new Clock(beatsPerMinute, beatsPerMeasure, inputChannelCount));
+    std::unique_ptr<Clock> clock(new Clock(sampleRateHz, channelCount, beatsPerMinute, beatsPerMeasure));
     Clock::s_instance = std::move(clock);
 }
 
-NowSound::Clock::Clock(float beatsPerMinute, int beatsPerMeasure, int inputChannelCount)
-    : _beatsPerMinute(beatsPerMinute),
+NowSound::Clock::Clock(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure)
+    : _sampleRateHz(sampleRateHz),
+	_channelCount(channelCount),
+	_beatsPerMinute(beatsPerMinute),
 	_beatsPerMeasure(beatsPerMeasure),
-	_inputChannelCount(inputChannelCount),
-	_audioTime(0),
+	_now(0),
 	_beatDuration(0)
 {
     Check(s_instance == nullptr); // No Clock yet
@@ -34,7 +35,7 @@ NowSound::Clock::Clock(float beatsPerMinute, int beatsPerMeasure, int inputChann
 
 void NowSound::Clock::CalculateBeatDuration()
 {
-    _beatDuration = (ContinuousDuration<AudioSample>)(((float)SampleRateHz * 60) / _beatsPerMinute);
+    _beatDuration = (ContinuousDuration<AudioSample>)(((float)SampleRateHz() * 60) / _beatsPerMinute);
 }
 
 void NowSound::Clock::BeatsPerMinute(float value)
@@ -48,5 +49,5 @@ const long NowSound::Clock::TicksPerSecond = 10 * 1000 * 1000;
 void NowSound::Clock::AdvanceFromAudioGraph(Duration<AudioSample> duration)
 {
     // TODO: += operator
-    _audioTime = _audioTime + duration;
+    _now = _now + duration;
 }

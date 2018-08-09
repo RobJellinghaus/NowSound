@@ -124,7 +124,7 @@ namespace NowSound
 		::std::vector<winrt::Windows::Devices::Enumeration::DeviceInformation> _inputDeviceInfos;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
-        BufferAllocator<float> _audioAllocator;
+        std::unique_ptr<BufferAllocator<float>> _audioAllocator;
 
         // The next TrackId to be allocated.
         TrackId _trackId;
