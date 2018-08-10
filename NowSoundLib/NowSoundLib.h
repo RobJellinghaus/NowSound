@@ -63,14 +63,10 @@ namespace NowSound
 		__declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
-		// input device.
+		// input device. If monoPair, the device will be treated as a pair of inputs, and the first input will be returned;
+		// the second is one greater than the first.
 		// Graph must be in Initialized state.
-		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex);
-
-		// Initialize the given device to emit one channel as its own input, given its index (as passed to InputDeviceInfo)
-		// and the index of the channel of the device; returns the AudioInputId of that channel of the input device.
-		// Graph must be in Initialized state.
-		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDeviceChannel(int deviceIndex, int channelIndex);
+		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex, bool monoPair);
 
 		// Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.

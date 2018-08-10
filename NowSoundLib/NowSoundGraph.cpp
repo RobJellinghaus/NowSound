@@ -54,14 +54,14 @@ namespace NowSound
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
-    {
-        return NowSoundGraph::Instance()->State();
-    }
+	{
+		return NowSoundGraph::Instance()->State();
+	}
 
-    void NowSoundGraph_InitializeAsync()
-    {
-        NowSoundGraph::Instance()->InitializeAsync();
-    }
+	void NowSoundGraph_InitializeAsync()
+	{
+		NowSoundGraph::Instance()->InitializeAsync();
+	}
 
 	NowSoundGraphInfo NowSoundGraph_Info()
 	{
@@ -80,20 +80,15 @@ namespace NowSound
 		NowSoundGraph::Instance()->InputDeviceName(deviceIndex, wcharBuffer, bufferCapacity);
 	}
 
-	AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex)
+	AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex, bool monoPair)
 	{
-		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, Option<int>());
-	}
-
-	AudioInputId NowSoundGraph_InitializeInputDeviceChannel(int deviceIndex, int channelIndex)
-	{
-		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, Option<int>(channelIndex));
+		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, monoPair);
 	}
 
 	void NowSoundGraph_CreateAudioGraphAsync()
-    {
-        NowSoundGraph::Instance()->CreateAudioGraphAsync();
-    }
+	{
+		NowSoundGraph::Instance()->CreateAudioGraphAsync();
+	}
 
 	NowSoundTimeInfo NowSoundGraph_TimeInfo()
 	{
@@ -106,80 +101,81 @@ namespace NowSound
 	}
 
 	void NowSoundGraph_StartAudioGraphAsync()
-    {
-        NowSoundGraph::Instance()->StartAudioGraphAsync();
-    }
+	{
+		NowSoundGraph::Instance()->StartAudioGraphAsync();
+	}
 
-    void NowSoundGraph_PlayUserSelectedSoundFileAsync()
-    {
-        NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
-    }
+	void NowSoundGraph_PlayUserSelectedSoundFileAsync()
+	{
+		NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
+	}
 
-    void NowSoundGraph_DestroyAudioGraphAsync()
-    {
-        NowSoundGraph::Instance()->DestroyAudioGraphAsync();
-    }
+	void NowSoundGraph_DestroyAudioGraphAsync()
+	{
+		NowSoundGraph::Instance()->DestroyAudioGraphAsync();
+	}
 
-    TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId)
-    {
-        return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
-    }
+	TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId)
+	{
+		return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
+	}
 
-    TimeSpan timeSpanFromSeconds(int seconds)
-    {
-        // TimeSpan is in 100ns units
-        return TimeSpan(seconds * Clock::TicksPerSecond);
-    }
+	TimeSpan timeSpanFromSeconds(int seconds)
+	{
+		// TimeSpan is in 100ns units
+		return TimeSpan(seconds * Clock::TicksPerSecond);
+	}
 
-    std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ new NowSoundGraph() };
+	std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ new NowSoundGraph() };
 
-    NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
+	NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
-    NowSoundGraph::NowSoundGraph()
-        : _audioGraph{ nullptr },
-        _audioGraphState{ NowSoundGraphState::GraphUninitialized },
-        _deviceOutputNode{ nullptr },
-        _audioAllocator{ nullptr },
-        _trackId{ TrackId::TrackIdUndefined },
+	NowSoundGraph::NowSoundGraph()
+		: _audioGraph{ nullptr },
+		_audioGraphState{ NowSoundGraphState::GraphUninitialized },
+		_deviceOutputNode{ nullptr },
+		_audioAllocator{ nullptr },
+		_trackId{ TrackId::TrackIdUndefined },
+		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
 		_inputDeviceIndicesToInitialize{},
-        _audioInputs{ },
-        _changingState{ false }
-    { }
+		_audioInputs{ },
+		_changingState{ false }
+	{ }
 
-    AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
+	AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
-    AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() const { return _deviceOutputNode; }
+	AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() const { return _deviceOutputNode; }
 
-    BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return _audioAllocator.get(); }
+	BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return _audioAllocator.get(); }
 
-    void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
-    {
-        std::lock_guard<std::mutex> guard(_stateMutex);
-        Check(_audioGraphState == expectedState);
-        Check(!_changingState);
-        _changingState = true;
-    }
+	void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
+	{
+		std::lock_guard<std::mutex> guard(_stateMutex);
+		Check(_audioGraphState == expectedState);
+		Check(!_changingState);
+		_changingState = true;
+	}
 
-    void NowSoundGraph::ChangeState(NowSoundGraphState newState)
-    {
-        std::lock_guard<std::mutex> guard(_stateMutex);
-        Check(_changingState);
+	void NowSoundGraph::ChangeState(NowSoundGraphState newState)
+	{
+		std::lock_guard<std::mutex> guard(_stateMutex);
+		Check(_changingState);
 		Check(newState != _audioGraphState);
-        _changingState = false;
-        _audioGraphState = newState;
-    }
+		_changingState = false;
+		_audioGraphState = newState;
+	}
 
-    NowSoundGraphState NowSoundGraph::State()
-    {
+	NowSoundGraphState NowSoundGraph::State()
+	{
 		// this is a machine word, atomically written; no need to lock
-        return _audioGraphState;
-    }
+		return _audioGraphState;
+	}
 
-    void NowSoundGraph::InitializeAsync()
-    {
-        PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
-        create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
-    }
+	void NowSoundGraph::InitializeAsync()
+	{
+		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
+		create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
+	}
 
 	IAsyncAction NowSoundGraph::InitializeAsyncImpl()
 	{
@@ -257,17 +253,23 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
-	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex, Option<int> channelOpt)
+	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex, bool monoPair)
 	{
 		Check(State() == NowSoundGraphState::GraphInitialized);
 
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
-		_inputChannelsToInitialize.push_back(channelOpt);
-		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_inputDeviceIndicesToInitialize.size())));
-		return nextAudioInputId;
+		_inputDeviceIsMonoPair.push_back(monoPair);
+		_nextAudioInputId = (AudioInputId)(_nextAudioInputId + 1);
+		AudioInputId returnValue = _nextAudioInputId;
+		if (monoPair)
+		{
+			// "pre-allocate" the next one
+			_nextAudioInputId = (AudioInputId)(_nextAudioInputId + 1);
+		}
+		return returnValue;
 	}
 
-	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex, Option<int> channelIndexOpt)
+	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex, bool monoPair)
 	{
 		// Create a device input node
 		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
@@ -284,8 +286,20 @@ namespace NowSound
 
 		AudioDeviceInputNode inputNode = deviceInputNodeResult.DeviceInputNode();
 
-		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
+		if (monoPair)
+		{
+			CreateInputDeviceFromNode(inputNode, Option<int>(0));
+			CreateInputDeviceFromNode(inputNode, Option<int>(1));
+		}
+		else
+		{
+			CreateInputDeviceFromNode(inputNode, Option<int>());
+		}
+	}
 
+	void NowSoundGraph::CreateInputDeviceFromNode(AudioDeviceInputNode inputNode, Option<int> channelIndexOpt)
+	{
+		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
 		std::unique_ptr<NowSoundInput> input(new NowSoundInput(
 			this,
 			nextAudioInputId,
@@ -324,11 +338,11 @@ namespace NowSound
 		});
 
 		// add in all inputs
-		Check(_inputDeviceIndicesToInitialize.size() == _inputChannelsToInitialize.size());
+		Check(_inputDeviceIndicesToInitialize.size() == _inputDeviceIsMonoPair.size());
 
 		for (int i = 0; i < _inputDeviceIndicesToInitialize.size(); i++)
 		{
-			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i], _inputChannelsToInitialize[i]);
+			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i], _inputDeviceIsMonoPair[i]);
 		}
 
         ChangeState(NowSoundGraphState::GraphCreated);

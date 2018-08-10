@@ -49,9 +49,9 @@ namespace NowSound
 		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Initialize given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
+		// If monoPair, then two AudioInputs will be created; the ID of the first will be returned, the ID of the second is one greater.
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
-		// (Note that actual device creation happens at audio graph creation time, to allow proper synchronization.)
-		AudioInputId InitializeInputDevice(int deviceIndex, Option<int> channelIndexOpt);
+		AudioInputId InitializeInputDevice(int deviceIndex, bool monoPair);
 
 		// Create the audio graph.
 		// Graph must be Initialized.  On completion, graph becomes Created.
@@ -129,11 +129,14 @@ namespace NowSound
         // The next TrackId to be allocated.
         TrackId _trackId;
 
+		// The next AudioInputId to be allocated.
+		AudioInputId _nextAudioInputId;
+
 		// The audio device indices to initialize.
 		::std::vector<int> _inputDeviceIndicesToInitialize;
 
-		// The optional channels for each device.
-		::std::vector<Option<int>> _inputChannelsToInitialize;
+		// Which devices are actually to be created as mono pairs?
+		::std::vector<bool> _inputDeviceIsMonoPair;
 
 		// The audio inputs we have; currently unchanging after graph creation.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
@@ -165,8 +168,11 @@ namespace NowSound
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* GetAudioAllocator();
 
-		// Create an input device.
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex, Option<int> channelOpt);
+		// Create an input device (or a pair of them, if monoPair is true).
+		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex, bool monoPair);
+
+		// Create an input device (or a pair of them, if monoPair is true).
+		void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, Option<int> channelIndexOpt);
 
 		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();

@@ -185,6 +185,7 @@ struct App : ApplicationT<App>
 	StackPanel _inputDeviceSelectionStackPanel{ nullptr };
 
 	std::vector<int> _checkedInputDevices{};
+	std::vector<bool> _monoPairSelected{};
 
     static int _nextTrackNumber;
 
@@ -352,7 +353,9 @@ fire_and_forget App::LaunchedAsync()
 
 	// Fill out the list of input devices and require the user to select at least one.
 	std::unique_ptr<std::vector<int>> checkedEntries{new std::vector<int>()};
+	_monoPairSelected.resize(info.InputDeviceCount);
 	Button okButton = Button();
+	okButton.IsEnabled(false);
 	for (int i = 0; i < info.InputDeviceCount; i++)
 	{
 		// Two bounded character buffers.
@@ -366,10 +369,24 @@ fire_and_forget App::LaunchedAsync()
 		std::wstring idWStr{ idBuf };
 		std::wstring nameWStr{ nameBuf };
 
-		CheckBox box = CheckBox();
+		StackPanel nextRow = StackPanel();
+		nextRow.Orientation(Orientation::Horizontal);
 
-		box.Content(winrt::box_value(nameBuf));
 		int j = i;
+
+		CheckBox box = CheckBox();
+		box.Content(winrt::box_value(nameBuf));
+		nextRow.Children().Append(box);
+		ComboBox combo = ComboBox();
+		combo.Items().Append(winrt::box_value(L"Stereo"));
+		combo.Items().Append(winrt::box_value(L"Mono Pair"));
+		combo.SelectedIndex(1);
+		nextRow.Children().Append(combo);
+		combo.SelectionChanged([this, j, combo](IInspectable const&, RoutedEventArgs const&)
+		{
+			_monoPairSelected[j] = combo.SelectedIndex() > 0;
+		});
+
 		box.Checked([this, j, okButton](IInspectable const&, RoutedEventArgs const&)
 		{
 			_checkedInputDevices.push_back(j);
@@ -382,17 +399,20 @@ fire_and_forget App::LaunchedAsync()
 
 			okButton.IsEnabled(_checkedInputDevices.size() > 0);
 		});
-		_inputDeviceSelectionStackPanel.Children().Append(box);
+
+		_inputDeviceSelectionStackPanel.Children().Append(nextRow);
 	}
 	okButton.Content(winrt::box_value(L"OK"));
 	okButton.Click([this](IInspectable const&, RoutedEventArgs const&)
 	{
 		for (int deviceIndex : _checkedInputDevices)
 		{
-			NowSoundGraph_InitializeInputDevice(deviceIndex);
+			NowSoundGraph_InitializeInputDevice(deviceIndex, _monoPairSelected[deviceIndex]);
 		}
-		// and hide the selections
+
+		// and hide the devices
 		_inputDeviceSelectionStackPanel.Visibility(Visibility::Collapsed);
+
 		// and go on with the flow
 		InputDevicesSelectedAsync();
 	});

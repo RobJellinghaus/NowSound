@@ -133,17 +133,8 @@ namespace NowSound
 
 		// update input volume histograms
 		float* dataInFloats = (float*)dataInBytes;
-		for (int i = 0; i < duration.Value(); i++)
-		{
-			for (int j = 0; j < Clock::Instance().ChannelCount(); j++)
-			{
-				float value = dataInFloats[i * channelCount + j];
-				// add the absolute value because for volume purposes we don't want negatives to cancel positives
-				_incomingAudioHistograms[j]->Add(std::abs(value));
-			}
-		}
 
-		float* bufferStartPointer = (float*)dataInBytes + bufferStart;
+		float* bufferStartPointer = dataInFloats + bufferStart;
 
 		// If we have a channelOpt setting, then copy the data into _buffer while panning it,
 		// and use _buffer as the source for recording.
@@ -151,6 +142,9 @@ namespace NowSound
 		{
 			// Make sure our buffer is big enough.
 			_buffer.resize(duration.Value() * Clock::Instance().ChannelCount());
+
+			// copy the data
+			std::copy(bufferStartPointer, bufferStartPointer + (duration.Value() * channelCount), _buffer.data());
 
 			// Use cosine panner for volume preservation.
 			double angularPosition = _pan * Pi / 2;
@@ -165,6 +159,17 @@ namespace NowSound
 			}
 
 			bufferStartPointer = _buffer.data();
+		}
+
+		// Update the histograms (show post-panned volume data).
+		for (int i = 0; i < duration.Value(); i++)
+		{
+			for (int j = 0; j < Clock::Instance().ChannelCount(); j++)
+			{
+				float value = bufferStartPointer[i * channelCount + j];
+				// add the absolute value because for volume purposes we don't want negatives to cancel positives
+				_incomingAudioHistograms[j]->Add(std::abs(value));
+			}
 		}
 
 		// iterate through all active Recorders
