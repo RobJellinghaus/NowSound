@@ -61,6 +61,9 @@ namespace NowSound
 			// Volume for the two channels.  TODO: generalize to N channels.
 			float Channel0Volume;
 			float Channel1Volume;
+
+			// The pan value; 0 = left, 1 = right, 0.5 = center.
+			float Pan;
 		} NowSoundInputInfo;
 
         // Information about a track's time in NowSound terms.
@@ -187,7 +190,8 @@ namespace NowSound
 
 		NowSoundInputInfo CreateNowSoundInputInfo(
 			float channel0Volume,
-			float channel1Volume);
+			float channel1Volume,
+			float pan);
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             int64_t startTimeInSamples,

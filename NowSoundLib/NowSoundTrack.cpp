@@ -153,7 +153,7 @@ namespace NowSound
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
-		_recentVolumeHistogram{ Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
+		_recentVolumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
 	{
         Check(_lastSampleTime.Value() >= 0);
 

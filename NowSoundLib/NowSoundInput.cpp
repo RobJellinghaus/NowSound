@@ -27,10 +27,13 @@ namespace NowSound
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
 		AudioDeviceInputNode inputNode,
-		BufferAllocator<float>* audioAllocator)
+		BufferAllocator<float>* audioAllocator,
+		Option<int> channelOpt)
 		: _nowSoundGraph{ nowSoundGraph },
 		_audioInputId{ inputId },
 		_inputDevice{ inputNode },
+		_channelOpt{ channelOpt },
+		_pan{ 0.5 },
 		_frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
 		_recorders{},
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
@@ -39,7 +42,7 @@ namespace NowSound
 	{
 		for (int i = 0; i < Clock::Instance().ChannelCount(); i++)
 		{
-			std::unique_ptr<Histogram> newHistogram{ new Histogram(Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
+			std::unique_ptr<Histogram> newHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
 			_incomingAudioHistograms.push_back(std::move(newHistogram));
 		}
 
@@ -56,6 +59,7 @@ namespace NowSound
 		NowSoundInputInfo ret;
 		ret.Channel0Volume = channel0Volume;
 		ret.Channel1Volume = channel1Volume;
+		ret.Pan = _pan;
 		return ret;
 	}
 
@@ -73,9 +77,13 @@ namespace NowSound
 		NowSoundTrack::AddTrack(id, std::move(newTrack));
 	}
 
+	const double Pi = std::atan(1) * 4;
+
 	void NowSoundInput::HandleIncomingAudio()
 	{
 		AudioFrame frame = _frameOutputNode.GetFrame();
+
+		int channelCount = Clock::Instance().ChannelCount();
 
 		uint8_t* dataInBytes{};
 		uint32_t capacityInBytes{};
@@ -94,7 +102,8 @@ namespace NowSound
 		}
 
 		// Must be multiple of channels * sizeof(float)
-		int sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
+		uint32_t sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
+		// make sure capacity is an exact multiple of sample size
 		Check((capacityInBytes & (sampleSizeInBytes - 1)) == 0);
 
 		uint32_t bufferStart = 0;
@@ -104,16 +113,19 @@ namespace NowSound
 			// then the audio graph decided to give us a big backload of buffer content
 			// as its first callback.  Not sure why it does this, but we don't want it,
 			// so take only the tail of the buffer.
-			uint32_t latencyInSamples = ((uint32_t)_nowSoundGraph->GetAudioGraph().LatencyInSamples() * sampleSizeInBytes);
+			uint32_t latencyInSamples = (uint32_t)_nowSoundGraph->GetAudioGraph().LatencyInSamples();
+
 			if (latencyInSamples == 0)
 			{
 				// sorry audiograph, don't really believe you when you say zero latency.
 				latencyInSamples = (int)(Clock::Instance().SampleRateHz() * MagicNumbers::AudioFrameLengthSeconds.Value());
 			}
-			if (capacityInBytes > latencyInSamples)
+
+			uint32_t latencyBufferSize = (uint32_t)latencyInSamples * sampleSizeInBytes;
+			if (capacityInBytes > latencyBufferSize)
 			{
-				bufferStart = capacityInBytes - (uint32_t)(_nowSoundGraph->GetAudioGraph().LatencyInSamples() * sampleSizeInBytes);
-				capacityInBytes = (uint32_t)(_nowSoundGraph->GetAudioGraph().LatencyInSamples() * sampleSizeInBytes);
+				bufferStart = capacityInBytes - latencyBufferSize;
+				capacityInBytes = latencyBufferSize;
 			}
 		}
 
@@ -125,10 +137,34 @@ namespace NowSound
 		{
 			for (int j = 0; j < Clock::Instance().ChannelCount(); j++)
 			{
-				float value = dataInFloats[i * Clock::Instance().ChannelCount() + j];
+				float value = dataInFloats[i * channelCount + j];
 				// add the absolute value because for volume purposes we don't want negatives to cancel positives
 				_incomingAudioHistograms[j]->Add(std::abs(value));
 			}
+		}
+
+		float* bufferStartPointer = (float*)dataInBytes + bufferStart;
+
+		// If we have a channelOpt setting, then copy the data into _buffer while panning it,
+		// and use _buffer as the source for recording.
+		if (_channelOpt.HasValue())
+		{
+			// Make sure our buffer is big enough.
+			_buffer.resize(duration.Value() * Clock::Instance().ChannelCount());
+
+			// Use cosine panner for volume preservation.
+			double angularPosition = _pan * Pi / 2;
+			double leftCoefficient = std::cos(angularPosition);
+			double rightCoefficient = std::sin(angularPosition);
+			for (int i = 0; i < duration.Value(); i++)
+			{
+				float inputValue = bufferStartPointer[(i * channelCount) + _channelOpt.Value()];
+
+				_buffer[i * channelCount] = (float)(leftCoefficient * inputValue);
+				_buffer[i * channelCount + 1] = (float)(rightCoefficient * inputValue);
+			}
+
+			bufferStartPointer = _buffer.data();
 		}
 
 		// iterate through all active Recorders
@@ -141,8 +177,7 @@ namespace NowSound
 			// Give the new audio to each Recorder, collecting the ones that are done.
 			for (IRecorder<AudioSample, float>* recorder : _recorders)
 			{
-				bool stillRecording =
-					recorder->Record(duration, (float*)(dataInBytes + bufferStart));
+				bool stillRecording = recorder->Record(duration, bufferStartPointer);
 
 				if (!stillRecording)
 				{

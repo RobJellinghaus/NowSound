@@ -67,6 +67,11 @@ namespace NowSound
 		// Graph must be in Initialized state.
 		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex);
 
+		// Initialize the given device to emit one channel as its own input, given its index (as passed to InputDeviceInfo)
+		// and the index of the channel of the device; returns the AudioInputId of that channel of the input device.
+		// Graph must be in Initialized state.
+		__declspec(dllexport) AudioInputId NowSoundGraph_InitializeInputDeviceChannel(int deviceIndex, int channelIndex);
+
 		// Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.
         __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();

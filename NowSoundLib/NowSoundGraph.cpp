@@ -12,6 +12,7 @@
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
+#include "Option.h"
 
 using namespace concurrency;
 using namespace std;
@@ -81,7 +82,12 @@ namespace NowSound
 
 	AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex)
 	{
-		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex);
+		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, Option<int>());
+	}
+
+	AudioInputId NowSoundGraph_InitializeInputDeviceChannel(int deviceIndex, int channelIndex)
+	{
+		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, Option<int>(channelIndex));
 	}
 
 	void NowSoundGraph_CreateAudioGraphAsync()
@@ -209,7 +215,7 @@ namespace NowSound
 			MagicNumbers::BeatsPerMeasure);
 
 		_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
-			Clock::Instance().BytesPerSecond() * MagicNumbers::AudioBufferSizeInSeconds.Value(),
+			(int)(Clock::Instance().BytesPerSecond() * MagicNumbers::AudioBufferSizeInSeconds.Value()),
 			MagicNumbers::InitialAudioBufferCount));
 
 		// save the local across the co_await statement
@@ -236,7 +242,7 @@ namespace NowSound
 			_audioGraph.EncodingProperties().BitsPerSample(),
 			_audioGraph.LatencyInSamples(),
 			_audioGraph.SamplesPerQuantum(),
-			_inputDeviceInfos.size());
+			(int32_t)_inputDeviceInfos.size());
 
 		return graphInfo;
 	}
@@ -251,16 +257,17 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
-	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex)
+	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex, Option<int> channelOpt)
 	{
 		Check(State() == NowSoundGraphState::GraphInitialized);
 
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
+		_inputChannelsToInitialize.push_back(channelOpt);
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_inputDeviceIndicesToInitialize.size())));
 		return nextAudioInputId;
 	}
 
-	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
+	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex, Option<int> channelIndexOpt)
 	{
 		// Create a device input node
 		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
@@ -279,7 +286,13 @@ namespace NowSound
 
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
 
-		std::unique_ptr<NowSoundInput> input(new NowSoundInput(this, nextAudioInputId, inputNode, _audioAllocator.get()));
+		std::unique_ptr<NowSoundInput> input(new NowSoundInput(
+			this,
+			nextAudioInputId,
+			inputNode,
+			_audioAllocator.get(),
+			channelIndexOpt));
+
 		_audioInputs.emplace_back(std::move(input));
 	}
 
@@ -311,9 +324,11 @@ namespace NowSound
 		});
 
 		// add in all inputs
-		for (int deviceIndex : _inputDeviceIndicesToInitialize)
+		Check(_inputDeviceIndicesToInitialize.size() == _inputChannelsToInitialize.size());
+
+		for (int i = 0; i < _inputDeviceIndicesToInitialize.size(); i++)
 		{
-			co_await CreateInputDeviceAsync(deviceIndex);
+			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i], _inputChannelsToInitialize[i]);
 		}
 
         ChangeState(NowSoundGraphState::GraphCreated);

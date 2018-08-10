@@ -12,6 +12,7 @@
 #include "Histogram.h"
 #include "NowSoundInput.h"
 #include "NowSoundLibTypes.h"
+#include "Option.h"
 #include "Recorder.h"
 #include "SliceStream.h"
 
@@ -26,11 +27,17 @@ namespace NowSound
 		// The NowSoundAudioGraph that created this input.
 		const NowSoundGraph* _nowSoundGraph;
 
-		// The audio input ID.
+		// The audio input ID of this input.
 		const AudioInputId _audioInputId;
 
 		// The input device.
 		winrt::Windows::Media::Audio::AudioDeviceInputNode _inputDevice;
+
+		// The optional channel to select from the input device.
+		Option<int> _channelOpt;
+
+		// The panning value (0 = left, 1 = right).
+		float _pan;
 
 		// The frame output node which allows buffering input audio into memory.
 		winrt::Windows::Media::Audio::AudioFrameOutputNode _frameOutputNode;
@@ -55,13 +62,20 @@ namespace NowSound
 		// Histograms on the input device volume -- one per channel (so stereo input gets two histograms).
 		std::vector<std::unique_ptr<Histogram>> _incomingAudioHistograms;
 
+		// Temporary buffer, reused across calls to HandleInputAudio.
+		std::vector<float> _buffer;
+
 	public:
-		// Construct a NowSoundInput.  TODO: allow specifying which device.
+		// Construct a NowSoundInput.
 		NowSoundInput(
 			NowSoundGraph* audioGraph,
 			AudioInputId audioInputId,
 			winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
-			BufferAllocator<float>* audioAllocator);
+			BufferAllocator<float>* audioAllocator,
+			Option<int> channelOpt);
+
+		// Set the stereo panning (0 = left, 1 = right, 0.5 = center).
+		void Pan(float pan);
 
 		// Get information about this input.
 		NowSoundInputInfo Info();
@@ -72,5 +86,4 @@ namespace NowSound
 		// Handle any audio incoming for this input.
 		void HandleIncomingAudio();
 	};
-
 }

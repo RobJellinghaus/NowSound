@@ -51,7 +51,7 @@ namespace NowSound
 		// Initialize given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
 		// (Note that actual device creation happens at audio graph creation time, to allow proper synchronization.)
-		AudioInputId InitializeInputDevice(int deviceIndex);
+		AudioInputId InitializeInputDevice(int deviceIndex, Option<int> channelIndexOpt);
 
 		// Create the audio graph.
 		// Graph must be Initialized.  On completion, graph becomes Created.
@@ -132,6 +132,9 @@ namespace NowSound
 		// The audio device indices to initialize.
 		::std::vector<int> _inputDeviceIndicesToInitialize;
 
+		// The optional channels for each device.
+		::std::vector<Option<int>> _inputChannelsToInitialize;
+
 		// The audio inputs we have; currently unchanging after graph creation.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
 		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
@@ -163,7 +166,7 @@ namespace NowSound
         BufferAllocator<float>* GetAudioAllocator();
 
 		// Create an input device.
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
+		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex, Option<int> channelOpt);
 
 		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();
