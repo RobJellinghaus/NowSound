@@ -24,26 +24,20 @@ namespace NowSound
 		typedef struct NowSoundGraphInfo
 		{
 			// The sample rate of the graph in hertz.
-			// This field is populated once the graph is Initialized.
 			int32_t SampleRateHz;
 			// The number of output channels
-			// This field is populated once the graph is Initialized.
 			int32_t ChannelCount;
 			// The number of bits per sample.
-			// This field is populated once the graph is Initialized.
 			int32_t BitsPerSample;
 			// The latency of the graph, in samples, as reported by the graph itself.
-			// This field is populated once the graph is Initialized.
 			int32_t LatencyInSamples;
 			// The number of samples per audio graph quantum, also reported by the graph itself.
-			// This field is populated once the graph is Initialized.
 			int32_t SamplesPerQuantum;
 			// The number of input devices.
-			// This field is populated once the graph is Initialized.
 			int32_t InputDeviceCount;
 		} NowSoundGraphInfo;
 
-		// Time information from a Running graph.
+		// Time information from a Created or Running graph.
 		typedef struct NowSoundTimeInfo
 		{
 			// The number of samples elamsed since the audio graph started.
@@ -56,6 +50,8 @@ namespace NowSound
 			float BeatInMeasure;
 		} NowSoundTimeInfo;
 
+		// Information about a created input.
+		// TODO: make this be mono!  Mono inputs are more spatializable.
 		typedef struct NowSoundInputInfo
 		{
 			// Volume for the two channels.  TODO: generalize to N channels.

@@ -75,15 +75,19 @@ namespace NowSound
 			Option<int> channelOpt);
 
 		// Set the stereo panning (0 = left, 1 = right, 0.5 = center).
+		// TODO: implement panning fully and expose to user!
 		void Pan(float pan);
 
 		// Get information about this input.
 		NowSoundInputInfo Info();
 
 		// Create a recording track monitoring this input.
+		// Note that this is not concurrency-safe with respect to other calls to this method.
+		// (It is of course concurrency-safe with respect to ongoing audio activity.)
 		void CreateRecordingTrack(TrackId id);
 
 		// Handle any audio incoming for this input.
+		// This method is invoked by audio quantum processing, as an audio activity.
 		void HandleIncomingAudio();
 	};
 }

@@ -41,11 +41,13 @@ namespace NowSound
 
 	NowSoundInputInfo CreateNowSoundInputInfo(
 		float channel0Volume,
-		float channel1Volume)
+		float channel1Volume,
+		float pan)
 	{
 		NowSoundInputInfo info;
 		info.Channel0Volume = channel0Volume;
 		info.Channel1Volume = channel1Volume;
+		info.Pan = pan;
 		return info;
 	}
 

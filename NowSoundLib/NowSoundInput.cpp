@@ -67,13 +67,14 @@ namespace NowSound
 	{
 		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, _audioInputId, _incomingAudioStream));
 
-		// new tracks are created as recording; lock the _recorders collection and add this new track
+		// New tracks are created as recording; lock the _recorders collection and add this new track.
+		// Note that the _recorders collection holds a raw pointer, e.g. a weak reference, to the track.
 		{
 			std::lock_guard<std::mutex> guard(_recorderMutex);
 			_recorders.push_back(newTrack.get());
 		}
 
-		// move the new track over to the collection of tracks in NowSoundTrackAPI
+		// Move the new track over to the collection of tracks in NowSoundTrackAPI.
 		NowSoundTrack::AddTrack(id, std::move(newTrack));
 	}
 
