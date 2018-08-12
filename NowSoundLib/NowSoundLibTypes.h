@@ -40,6 +40,9 @@ namespace NowSound
 		// Time information from a Created or Running graph.
 		typedef struct NowSoundTimeInfo
 		{
+			// The number of AudioInputs defined in the graph.
+			int32_t AudioInputCount;
+
 			// The number of samples elamsed since the audio graph started.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
@@ -50,13 +53,12 @@ namespace NowSound
 			float BeatInMeasure;
 		} NowSoundTimeInfo;
 
-		// Information about a created input.
-		// TODO: make this be mono!  Mono inputs are more spatializable.
+		// Information about a created input; currently only mono inputs are supported.
+		// (Stereo inputs can be represented as a pair of mono inputs.)
 		typedef struct NowSoundInputInfo
 		{
-			// Volume for the two channels.  TODO: generalize to N channels.
-			float Channel0Volume;
-			float Channel1Volume;
+			// Volume for the input signal.
+			float Volume;
 
 			// The pan value; 0 = left, 1 = right, 0.5 = center.
 			float Pan;
@@ -83,6 +85,8 @@ namespace NowSound
 			int64_t LastSampleTime;
 			// The volume, averaged over the last N samples.
 			float RecentVolume;
+			// The panning value of this track.
+			float Pan;
 			// The minimum count of required samples over the last N seconds.
             float MinimumRequiredSamples;
             // The maximum count of required samples over the last N seconds.
@@ -144,7 +148,9 @@ namespace NowSound
         };
 
         // The indices for audio inputs created by the app.
-        /// Prevents confusing an audio input with some other int value.
+        // Prevents confusing an audio input with some other int value.
+		//
+		// Note that audio inputs are always mono (at present, and perhaps indefinitely).
         // 
         // The predefined values are really irrelevant; it can be cast to and from int as necessary.
         // But, used in parameters, the type helps with making the code self-documenting.
@@ -179,14 +185,14 @@ namespace NowSound
 			int32_t inputDeviceCount);
 
 		NowSoundTimeInfo CreateNowSoundTimeInfo(
+			int32_t audioInputCount,
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,
 			float beatInMeasure);
 
 		NowSoundInputInfo CreateNowSoundInputInfo(
-			float channel0Volume,
-			float channel1Volume,
+			float volume,
 			float pan);
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
@@ -199,6 +205,7 @@ namespace NowSound
 			float localClockBeat,
 			int64_t lastSampleTime,
 			float recentVolume,
+			float pan,
             float minimumRequiredSamples,
 			float maximumRequiredSamples,
 			float averageRequiredSamples,

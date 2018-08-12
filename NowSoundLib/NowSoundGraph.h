@@ -48,10 +48,9 @@ namespace NowSound
 		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
 		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
-		// Initialize given input; return its newly assigned input ID. (AudioInputIds only apply to created devices.)
-		// If monoPair, then two AudioInputs will be created; the ID of the first will be returned, the ID of the second is one greater.
+		// Initialize given input device.  One mono input will be created per channel of the device.
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
-		AudioInputId InitializeInputDevice(int deviceIndex, bool monoPair);
+		void InitializeDeviceInputs(int deviceIndex);
 
 		// Create the audio graph.
 		// Graph must be Initialized.  On completion, graph becomes Created.
@@ -135,9 +134,6 @@ namespace NowSound
 		// The audio device indices to initialize.
 		::std::vector<int> _inputDeviceIndicesToInitialize;
 
-		// Which devices are actually to be created as mono pairs?
-		::std::vector<bool> _inputDeviceIsMonoPair;
-
 		// The audio inputs we have; currently unchanging after graph creation.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
 		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
@@ -169,10 +165,10 @@ namespace NowSound
         BufferAllocator<float>* GetAudioAllocator();
 
 		// Create an input device (or a pair of them, if monoPair is true).
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex, bool monoPair);
+		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
 
 		// Create an input device (or a pair of them, if monoPair is true).
-		void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, Option<int> channelIndexOpt);
+		void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, int channel);
 
 		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();

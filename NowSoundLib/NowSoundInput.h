@@ -20,7 +20,7 @@ namespace NowSound
 {
 	class NowSoundGraph;
 
-	// A single audio input and its associated objects.
+	// A single mono audio input and its associated objects.
 	class NowSoundInput
 	{
 	private:
@@ -30,11 +30,11 @@ namespace NowSound
 		// The audio input ID of this input.
 		const AudioInputId _audioInputId;
 
-		// The input device.
+		// The input device. Note that this device input node may be shared between multiple NowSoundInputs.
 		winrt::Windows::Media::Audio::AudioDeviceInputNode _inputDevice;
 
-		// The optional channel to select from the input device.
-		Option<int> _channelOpt;
+		// The channel to select from the input device.
+		int _channel;
 
 		// The panning value (0 = left, 1 = right).
 		float _pan;
@@ -59,11 +59,11 @@ namespace NowSound
 		// Adapter to record incoming data into _incomingAudioStream.
 		StreamRecorder<AudioSample, float> _incomingAudioStreamRecorder;
 
-		// Histograms on the input device volume -- one per channel (so stereo input gets two histograms).
-		std::vector<std::unique_ptr<Histogram>> _incomingAudioHistograms;
+		// Histograms on the input volume of this input's channel.
+		Histogram _volumeHistogram;
 
 		// Temporary buffer, reused across calls to HandleInputAudio.
-		std::vector<float> _buffer;
+		std::vector<float> _monoBuffer;
 
 	public:
 		// Construct a NowSoundInput.
@@ -72,7 +72,7 @@ namespace NowSound
 			AudioInputId audioInputId,
 			winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
 			BufferAllocator<float>* audioAllocator,
-			Option<int> channelOpt);
+			int channel);
 
 		// Set the stereo panning (0 = left, 1 = right, 0.5 = center).
 		// TODO: implement panning fully and expose to user!

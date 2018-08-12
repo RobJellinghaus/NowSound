@@ -26,12 +26,14 @@ namespace NowSound
 	}
 
 	NowSoundTimeInfo CreateNowSoundTimeInfo(
+		int32_t audioInputCount,
 		int64_t timeInSamples,
 		float exactBeat,
 		float beatsPerMinute,
 		float beatInMeasure)
 	{
 		NowSoundTimeInfo info;
+		info.AudioInputCount = audioInputCount;
 		info.TimeInSamples = timeInSamples;
 		info.ExactBeat = exactBeat;
 		info.BeatsPerMinute = beatsPerMinute;
@@ -40,13 +42,11 @@ namespace NowSound
 	}
 
 	NowSoundInputInfo CreateNowSoundInputInfo(
-		float channel0Volume,
-		float channel1Volume,
+		float volume,
 		float pan)
 	{
 		NowSoundInputInfo info;
-		info.Channel0Volume = channel0Volume;
-		info.Channel1Volume = channel1Volume;
+		info.Volume = volume;
 		info.Pan = pan;
 		return info;
 	}
@@ -61,6 +61,7 @@ namespace NowSound
 		float localClockBeat,
 		int64_t lastSampleTime,
 		float recentVolume,
+		float pan,
 		float minimumRequiredSamples,
         float maximumRequiredSamples,
         float averageRequiredSamples,
@@ -78,6 +79,7 @@ namespace NowSound
 		info.LocalClockBeat = localClockBeat;
 		info.LastSampleTime = lastSampleTime;
 		info.RecentVolume = recentVolume;
+		info.Pan = pan;
 		info.MinimumRequiredSamples = minimumRequiredSamples;
         info.MaximumRequiredSamples = maximumRequiredSamples;
         info.AverageRequiredSamples = averageRequiredSamples;

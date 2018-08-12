@@ -28,44 +28,35 @@ namespace NowSound
 		AudioInputId inputId,
 		AudioDeviceInputNode inputNode,
 		BufferAllocator<float>* audioAllocator,
-		Option<int> channelOpt)
+		int channel)
 		: _nowSoundGraph{ nowSoundGraph },
 		_audioInputId{ inputId },
 		_inputDevice{ inputNode },
-		_channelOpt{ channelOpt },
+		_channel{ channel },
 		_pan{ 0.5 },
+		// TODO: make NowSoundInputs on the same device share FrameOutputNodes as well as DeviceInputNodes
 		_frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
 		_recorders{},
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
 		_incomingAudioStreamRecorder{ &_incomingAudioStream },
-		_incomingAudioHistograms{}
+		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
 	{
-		for (int i = 0; i < Clock::Instance().ChannelCount(); i++)
-		{
-			std::unique_ptr<Histogram> newHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value()) };
-			_incomingAudioHistograms.push_back(std::move(newHistogram));
-		}
-
 		_inputDevice.AddOutgoingConnection(_frameOutputNode);
 	}
 
 	NowSoundInputInfo NowSoundInput::Info()
 	{
-		const std::unique_ptr<Histogram>& channel0 = _incomingAudioHistograms[0];
-		const std::unique_ptr<Histogram>& channel1 = _incomingAudioHistograms[1];
-		float channel0Volume = channel0->Average();
-		float channel1Volume = channel1->Average();
+		float volume = _volumeHistogram.Average();
 
 		NowSoundInputInfo ret;
-		ret.Channel0Volume = channel0Volume;
-		ret.Channel1Volume = channel1Volume;
+		ret.Volume = volume;
 		ret.Pan = _pan;
 		return ret;
 	}
 
 	void NowSoundInput::CreateRecordingTrack(TrackId id)
 	{
-		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, _audioInputId, _incomingAudioStream));
+		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, _audioInputId, _incomingAudioStream, _pan));
 
 		// New tracks are created as recording; lock the _recorders collection and add this new track.
 		// Note that the _recorders collection holds a raw pointer, e.g. a weak reference, to the track.
@@ -84,6 +75,8 @@ namespace NowSound
 	{
 		AudioFrame frame = _frameOutputNode.GetFrame();
 
+		// The frame has this many channels.
+		// TODO: decouple input channels from overall graph channels.
 		int channelCount = Clock::Instance().ChannelCount();
 
 		uint8_t* dataInBytes{};
@@ -133,44 +126,17 @@ namespace NowSound
 		Duration<AudioSample> duration(capacityInBytes / sampleSizeInBytes);
 
 		// update input volume histograms
-		float* dataInFloats = (float*)dataInBytes;
+		float* dataInFloats = (float*)(dataInBytes + bufferStart);
 
-		float* bufferStartPointer = dataInFloats + bufferStart;
+		// Make sure our buffer is big enough; note that we don't multiply by channelCount because this is a mono buffer.
+		_monoBuffer.resize(duration.Value());
 
-		// If we have a channelOpt setting, then copy the data into _buffer while panning it,
-		// and use _buffer as the source for recording.
-		if (_channelOpt.HasValue())
+		// Copy the data from the appropriate channel of the input device into the mono buffer.
+		for (int i = 0 ; i < duration.Value(); i++)
 		{
-			// Make sure our buffer is big enough.
-			_buffer.resize(duration.Value() * Clock::Instance().ChannelCount());
-
-			// copy the data
-			std::copy(bufferStartPointer, bufferStartPointer + (duration.Value() * channelCount), _buffer.data());
-
-			// Use cosine panner for volume preservation.
-			double angularPosition = _pan * Pi / 2;
-			double leftCoefficient = std::cos(angularPosition);
-			double rightCoefficient = std::sin(angularPosition);
-			for (int i = 0; i < duration.Value(); i++)
-			{
-				float inputValue = bufferStartPointer[(i * channelCount) + _channelOpt.Value()];
-
-				_buffer[i * channelCount] = (float)(leftCoefficient * inputValue);
-				_buffer[i * channelCount + 1] = (float)(rightCoefficient * inputValue);
-			}
-
-			bufferStartPointer = _buffer.data();
-		}
-
-		// Update the histograms (show post-panned volume data).
-		for (int i = 0; i < duration.Value(); i++)
-		{
-			for (int j = 0; j < Clock::Instance().ChannelCount(); j++)
-			{
-				float value = bufferStartPointer[i * channelCount + j];
-				// add the absolute value because for volume purposes we don't want negatives to cancel positives
-				_incomingAudioHistograms[j]->Add(std::abs(value));
-			}
+			float value = dataInFloats[i * channelCount + _channel];
+			_volumeHistogram.Add(value);
+			_monoBuffer.data()[i] = value;
 		}
 
 		// iterate through all active Recorders
@@ -183,7 +149,7 @@ namespace NowSound
 			// Give the new audio to each Recorder, collecting the ones that are done.
 			for (IRecorder<AudioSample, float>* recorder : _recorders)
 			{
-				bool stillRecording = recorder->Record(duration, bufferStartPointer);
+				bool stillRecording = recorder->Record(duration, _monoBuffer.data());
 
 				if (!stillRecording)
 				{

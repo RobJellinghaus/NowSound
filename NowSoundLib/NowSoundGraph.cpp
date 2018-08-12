@@ -48,9 +48,10 @@ namespace NowSound
 	{
 		return CreateNowSoundTimeInfo(
 			1,
-			(float)2,
+			2,
 			(float)3,
-			(float)4);
+			(float)4,
+			(float)5);
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
@@ -80,9 +81,9 @@ namespace NowSound
 		NowSoundGraph::Instance()->InputDeviceName(deviceIndex, wcharBuffer, bufferCapacity);
 	}
 
-	AudioInputId NowSoundGraph_InitializeInputDevice(int deviceIndex, bool monoPair)
+	void NowSoundGraph_InitializeDeviceInputs(int deviceIndex)
 	{
-		return NowSoundGraph::Instance()->InitializeInputDevice(deviceIndex, monoPair);
+		NowSoundGraph::Instance()->InitializeDeviceInputs(deviceIndex);
 	}
 
 	void NowSoundGraph_CreateAudioGraphAsync()
@@ -253,23 +254,14 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
-	AudioInputId NowSoundGraph::InitializeInputDevice(int deviceIndex, bool monoPair)
+	void NowSoundGraph::InitializeDeviceInputs(int deviceIndex)
 	{
 		Check(State() == NowSoundGraphState::GraphInitialized);
 
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
-		_inputDeviceIsMonoPair.push_back(monoPair);
-		_nextAudioInputId = (AudioInputId)(_nextAudioInputId + 1);
-		AudioInputId returnValue = _nextAudioInputId;
-		if (monoPair)
-		{
-			// "pre-allocate" the next one
-			_nextAudioInputId = (AudioInputId)(_nextAudioInputId + 1);
-		}
-		return returnValue;
 	}
 
-	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex, bool monoPair)
+	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
 	{
 		// Create a device input node
 		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
@@ -286,18 +278,14 @@ namespace NowSound
 
 		AudioDeviceInputNode inputNode = deviceInputNodeResult.DeviceInputNode();
 
-		if (monoPair)
+		// create one AudioInput per input channel of the device
+		for (uint32_t i = 0; i < inputNode.EncodingProperties().ChannelCount(); i++)
 		{
-			CreateInputDeviceFromNode(inputNode, Option<int>(0));
-			CreateInputDeviceFromNode(inputNode, Option<int>(1));
-		}
-		else
-		{
-			CreateInputDeviceFromNode(inputNode, Option<int>());
+			CreateInputDeviceFromNode(inputNode, (int)i);
 		}
 	}
 
-	void NowSoundGraph::CreateInputDeviceFromNode(AudioDeviceInputNode inputNode, Option<int> channelIndexOpt)
+	void NowSoundGraph::CreateInputDeviceFromNode(AudioDeviceInputNode inputNode, int channel)
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
 		std::unique_ptr<NowSoundInput> input(new NowSoundInput(
@@ -305,7 +293,7 @@ namespace NowSound
 			nextAudioInputId,
 			inputNode,
 			_audioAllocator.get(),
-			channelIndexOpt));
+			channel));
 
 		_audioInputs.emplace_back(std::move(input));
 	}
@@ -337,12 +325,9 @@ namespace NowSound
 			HandleIncomingAudio();
 		});
 
-		// add in all inputs
-		Check(_inputDeviceIndicesToInitialize.size() == _inputDeviceIsMonoPair.size());
-
 		for (int i = 0; i < _inputDeviceIndicesToInitialize.size(); i++)
 		{
-			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i], _inputDeviceIsMonoPair[i]);
+			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i]);
 		}
 
         ChangeState(NowSoundGraphState::GraphCreated);
@@ -359,6 +344,7 @@ namespace NowSound
 		int64_t completeBeats = (int64_t)durationBeats.Value();
 
 		NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
+			_audioInputs.size(),
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),

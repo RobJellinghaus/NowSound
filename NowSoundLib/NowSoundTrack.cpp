@@ -55,7 +55,8 @@ namespace NowSound
 			(float)12,
 			(float)13,
 			(float)14,
-			(float)15);
+			(float)15,
+			(float)16);
 	}
 
 	__declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
@@ -134,14 +135,15 @@ namespace NowSound
     NowSoundTrack::NowSoundTrack(
         TrackId trackId,
         AudioInputId inputId,
-        const BufferedSliceStream<AudioSample, float>& sourceStream)
+        const BufferedSliceStream<AudioSample, float>& sourceStream,
+		float initialPan)
         : _trackId{ trackId },
         _inputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
             Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration),
-            Clock::Instance().ChannelCount(),
+            1, // mono streams only for now (and maybe indefinitely)
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
             /*useContinuousLoopingMapper*/ false),
@@ -153,7 +155,8 @@ namespace NowSound
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
-		_recentVolumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
+		_recentVolumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
+		_pan{ initialPan }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -246,6 +249,7 @@ namespace NowSound
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
 			_recentVolumeHistogram.Average(),
+			_pan,
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
             _requiredSamplesHistogram.Average(),

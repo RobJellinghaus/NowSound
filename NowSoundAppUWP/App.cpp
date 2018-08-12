@@ -185,7 +185,6 @@ struct App : ApplicationT<App>
 	StackPanel _inputDeviceSelectionStackPanel{ nullptr };
 
 	std::vector<int> _checkedInputDevices{};
-	std::vector<bool> _monoPairSelected{};
 
     static int _nextTrackNumber;
 
@@ -317,10 +316,8 @@ struct App : ApplicationT<App>
 				<< std::fixed << std::setprecision(2)
 				<< L" | Beat: " << timeInfo.BeatInMeasure
 				<< L" | Total beats: " << timeInfo.ExactBeat
-				<< L" | I1C0 volume: " << input1Info.Channel0Volume
-				<< L" | I1C1 volume: " << input1Info.Channel1Volume
-				<< L" | I2C0 volume: " << input2Info.Channel0Volume
-				<< L" | I2C1 volume: " << input2Info.Channel1Volume;
+				<< L" | Input 1 volume: " << input1Info.Volume
+				<< L" | Input 2 volume: " << input2Info.Volume;
 			_textBlockTimeInfo.Text(wstr.str());
 
             // update all buttons
@@ -353,7 +350,6 @@ fire_and_forget App::LaunchedAsync()
 
 	// Fill out the list of input devices and require the user to select at least one.
 	std::unique_ptr<std::vector<int>> checkedEntries{new std::vector<int>()};
-	_monoPairSelected.resize(info.InputDeviceCount);
 	Button okButton = Button();
 	okButton.IsEnabled(false);
 	for (int i = 0; i < info.InputDeviceCount; i++)
@@ -377,16 +373,6 @@ fire_and_forget App::LaunchedAsync()
 		CheckBox box = CheckBox();
 		box.Content(winrt::box_value(nameBuf));
 		nextRow.Children().Append(box);
-		ComboBox combo = ComboBox();
-		combo.Items().Append(winrt::box_value(L"Stereo"));
-		combo.Items().Append(winrt::box_value(L"Mono Pair"));
-		combo.SelectedIndex(1);
-		nextRow.Children().Append(combo);
-		combo.SelectionChanged([this, j, combo](IInspectable const&, RoutedEventArgs const&)
-		{
-			_monoPairSelected[j] = combo.SelectedIndex() > 0;
-		});
-
 		box.Checked([this, j, okButton](IInspectable const&, RoutedEventArgs const&)
 		{
 			_checkedInputDevices.push_back(j);
@@ -407,7 +393,7 @@ fire_and_forget App::LaunchedAsync()
 	{
 		for (int deviceIndex : _checkedInputDevices)
 		{
-			NowSoundGraph_InitializeInputDevice(deviceIndex, _monoPairSelected[deviceIndex]);
+			NowSoundGraph_InitializeDeviceInputs(deviceIndex);
 		}
 
 		// and hide the devices

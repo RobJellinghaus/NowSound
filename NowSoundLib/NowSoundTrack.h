@@ -19,6 +19,8 @@
 
 namespace NowSound
 {
+	// Represents a single looping track of recorded audio.
+	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
     class NowSoundTrack : public IRecorder<AudioSample, float>
     {
     public:
@@ -87,8 +89,15 @@ namespace NowSound
 		// histogram of volume
 		Histogram _recentVolumeHistogram;
 
+		// current pan value; 0 = left, 0.5 = center, 1 = right
+		float _pan;
+
     public:
-        NowSoundTrack(TrackId trackId, AudioInputId inputId, const BufferedSliceStream<AudioSample, float>& sourceStream);
+		NowSoundTrack(
+			TrackId trackId,
+			AudioInputId inputId,
+			const BufferedSliceStream<AudioSample, float>& sourceStream,
+			float initialPan);
 
         // In what state is this track?
         NowSoundTrackState State() const;
@@ -124,6 +133,10 @@ namespace NowSound
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         bool IsMuted() const;
         void SetIsMuted(bool isMuted);
+
+		// Get and set the pan value for this track.
+		float Pan();
+		void Pan(float pan);
 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         void Delete();
