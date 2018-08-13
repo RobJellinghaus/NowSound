@@ -383,14 +383,14 @@ namespace NowSound
     {
         // TODO: verify not on audio graph thread
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
-		Check(audioInput >= 0);
-		Check(audioInput < _audioInputs.size());
+		Check(audioInput >= 1);
+		Check(audioInput < _audioInputs.size() + 1);
 
         // by construction this will be greater than TrackId::Undefined
         TrackId id = (TrackId)((int)_trackId + 1);
         _trackId = id;
 
-		_audioInputs[(int)audioInput]->CreateRecordingTrack(id);
+		_audioInputs[(int)(audioInput - 1)]->CreateRecordingTrack(id);
 
 		return id;
     }

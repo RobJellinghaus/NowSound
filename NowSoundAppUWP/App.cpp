@@ -53,6 +53,7 @@ struct App : ApplicationT<App>
         TrackId _trackId;
         NowSoundTrackState _trackState;
         Button _button;
+		ComboBox _combo;
         TextBlock _textBlock;
         std::wstring _label;
         int64_t _recordingStartTime;
@@ -134,11 +135,12 @@ struct App : ApplicationT<App>
             if (_trackState == NowSoundTrackState::TrackUninitialized)
             {
                 // we haven't started recording yet; time to do so!
-                _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)0);
+                _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)(_combo.SelectedIndex() + 1));
                 // don't initialize _trackState; that's Update's job.
                 // But do find out what time it is.
                 NowSoundTimeInfo graphInfo = NowSoundGraph_TimeInfo();
                 _recordingStartTime = graphInfo.TimeInSamples;
+				_combo.IsEnabled(false);
             }
             else if (_trackState == NowSoundTrackState::TrackRecording)
             {
@@ -151,6 +153,7 @@ struct App : ApplicationT<App>
             _trackNumber{ _nextTrackNumber++ },
             _trackId{ TrackId::TrackIdUndefined },
             _button{ Button() },
+			_combo{ComboBox()},
             _textBlock{ TextBlock() },
             _label{ L"Uninitialized" },
             _trackState{NowSoundTrackState::TrackUninitialized}
@@ -160,6 +163,7 @@ struct App : ApplicationT<App>
             StackPanel trackPanel{};
             trackPanel.Orientation(Windows::UI::Xaml::Controls::Orientation::Horizontal);
             trackPanel.Children().Append(_button);
+			trackPanel.Children().Append(_combo);
             trackPanel.Children().Append(_textBlock);
             app->_stackPanel.Children().Append(trackPanel);
 
@@ -167,6 +171,16 @@ struct App : ApplicationT<App>
             {
                 HandleClick();
             });
+
+			// populate the combo box with one entry per audio input
+			NowSoundTimeInfo timeInfo = NowSoundGraph_TimeInfo();
+			for (int i = 0; i < timeInfo.AudioInputCount; i++)
+			{
+				std::wstringstream wstr{};
+				wstr << L"Input " << i;
+				_combo.Items().Append(winrt::box_value(wstr.str()));
+			}
+			_combo.SelectedIndex(0);
         }
 
         // don't allow these to be copied ever
