@@ -68,16 +68,17 @@ struct App : ApplicationT<App>
             wstr = std::wstringstream{};
             if (_trackId != TrackId::TrackIdUndefined)
             {
-                NowSoundTrackInfo trackTimeInfo = NowSoundTrack_Info(_trackId);
-                wstr.precision(3);
-                wstr << L" | Start (beats): " << trackTimeInfo.StartTimeInBeats
-                    << L" | Duration (beats): " << trackTimeInfo.DurationInBeats
-                    << L" | Current beat: " << trackTimeInfo.LocalClockBeat
-					<< L" | Last sample time: " << trackTimeInfo.LastSampleTime
-                    << L" | Avg (r.s.): " << (int)trackTimeInfo.AverageRequiredSamples
-                    << L" | Min (samp./quant.): " << (int)trackTimeInfo.MinimumTimeSinceLastQuantum
-                    << L" | Max (s/q): " << (int)trackTimeInfo.MaximumTimeSinceLastQuantum
-                    << L" | Avg (s/q): " << (int)trackTimeInfo.AverageTimeSinceLastQuantum
+                NowSoundTrackInfo trackInfo = NowSoundTrack_Info(_trackId);
+                wstr << std::fixed << std::setprecision(2)
+					<< L" | Start (beats): " << trackInfo.StartTimeInBeats
+                    << L" | Duration (beats): " << trackInfo.DurationInBeats
+                    << L" | Current beat: " << trackInfo.LocalClockBeat
+					<< L" | Volume: " << trackInfo.Volume
+					<< L" | Last sample time: " << trackInfo.LastSampleTime
+                    << L" | Avg (r.s.): " << (int)trackInfo.AverageRequiredSamples
+                    << L" | Min (samp./quant.): " << (int)trackInfo.MinimumTimeSinceLastQuantum
+                    << L" | Max (s/q): " << (int)trackInfo.MaximumTimeSinceLastQuantum
+                    << L" | Avg (s/q): " << (int)trackInfo.AverageTimeSinceLastQuantum
                     ;
             }
             else

@@ -78,7 +78,7 @@ namespace NowSound
 		info.LocalClockTime = localClockTime;
 		info.LocalClockBeat = localClockBeat;
 		info.LastSampleTime = lastSampleTime;
-		info.RecentVolume = recentVolume;
+		info.Volume = recentVolume;
 		info.Pan = pan;
 		info.MinimumRequiredSamples = minimumRequiredSamples;
         info.MaximumRequiredSamples = maximumRequiredSamples;

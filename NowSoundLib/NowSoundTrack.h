@@ -87,7 +87,7 @@ namespace NowSound
         Histogram _sinceLastSampleTimingHistogram;
 
 		// histogram of volume
-		Histogram _recentVolumeHistogram;
+		Histogram _volumeHistogram;
 
 		// current pan value; 0 = left, 0.5 = center, 1 = right
 		float _pan;

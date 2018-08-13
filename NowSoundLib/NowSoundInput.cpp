@@ -69,8 +69,6 @@ namespace NowSound
 		NowSoundTrack::AddTrack(id, std::move(newTrack));
 	}
 
-	const double Pi = std::atan(1) * 4;
-
 	void NowSoundInput::HandleIncomingAudio()
 	{
 		AudioFrame frame = _frameOutputNode.GetFrame();
@@ -135,7 +133,7 @@ namespace NowSound
 		for (int i = 0 ; i < duration.Value(); i++)
 		{
 			float value = dataInFloats[i * channelCount + _channel];
-			_volumeHistogram.Add(value);
+			_volumeHistogram.Add(std::abs(value));
 			_monoBuffer.data()[i] = value;
 		}
 

@@ -60,11 +60,9 @@ void Histogram::Add(float value)
 
 void Histogram::EnsureMinMaxKnown()
 {
-	if (!_minMaxKnown)
+	if (!_minMaxKnown && _valuesInInsertionOrder.size() > 0)
 	{
 		std::lock_guard<std::mutex> guard(_mutex);
-		// don't ask for min-max before there are any values at all
-		Check(_valuesInInsertionOrder.size() > 0);
 
 		_min = _valuesInInsertionOrder[0];
 		_max = _valuesInInsertionOrder[0];

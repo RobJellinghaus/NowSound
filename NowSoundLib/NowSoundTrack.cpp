@@ -155,7 +155,7 @@ namespace NowSound
         _debugLog{},
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
-		_recentVolumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
+		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
 		_pan{ initialPan }
 	{
         Check(_lastSampleTime.Value() >= 0);
@@ -248,7 +248,7 @@ namespace NowSound
 			localClockTime.Value(),
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
-			_recentVolumeHistogram.Average(),
+			_volumeHistogram.Average(),
 			_pan,
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
@@ -283,7 +283,9 @@ namespace NowSound
         // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
     }
 
-    void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
+	const double Pi = std::atan(1) * 4;
+
+	void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
     {
         Check(sender == _audioFrameInputNode);
 
@@ -366,28 +368,41 @@ namespace NowSound
             // note that *creating* an audio frame takes a sample count and not a timespan duration....
             //audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::Instance().SampleRateHz()));
 
-            while (samplesRemaining > 0)
+			// Coefficients for panning the mono data into the audio buffer.
+			// Use cosine panner for volume preservation.
+			double angularPosition = _pan * Pi / 2;
+			double leftCoefficient = std::cos(angularPosition);
+			double rightCoefficient = std::sin(angularPosition);
+
+			int channelCount = Clock::Instance().ChannelCount();
+			// only stereo supported
+			// TODO: support more channels, fuller spatialization
+			Check(channelCount == 2); 
+
+			while (samplesRemaining > 0)
             {
                 // get up to one second or samplesRemaining, whichever is smaller
-                Slice<AudioSample, float> longest(
+                Slice<AudioSample, float> slice(
                     _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
+				Duration<AudioSample> sliceDuration = slice.SliceDuration();
 
-                longest.CopyTo(reinterpret_cast<float*>(dataInBytes));
+				// longest is a mono stream.
+				// Now is when we must stereo-pan it.
+				float* dataInFloats = (float*)dataInBytes;
 
-				// add to volume histogram
-				/* whoa why does this make everything break so badly
-				for (int i = 0; i < longest.SliceDuration().Value(); i++)
+				for (int i = 0; i < sliceDuration.Value(); i++)
 				{
-					_recentVolumeHistogram.Add(std::abs(longest.Get(i, 0)));
+					// Pan each mono sample (and track its volume).
+					float value = slice.Get(i, 0);
+					_volumeHistogram.Add(std::abs(value));
+					dataInFloats[i * channelCount] = (float)(leftCoefficient * value);
+					dataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
 				}
-				*/
 
-                Time<AudioSample> now(Clock::Instance().Now());
-
-                dataInBytes += longest.SliceDuration().Value() * longest.SliverCount() * sizeof(float);
-                _lastSampleTime = _lastSampleTime + longest.SliceDuration();
+                dataInBytes += slice.SliceDuration().Value() * channelCount * sizeof(float);
+                _lastSampleTime = _lastSampleTime + slice.SliceDuration();
                 Check(_lastSampleTime.Value() >= 0);
-                samplesRemaining -= (int)longest.SliceDuration().Value();
+                samplesRemaining -= (int)slice.SliceDuration().Value();
             }
         }
 

@@ -84,7 +84,7 @@ namespace NowSound
 			// The time at which the track last delivered samples (depends on current audio frame size).
 			int64_t LastSampleTime;
 			// The volume, averaged over the last N samples.
-			float RecentVolume;
+			float Volume;
 			// The panning value of this track.
 			float Pan;
 			// The minimum count of required samples over the last N seconds.
