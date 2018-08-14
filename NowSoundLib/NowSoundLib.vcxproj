@@ -316,6 +316,7 @@
     <ClInclude Include="NowSoundTrack.h" />
     <ClInclude Include="NowSoundLib.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="rosetta_fft.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MagicNumbers.cpp" />
@@ -331,6 +332,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="NowSoundTrack.cpp" />
+    <ClCompile Include="rosetta_fft.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
