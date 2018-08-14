@@ -124,13 +124,17 @@ namespace RosettaFFT
 		double lowerBound = 0;
 		for (int i = 0; i < binCount; i++)
 		{
-			// we are effectively splitting each bin in half, which leads to a bin ratio that is sqrt(binRatio)
+			// we are effectively splitting each bin in half, which leads to an "inter-bin ratio" that is sqrt(binRatio)
 			double upperBound = centralBinFrequencies[i] * std::sqrt(binRatio);
 
 			// convert lowerBound and upperBound to source FFT bin indices
 			results[i] = FrequencyBinBounds(lowerBound / bandwidthPerFFTBin, upperBound / bandwidthPerFFTBin);
 			lowerBound = upperBound;
 		}
+
+		// and force final upper bound to be all the way to the middle of the FFT data
+		FrequencyBinBounds final = results[results.size() - 1];
+		results[results.size() - 1] = FrequencyBinBounds(final.LowerBound, fftBinCount / 2);
 	}
 
 	void RescaleFFT(const vector<FrequencyBinBounds>& bounds, const CArray& fftData, vector<float>& outputVector)
