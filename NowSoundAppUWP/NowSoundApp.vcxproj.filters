@@ -3,9 +3,14 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="TrackButton.cpp" />
+    <ClCompile Include="NowSoundAppMagicNumbers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="TrackButton.h" />
+    <ClInclude Include="NowSoundAppMagicNumbers.h" />
+    <ClInclude Include="NowSoundApp.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

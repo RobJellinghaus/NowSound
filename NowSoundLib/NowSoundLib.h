@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "pch.h"
-
 #include "stdint.h"
 
 #include "BufferAllocator.h"
@@ -67,6 +65,19 @@ namespace NowSound
 		// but only the first will be returned.
 		__declspec(dllexport) void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
 
+		// Initialize the FFT subsystem, which for now must be done before graph creation.
+		__declspec(dllexport) void NowSoundGraph_InitializeFFT(
+			// How many output bins in the (logarithmic) frequency histogram?
+			int outputBinCount,
+			// What central frequency to use for the histogram?
+			double centralFrequency,
+			// How many divisions to make in each octave?
+			int octaveDivisions,
+			// Which bin index should be centered on centralFrequency?
+			int centralBinIndex,
+			// How many samples as input to and output from the FFT?
+			int fftSize);
+
 		// Create the audio graph.
         // Graph must be Initialized.  On completion, graph becomes Created.
         __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();
@@ -77,9 +88,14 @@ namespace NowSound
 
 		// Get the info for the specified input.
 		// Graph must be at least Created; time will not be running until the graph is Running.
-		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId id);
+		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
 
-        // Start the audio graph.
+		// Get the input frequency histogram; LPWSTR must actually reference a float buffer, but
+		// must be typed as LPWSTR and must have a capacity represented in two-byte wide characters
+		// (to match the P/Invoke style of "pass in StringBuilder", known to work).
+		__declspec(dllexport) bool NowSoundGraph_InputFrequencies(AudioInputId inputId, LPWSTR wcharBuffer, int bufferCharCapacity);
+
+		// Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Running.
         __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
 
@@ -112,7 +128,14 @@ namespace NowSound
         // Contractually requires State == NowSoundTrack_State.Recording.
         __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 
-        // True if this is muted.
+		// Get the current track frequency histogram; LPWSTR must actually reference a float buffer of the
+		// same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
+		// and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
+		// "pass in StringBuilder", known to work well).
+		// Returns true if there was enough data to update the buffer, or false if there was not.
+		__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, LPWSTR wcharBuffer, int bufferCharCapacity);
+
+		// True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.

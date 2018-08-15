@@ -3,7 +3,7 @@
 
 #include "pch.h"
 #include "Check.h"
-#include "NowSoundLib.h"
+#include "NowSoundApp.h"
 
 #include <string>
 #include <sstream>
@@ -31,319 +31,139 @@ TimeSpan timeSpanFromSeconds(int seconds)
     return TimeSpan(seconds * TicksPerSecond);
 }
 
-// Simple application which exercises NowSoundLib, allowing test of basic looping.
-struct App : ApplicationT<App>
+std::wstring NowSoundApp::StateLabel(NowSoundGraphState state)
 {
-    // The interaction model of this app is:
-    // - Status text box gets updated with overall graph state.
-    // - Initially, a "Track #1: Uninitialized" button is visible.
-    // - When clicked, this turns to "Track #1: Recording", and a new track begins recording.
-    // - When *that* is clicked, it turns to "Track #1: FinishRecording" and then "Track #1: Looping",
-    // and the track starts looping.
-    // - Also, a new "Track #2: Uninitialized" button appears, with the same behavior.
-    // 
-    // Result: the app is effectively a simple live looper capable of looping N tracks.
+	switch (state)
+	{
+	case NowSoundGraphState::GraphUninitialized: return L"Uninitialized";
+	case NowSoundGraphState::GraphInitialized: return L"Initialized";
+	case NowSoundGraphState::GraphCreated: return L"Created";
+	case NowSoundGraphState::GraphRunning: return L"Running";
+	case NowSoundGraphState::GraphInError: return L"InError";
+	default: { Check(false); return L""; } // Unknown graph state; should be impossible
+	}
+}
 
-    // There is one TrackButton per recorded track, plus one more to allow recording a new track.
-    // Note that every method in TrackButton() expects to be called on the UI context.
-    struct TrackButton
-    {
-        App* _app;
-        int _trackNumber;
-        TrackId _trackId;
-        NowSoundTrackState _trackState;
-        Button _button;
-		ComboBox _combo;
-        TextBlock _textBlock;
-        std::wstring _label;
-        int64_t _recordingStartTime;
-
-        void UpdateUI()
-        {
-            std::wstringstream wstr{};
-            wstr << L" Track # " << _trackNumber << L": " << _label;
-            hstring hstr{};
-            hstr = wstr.str();
-            _button.Content(IReference<hstring>(hstr));
-
-            wstr = std::wstringstream{};
-            if (_trackId != TrackId::TrackIdUndefined)
-            {
-                NowSoundTrackInfo trackInfo = NowSoundTrack_Info(_trackId);
-                wstr << std::fixed << std::setprecision(2)
-					<< L" | Start (beats): " << trackInfo.StartTimeInBeats
-                    << L" | Duration (beats): " << trackInfo.DurationInBeats
-                    << L" | Current beat: " << trackInfo.LocalClockBeat
-					<< L" | Volume: " << trackInfo.Volume
-					<< L" | Last sample time: " << trackInfo.LastSampleTime
-                    << L" | Avg (r.s.): " << (int)trackInfo.AverageRequiredSamples
-                    << L" | Min (samp./quant.): " << (int)trackInfo.MinimumTimeSinceLastQuantum
-                    << L" | Max (s/q): " << (int)trackInfo.MaximumTimeSinceLastQuantum
-                    << L" | Avg (s/q): " << (int)trackInfo.AverageTimeSinceLastQuantum
-                    ;
-            }
-            else
-            {
-                wstr << L"";
-            }
-            _textBlock.Text(winrt::hstring(wstr.str()));
-        }
-
-        // Update this track button.  If this track button just started looping, then make and return
-        // a new (uninitialized) track button.
-        std::unique_ptr<TrackButton> Update()
-        {
-            NowSoundTrackState currentState{};
-            if (_trackId != TrackId::TrackIdUndefined)
-            {
-                currentState = NowSoundTrack_State(_trackId);
-            }
-
-            std::unique_ptr<TrackButton> returnValue{};
-            if (currentState != _trackState)
-            {
-                switch (currentState)
-                {
-                case NowSoundTrackState::TrackUninitialized:
-                    _label = L"Uninitialized";
-                    break;
-                case NowSoundTrackState::TrackRecording:
-                    _label = L"Recording";
-                    break;
-                case NowSoundTrackState::TrackLooping:
-                    _label = L"Looping";
-                    break;
-                case NowSoundTrackState::TrackFinishRecording:
-                    _label = L"FinishRecording";
-                    break;
-                }
-
-                _trackState = currentState;
-                if (currentState == NowSoundTrackState::TrackLooping)
-                {
-                    returnValue = std::unique_ptr<TrackButton>{new TrackButton{_app}};
-                }
-            }
-
-            UpdateUI();
-
-            return returnValue;
-        }
-
-        void HandleClick()
-        {
-            if (_trackState == NowSoundTrackState::TrackUninitialized)
-            {
-                // we haven't started recording yet; time to do so!
-                _trackId = NowSoundGraph_CreateRecordingTrackAsync((AudioInputId)(_combo.SelectedIndex() + 1));
-                // don't initialize _trackState; that's Update's job.
-                // But do find out what time it is.
-                NowSoundTimeInfo graphInfo = NowSoundGraph_TimeInfo();
-                _recordingStartTime = graphInfo.TimeInSamples;
-				_combo.IsEnabled(false);
-            }
-            else if (_trackState == NowSoundTrackState::TrackRecording)
-            {
-                NowSoundTrack_FinishRecording(_trackId);
-            }
-        }
-
-        TrackButton(App* app)
-            : _app{ app },
-            _trackNumber{ _nextTrackNumber++ },
-            _trackId{ TrackId::TrackIdUndefined },
-            _button{ Button() },
-			_combo{ComboBox()},
-            _textBlock{ TextBlock() },
-            _label{ L"Uninitialized" },
-            _trackState{NowSoundTrackState::TrackUninitialized}
-        {
-            UpdateUI();
-
-            StackPanel trackPanel{};
-            trackPanel.Orientation(Windows::UI::Xaml::Controls::Orientation::Horizontal);
-            trackPanel.Children().Append(_button);
-			trackPanel.Children().Append(_combo);
-            trackPanel.Children().Append(_textBlock);
-            app->_stackPanel.Children().Append(trackPanel);
-
-            _button.Click([this](IInspectable const&, RoutedEventArgs const&)
-            {
-                HandleClick();
-            });
-
-			// populate the combo box with one entry per audio input
-			NowSoundTimeInfo timeInfo = NowSoundGraph_TimeInfo();
-			for (int i = 0; i < timeInfo.AudioInputCount; i++)
-			{
-				std::wstringstream wstr{};
-				wstr << L"Input " << i;
-				_combo.Items().Append(winrt::box_value(wstr.str()));
-			}
-			_combo.SelectedIndex(0);
-        }
-
-        // don't allow these to be copied ever
-        TrackButton(TrackButton& other) = delete;
-        TrackButton(TrackButton&& other) = delete;
-    };
-
-    // Label string.
-    const std::wstring AudioGraphStateString = L"Audio graph state: ";
-
-    TextBlock _textBlockGraphStatus{ nullptr };
-    TextBlock _textBlockGraphInfo{ nullptr };
-    TextBlock _textBlockTimeInfo{ nullptr };
-
-    StackPanel _stackPanel{ nullptr };
-
-	StackPanel _inputDeviceSelectionStackPanel{ nullptr };
-
-	std::vector<int> _checkedInputDevices{};
-
-    static int _nextTrackNumber;
-
-    // The per-track UI controls.
-    // This is only ever modified (and even traversed) from the UI context, so does not need to be locked.
-    std::vector<std::unique_ptr<TrackButton>> _trackButtons{};
-
-    // The apartment context of the UI thread; must co_await this before updating UI
-    // (and must thereafter switch out of UI context ASAP, for liveness).
-    apartment_context _uiThread;
-
-    std::wstring StateLabel(NowSoundGraphState state)
-    {
-        switch (state)
-        {
-        case NowSoundGraphState::GraphUninitialized: return L"Uninitialized";
-        case NowSoundGraphState::GraphInitialized: return L"Initialized";
-        case NowSoundGraphState::GraphCreated: return L"Created";
-        case NowSoundGraphState::GraphRunning: return L"Running";
-        case NowSoundGraphState::GraphInError: return L"InError";
-        default: { Check(false); return L""; } // Unknown graph state; should be impossible
-        }
-    }
-
-    // Update the state label.
-    // Must be on UI context.
-    void UpdateStateLabel()
-    {
-        std::wstring str(AudioGraphStateString);
-        str.append(StateLabel(NowSoundGraph_State()));
-        _textBlockGraphStatus.Text(str);
-    }
+// Update the state label.
+// Must be on UI context.
+void NowSoundApp::UpdateStateLabel()
+{
+	std::wstring str(AudioGraphStateString);
+	str.append(StateLabel(NowSoundGraph_State()));
+	_textBlockGraphStatus.Text(str);
+}
 
     // Wait until the graph state becomes the expected state, or timeoutTime is reached.
     // Must be on background context (all waits should always be in background).
-    std::future<bool> WaitForGraphState(NowSoundGraphState expectedState, TimeSpan timeout)
-    {
-        // TODO: ensure not on UI context.
+std::future<bool> NowSoundApp::WaitForGraphState(NowSoundGraphState expectedState, TimeSpan timeout)
+{
+	// TODO: ensure not on UI context.
 
-        DateTime timeoutTime = winrt::clock::now() + timeout;
+	DateTime timeoutTime = winrt::clock::now() + timeout;
 
-        // Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
-        // so we use polling in this example -- and to determine how it actually works in modern C++.
-        NowSoundGraphState currentState = NowSoundGraph_State();
-        // While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
-        while (expectedState != NowSoundGraph_State()
-            && winrt::clock::now() < timeoutTime)
-        {
-            // wait in intervals of 1/1000 sec
-            co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.001f)));
+	// Polling wait is inferior to callbacks, but the Unity model is all about polling (aka realtime game loop),
+	// so we use polling in this example -- and to determine how it actually works in modern C++.
+	NowSoundGraphState currentState = NowSoundGraph_State();
+	// While the state isn't as expected yet, and we haven't reached timeoutTime, keep ticking.
+	while (expectedState != NowSoundGraph_State()
+		&& winrt::clock::now() < timeoutTime)
+	{
+		// wait in intervals of 1/1000 sec
+		co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.001f)));
 
-            currentState = NowSoundGraph_State();
-        }
+		currentState = NowSoundGraph_State();
+	}
 
-        // switch to UI thread to update state label, then back to background
-        co_await _uiThread;
-        UpdateStateLabel();
-        co_await resume_background();
+	// switch to UI thread to update state label, then back to background
+	co_await _uiThread;
+	UpdateStateLabel();
+	co_await resume_background();
 
-        return expectedState == currentState;
-    }
+	return expectedState == currentState;
+}
 
-    fire_and_forget LaunchedAsync();
-	fire_and_forget InputDevicesSelectedAsync();
+void NowSoundApp::OnLaunched(LaunchActivatedEventArgs const&)
+{
+	_textBlockGraphStatus = TextBlock();
+	_textBlockGraphStatus.Text(AudioGraphStateString);
+	_textBlockGraphInfo = TextBlock();
+	_textBlockGraphInfo.Text(L"");
+	_textBlockTimeInfo = TextBlock();
+	_textBlockTimeInfo.Text(L"");
+	_inputDeviceSelectionStackPanel = StackPanel();
 
-    void OnLaunched(LaunchActivatedEventArgs const&)
-    {
-        _textBlockGraphStatus = TextBlock();
-        _textBlockGraphStatus.Text(AudioGraphStateString);
-        _textBlockGraphInfo = TextBlock();
-        _textBlockGraphInfo.Text(L"");
-        _textBlockTimeInfo = TextBlock();
-        _textBlockTimeInfo.Text(L"");
-		_inputDeviceSelectionStackPanel = StackPanel();
+	Window xamlWindow = Window::Current();
 
-        Window xamlWindow = Window::Current();
+	_stackPanel = StackPanel();
+	_stackPanel.Children().Append(_inputDeviceSelectionStackPanel);
+	_stackPanel.Children().Append(_textBlockGraphStatus);
+	_stackPanel.Children().Append(_textBlockGraphInfo);
+	_stackPanel.Children().Append(_textBlockTimeInfo);
 
-        _stackPanel = StackPanel();
-		_stackPanel.Children().Append(_inputDeviceSelectionStackPanel);
-        _stackPanel.Children().Append(_textBlockGraphStatus);
-        _stackPanel.Children().Append(_textBlockGraphInfo);
-        _stackPanel.Children().Append(_textBlockTimeInfo);
+	xamlWindow.Content(_stackPanel);
+	xamlWindow.Activate();
 
-        xamlWindow.Content(_stackPanel);
-        xamlWindow.Activate();
-
-        LaunchedAsync();
-    }
+	LaunchedAsync();
+}
 
     // Update all the track buttons.
     // Must be called on UI context.
-    void UpdateButtons()
-    {
-        std::vector<std::unique_ptr<TrackButton>> newTrackButtons{};
-        for (auto& button : _trackButtons)
-        {
-            std::unique_ptr<TrackButton> newButtonOpt = button->Update();
-            if (newButtonOpt != nullptr)
-            {
-                newTrackButtons.push_back(std::move(newButtonOpt));
-            }
-        }
-        for (auto& newButton : newTrackButtons)
-        {
-            _trackButtons.push_back(std::move(newButton));
-        }
-    }
+void NowSoundApp::UpdateButtons()
+{
+	std::vector<std::unique_ptr<TrackButton>> newTrackButtons{};
+	for (auto& button : _trackButtons)
+	{
+		std::unique_ptr<TrackButton> newButtonOpt = button->Update();
+		if (newButtonOpt != nullptr)
+		{
+			newTrackButtons.push_back(std::move(newButtonOpt));
+		}
+	}
+	for (auto& newButton : newTrackButtons)
+	{
+		_trackButtons.push_back(std::move(newButton));
+	}
+}
 
     // loop forever, updating the buttons
-    IAsyncAction UpdateLoop()
-    {
-        while (true)
-        {
-            // always wait in the background
-            co_await resume_background();
+IAsyncAction NowSoundApp::UpdateLoop()
+{
+	while (true)
+	{
+		// always wait in the background
+		co_await resume_background();
 
-            // wait in intervals of 1/100 sec
-            co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01)));
+		// wait in intervals of 1/100 sec
+		co_await resume_after(TimeSpan((int)(TicksPerSecond * 0.01)));
 
-            // switch to UI thread to update buttons and time info
-            co_await _uiThread;
+		// switch to UI thread to update buttons and time info
+		co_await _uiThread;
 
-            // update time info
-            NowSoundTimeInfo timeInfo = NowSoundGraph_TimeInfo();
-			NowSoundInputInfo input1Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput1);
-			NowSoundInputInfo input2Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput2);
-			std::wstringstream wstr;
-			wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
-				<< std::fixed << std::setprecision(2)
-				<< L" | Beat: " << timeInfo.BeatInMeasure
-				<< L" | Total beats: " << timeInfo.ExactBeat
-				<< L" | Input 1 volume: " << input1Info.Volume
-				<< L" | Input 2 volume: " << input2Info.Volume;
-			_textBlockTimeInfo.Text(wstr.str());
+		// update time info
+		NowSoundTimeInfo timeInfo = NowSoundGraph_TimeInfo();
+		NowSoundInputInfo input1Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput1);
+		NowSoundInputInfo input2Info = NowSoundGraph_InputInfo(AudioInputId::AudioInput2);
+		std::wstringstream wstr;
+		wstr << L"Time (in audio samples): " << timeInfo.TimeInSamples
+			<< std::fixed << std::setprecision(2)
+			<< L" | Beat: " << timeInfo.BeatInMeasure
+			<< L" | Total beats: " << timeInfo.ExactBeat
+			<< L" | Input 1 volume: " << input1Info.Volume
+			<< L" | Input 2 volume: " << input2Info.Volume;
+		_textBlockTimeInfo.Text(wstr.str());
 
-            // update all buttons
-            UpdateButtons();
-        }
-    }
-};
+		// update all buttons
+		UpdateButtons();
+	}
+}
 
-int App::_nextTrackNumber{ 1 };
+int NowSoundApp::_nextTrackNumber{ 1 };
 
-fire_and_forget App::LaunchedAsync()
+int NowSoundApp::GetNextTrackNumber() { return _nextTrackNumber++; }
+
+StackPanel NowSoundApp::StackPanel() { return _stackPanel; }
+
+fire_and_forget NowSoundApp::LaunchedAsync()
 {
 	apartment_context ui_thread{};
 	_uiThread = ui_thread;
@@ -420,7 +240,7 @@ fire_and_forget App::LaunchedAsync()
 	_inputDeviceSelectionStackPanel.Children().Append(okButton);
 }
 
-fire_and_forget App::InputDevicesSelectedAsync()
+fire_and_forget NowSoundApp::InputDevicesSelectedAsync()
 {
     co_await resume_background();
     // wait only one second (and hopefully much less) for graph to become initialized.
@@ -460,5 +280,5 @@ fire_and_forget App::InputDevicesSelectedAsync()
 
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
-    Application::Start([](auto &&) { make<App>(); });
+    Application::Start([](auto &&) { make<NowSoundApp>(); });
 }
