@@ -10,6 +10,7 @@
 
 #include "Clock.h"
 #include "Histogram.h"
+#include "NowSoundFrequencyTracker.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "Time.h"
@@ -44,11 +45,17 @@ namespace NowSound
         static winrt::Windows::Media::AudioFrame s_audioFrame;
 #endif
 
+		// The graph that created this.
+		const NowSoundGraph* _graph;
+
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
 
         // The input the track is recording from, if recording.
         const AudioInputId _inputId;
+
+		// The frequency tracker for this track.
+		const std::unique_ptr<NowSoundFrequencyTracker> _frequencyTracker;
 
         // The current state of the track.
         NowSoundTrackState _state;
@@ -94,6 +101,7 @@ namespace NowSound
 
     public:
 		NowSoundTrack(
+			NowSoundGraph* graph,
 			TrackId trackId,
 			AudioInputId inputId,
 			const BufferedSliceStream<AudioSample, float>& sourceStream,
@@ -127,7 +135,10 @@ namespace NowSound
         // Contractually requires State == NowSoundTrack_State::Recording.
         void FinishRecording();
 
-        // True if this is muted.
+		// Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
+		bool GetFrequencies(LPWSTR wcharBuffer, int bufferCapacity);
+
+		// True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.

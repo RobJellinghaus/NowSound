@@ -14,7 +14,7 @@
 winrt::Windows::Foundation::TimeSpan timeSpanFromSeconds(int seconds);
 
 // Simple application which exercises NowSoundLib, allowing test of basic looping.
-class NowSoundApp : winrt::Windows::UI::Xaml::ApplicationT<NowSoundApp>
+class NowSoundApp : public winrt::Windows::UI::Xaml::ApplicationT<NowSoundApp>
 {
 	// The interaction model of this app is:
 	// - Status text box gets updated with overall graph state.
@@ -62,8 +62,6 @@ class NowSoundApp : winrt::Windows::UI::Xaml::ApplicationT<NowSoundApp>
 	winrt::fire_and_forget LaunchedAsync();
 	winrt::fire_and_forget InputDevicesSelectedAsync();
 
-	void OnLaunched(winrt::Windows::ApplicationModel::Activation::LaunchActivatedEventArgs const&);
-
 	// Update all the track buttons.
 	// Must be called on UI context.
 	void UpdateButtons();
@@ -72,8 +70,10 @@ class NowSoundApp : winrt::Windows::UI::Xaml::ApplicationT<NowSoundApp>
 	winrt::Windows::Foundation::IAsyncAction UpdateLoop();
 
 public:
+	void OnLaunched(winrt::Windows::ApplicationModel::Activation::LaunchActivatedEventArgs const&);
+
 	int GetNextTrackNumber();
 
-	winrt::Windows::UI::Xaml::Controls::StackPanel StackPanel();
+	winrt::Windows::UI::Xaml::Controls::StackPanel GetStackPanel();
 };
 

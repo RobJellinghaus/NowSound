@@ -25,7 +25,7 @@ namespace NowSound
 	{
 	private:
 		// The NowSoundAudioGraph that created this input.
-		const NowSoundGraph* _nowSoundGraph;
+		NowSoundGraph* _nowSoundGraph;
 
 		// The audio input ID of this input.
 		const AudioInputId _audioInputId;

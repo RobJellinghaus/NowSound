@@ -56,7 +56,7 @@ namespace NowSound
 
 	void NowSoundInput::CreateRecordingTrack(TrackId id)
 	{
-		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(id, _audioInputId, _incomingAudioStream, _pan));
+		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(_nowSoundGraph, id, _audioInputId, _incomingAudioStream, _pan));
 
 		// New tracks are created as recording; lock the _recorders collection and add this new track.
 		// Note that the _recorders collection holds a raw pointer, e.g. a weak reference, to the track.

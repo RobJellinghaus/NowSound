@@ -17,6 +17,7 @@
 #include "NowSoundInput.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
+#include "rosetta_fft.h"
 #include "SliceStream.h"
 
 namespace NowSound
@@ -32,7 +33,7 @@ namespace NowSound
         // the method transitions the graph to once the asynchronous action is complete.
         // TODO: consider having some separate mutual exclusion to prevent multiple concurrent methods
         // from firing (don't want the graph to, e.g., get started twice in a race).
-        NowSoundGraphState State();
+        NowSoundGraphState State() const;
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
@@ -52,6 +53,14 @@ namespace NowSound
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
 		void InitializeDeviceInputs(int deviceIndex);
 
+		// Initialize the FFT bins and other state.
+		void InitializeFFT(
+			int outputBinCount,
+			double centralFrequency,
+			int octaveDivisions,
+			int centralBinIndex,
+			int fftSize);
+			
 		// Create the audio graph.
 		// Graph must be Initialized.  On completion, graph becomes Created.
 		void CreateAudioGraphAsync();
@@ -64,7 +73,7 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
-        // Start the audio graph.
+		// Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Running.
         void StartAudioGraphAsync();
 
@@ -134,6 +143,12 @@ namespace NowSound
 		// The audio device indices to initialize.
 		::std::vector<int> _inputDeviceIndicesToInitialize;
 
+		// The vector of frequency bins.
+		::std::vector<RosettaFFT::FrequencyBinBounds> _fftBinBounds;
+
+		// The FFT size.
+		int _fftSize;
+
 		// The audio inputs we have; currently unchanging after graph creation.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
 		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
@@ -162,7 +177,7 @@ namespace NowSound
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
-        BufferAllocator<float>* GetAudioAllocator();
+        BufferAllocator<float>* GetAudioAllocator() const;
 
 		// Create an input device (or a pair of them, if monoPair is true).
 		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
@@ -172,5 +187,11 @@ namespace NowSound
 
 		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();
+
+		// Access the vector of frequency bins, when generating frequency histograms.
+		const std::vector<RosettaFFT::FrequencyBinBounds>* GetBinBounds() const;
+
+		// Access to the FFT size.
+		int FftSize() const;
     };
 }

@@ -55,5 +55,5 @@ namespace RosettaFFT
 	// Given a precalculated vector of FrequencyBinBounds and some FFT data, populate the output
 	// vector from the data according to the bounds.
 	// The output vector must be the same length as the bounds vector.
-	void RescaleFFT(const std::vector<FrequencyBinBounds>& bounds, const CArray& fftData, std::vector<float>& outputVector);
+	void RescaleFFT(const std::vector<FrequencyBinBounds>& bounds, const CArray& fftData, float* outputVector, int outputCapacity);
 }

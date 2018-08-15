@@ -3,6 +3,7 @@
 
 #include "pch.h"
 
+#include "Check.h"
 #include "rosetta_fft.h"
 
 using namespace std;
@@ -102,6 +103,14 @@ namespace RosettaFFT
 		double sampleRate,
 		int fftBinCount)
 	{
+		NowSound::Check(centralFrequency > 0);
+		NowSound::Check(octaveDivisions > 0);
+		NowSound::Check(binCount > 0);
+		NowSound::Check(centralBinIndex >= 0);
+		NowSound::Check(centralBinIndex < binCount);
+		NowSound::Check(sampleRate > 0);
+		NowSound::Check(fftBinCount > 0);
+
 		vector<double> centralBinFrequencies{};
 		centralBinFrequencies.resize(binCount);
 		centralBinFrequencies[centralBinIndex] = centralFrequency;
@@ -137,9 +146,10 @@ namespace RosettaFFT
 		results[results.size() - 1] = FrequencyBinBounds(final.LowerBound, fftBinCount / 2);
 	}
 
-	void RescaleFFT(const vector<FrequencyBinBounds>& bounds, const CArray& fftData, vector<float>& outputVector)
+	void RescaleFFT(const vector<FrequencyBinBounds>& bounds, const CArray& fftData, float* outputVector, int outputCapacity)
 	{
-		// Check(bounds.size() == outputVector.size());
+		NowSound::Check(bounds.size() == outputCapacity);
+
 		for (int i = 0; i < bounds.size(); i++)
 		{
 			// Sum up all fftData slots.

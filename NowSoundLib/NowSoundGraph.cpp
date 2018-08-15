@@ -86,6 +86,16 @@ namespace NowSound
 		NowSoundGraph::Instance()->InitializeDeviceInputs(deviceIndex);
 	}
 
+	void NowSoundGraph_InitializeFFT(
+		int outputBinCount,
+		double centralFrequency,
+		int octaveDivisions,
+		int centralBinIndex,
+		int fftSize)
+	{
+		NowSoundGraph::Instance()->InitializeFFT(outputBinCount, centralFrequency, octaveDivisions, centralBinIndex, fftSize);
+	}
+
 	void NowSoundGraph_CreateAudioGraphAsync()
 	{
 		NowSoundGraph::Instance()->CreateAudioGraphAsync();
@@ -140,14 +150,15 @@ namespace NowSound
 		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
 		_inputDeviceIndicesToInitialize{},
 		_audioInputs{ },
-		_changingState{ false }
+		_changingState{ false },
+		_fftBinBounds{}
 	{ }
 
 	AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
 	AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() const { return _deviceOutputNode; }
 
-	BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() { return _audioAllocator.get(); }
+	BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() const { return _audioAllocator.get(); }
 
 	void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
 	{
@@ -166,7 +177,7 @@ namespace NowSound
 		_audioGraphState = newState;
 	}
 
-	NowSoundGraphState NowSoundGraph::State()
+	NowSoundGraphState NowSoundGraph::State() const
 	{
 		// this is a machine word, atomically written; no need to lock
 		return _audioGraphState;
@@ -261,6 +272,31 @@ namespace NowSound
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
 	}
 
+	void NowSoundGraph::InitializeFFT(
+		int outputBinCount,
+		double centralFrequency,
+		int octaveDivisions,
+		int centralBinIndex,
+		int fftSize)
+	{
+		_fftBinBounds.resize(outputBinCount);
+		_fftSize = fftSize;
+
+		// Initialize the bounds of the bins into which we collate FFT data.
+		RosettaFFT::MakeBinBounds(
+			_fftBinBounds,
+			centralFrequency,
+			octaveDivisions,
+			outputBinCount,
+			centralBinIndex,
+			Clock::Instance().SampleRateHz(),
+			fftSize);
+	}
+
+	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::GetBinBounds() const { return &_fftBinBounds; }
+
+	int NowSoundGraph::FftSize() const { return _fftSize; }
+
 	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
 	{
 		// Create a device input node
@@ -344,7 +380,7 @@ namespace NowSound
 		int64_t completeBeats = (int64_t)durationBeats.Value();
 
 		NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
-			_audioInputs.size(),
+			(int32_t)_audioInputs.size(),
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),

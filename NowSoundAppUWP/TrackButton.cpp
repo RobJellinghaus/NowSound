@@ -163,7 +163,7 @@ TrackButton::TrackButton(NowSoundApp* app)
 	trackPanel.Children().Append(_button);
 	trackPanel.Children().Append(_combo);
 	trackPanel.Children().Append(_textBlock);
-	app->StackPanel().Children().Append(trackPanel);
+	app->GetStackPanel().Children().Append(trackPanel);
 
 	_button.Click([this](IInspectable const&, RoutedEventArgs const&)
 	{

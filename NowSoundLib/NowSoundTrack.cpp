@@ -84,12 +84,17 @@ namespace NowSound
         return NowSoundTrack::Track(trackId)->Info();
     }
 
-    __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
+	__declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
     {
         NowSoundTrack::Track(trackId)->FinishRecording();
     }
 
-    __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
+	__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, LPWSTR wcharBuffer, int bufferCapacity)
+	{
+		return NowSoundTrack::Track(trackId)->GetFrequencies(wcharBuffer, bufferCapacity);
+	}
+
+	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
     {
         return NowSoundTrack::Track(trackId)->IsMuted();
     }
@@ -133,11 +138,13 @@ namespace NowSound
     }
 
     NowSoundTrack::NowSoundTrack(
+		NowSoundGraph* graph,
         TrackId trackId,
         AudioInputId inputId,
         const BufferedSliceStream<AudioSample, float>& sourceStream,
 		float initialPan)
-        : _trackId{ trackId },
+		: _graph{ graph },
+		_trackId{ trackId },
         _inputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
@@ -156,7 +163,8 @@ namespace NowSound
         _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
 		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
-		_pan{ initialPan }
+		_pan{ initialPan },
+		_frequencyTracker{ new NowSoundFrequencyTracker(_graph->GetBinBounds(), _graph->FftSize()) }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -261,7 +269,17 @@ namespace NowSound
     bool NowSoundTrack::IsMuted() const { return _isMuted; }
     void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
 
-    void NowSoundTrack::FinishRecording()
+	bool NowSoundTrack::GetFrequencies(LPWSTR wcharBuffer, int bufferCapacity)
+	{
+		// Buffer capacity must be enough WCHARs to equal a graph bin count array of floats
+		Check(bufferCapacity * sizeof(WCHAR) == (_graph->GetBinBounds()->size()) * sizeof(float));
+
+		float* frequencyBuffer = (float*)wcharBuffer;
+
+		return _frequencyTracker->GetLatestHistogram(frequencyBuffer, bufferCapacity / (sizeof(float) / sizeof(WCHAR)));
+	}
+	
+	void NowSoundTrack::FinishRecording()
     {
         // TODO: ThreadContract.RequireUnity();
 
@@ -390,9 +408,12 @@ namespace NowSound
 				// Now is when we must stereo-pan it.
 				float* dataInFloats = (float*)dataInBytes;
 
+				// Record all this data in the frequency tracker.
+				_frequencyTracker->Record(dataInFloats, sliceDuration.Value());
+
+				// Pan each mono sample (and track its volume).
 				for (int i = 0; i < sliceDuration.Value(); i++)
 				{
-					// Pan each mono sample (and track its volume).
 					float value = slice.Get(i, 0);
 					_volumeHistogram.Add(std::abs(value));
 					dataInFloats[i * channelCount] = (float)(leftCoefficient * value);

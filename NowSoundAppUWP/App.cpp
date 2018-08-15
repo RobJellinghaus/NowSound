@@ -161,7 +161,7 @@ int NowSoundApp::_nextTrackNumber{ 1 };
 
 int NowSoundApp::GetNextTrackNumber() { return _nextTrackNumber++; }
 
-StackPanel NowSoundApp::StackPanel() { return _stackPanel; }
+StackPanel NowSoundApp::GetStackPanel() { return _stackPanel; }
 
 fire_and_forget NowSoundApp::LaunchedAsync()
 {
