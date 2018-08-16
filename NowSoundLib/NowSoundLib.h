@@ -90,11 +90,6 @@ namespace NowSound
 		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
 
-		// Get the input frequency histogram; LPWSTR must actually reference a float buffer, but
-		// must be typed as LPWSTR and must have a capacity represented in two-byte wide characters
-		// (to match the P/Invoke style of "pass in StringBuilder", known to work).
-		__declspec(dllexport) bool NowSoundGraph_InputFrequencies(AudioInputId inputId, LPWSTR wcharBuffer, int bufferCharCapacity);
-
 		// Start the audio graph.
         // Graph must be Created.  On completion, graph becomes Running.
         __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
@@ -133,7 +128,7 @@ namespace NowSound
 		// and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
 		// "pass in StringBuilder", known to work well).
 		// Returns true if there was enough data to update the buffer, or false if there was not.
-		__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, LPWSTR wcharBuffer, int bufferCharCapacity);
+		__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity);
 
 		// True if this is muted.
         // 

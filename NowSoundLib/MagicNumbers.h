@@ -18,7 +18,7 @@ namespace NowSound
         // Making this shorter potentially reduces latency or at least input variability.
         // Making this longer reduces the number of times frame input nodes require data,
         // reducing CPU usage and context switching.
-        static const ContinuousDuration<Second> AudioFrameLengthSeconds;
+        static const Duration<AudioSample> AudioFrameDuration;
 
         // The initial tempo.
         static const float InitialBeatsPerMinute;

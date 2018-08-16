@@ -110,7 +110,7 @@ namespace NowSound
 			if (latencyInSamples == 0)
 			{
 				// sorry audiograph, don't really believe you when you say zero latency.
-				latencyInSamples = (int)(Clock::Instance().SampleRateHz() * MagicNumbers::AudioFrameLengthSeconds.Value());
+				latencyInSamples = MagicNumbers::AudioFrameDuration.Value();
 			}
 
 			uint32_t latencyBufferSize = (uint32_t)latencyInSamples * sampleSizeInBytes;

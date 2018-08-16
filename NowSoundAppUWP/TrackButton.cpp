@@ -57,7 +57,7 @@ void TrackButton::RenderFrequencyBuffer(std::wstring& output)
 void TrackButton::UpdateUI()
 {
 	std::wstringstream wstr{};
-	wstr << L" Track # " << _trackNumber << L": " << _label;
+	wstr << L" Track # " << _trackNumber << L" (id " << _trackId << L"): " << _label;
 	hstring hstr{};
 	hstr = wstr.str();
 	_button.Content(IReference<hstring>(hstr));
@@ -67,7 +67,7 @@ void TrackButton::UpdateUI()
 	{
 		NowSoundTrackInfo trackInfo = NowSoundTrack_Info(_trackId);
 
-		bool valid = NowSoundTrack_GetFrequencies(_trackId, _frequencyBuffer.get(), NowSoundAppMagicNumbers::FrequencyBufferWCharCapacity);
+		bool valid = NowSoundTrack_GetFrequencies(_trackId, _frequencyBuffer.get(), NowSoundAppMagicNumbers::OutputBinCount);
 
 		if (valid)
 		{
@@ -164,7 +164,7 @@ TrackButton::TrackButton(NowSoundApp* app)
 	_textBlock{ TextBlock() },
 	_label{ L"Uninitialized" },
 	_trackState{ NowSoundTrackState::TrackUninitialized },
-	_frequencyBuffer{ new WCHAR[NowSoundAppMagicNumbers::FrequencyBufferWCharCapacity] },
+	_frequencyBuffer{ new float[NowSoundAppMagicNumbers::OutputBinCount] },
 	_frequencyOutputString{} // fill constructor doesn't resolve correctly here
 
 {

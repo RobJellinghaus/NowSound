@@ -89,9 +89,9 @@ namespace NowSound
         NowSoundTrack::Track(trackId)->FinishRecording();
     }
 
-	__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, LPWSTR wcharBuffer, int bufferCapacity)
+	__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
 	{
-		return NowSoundTrack::Track(trackId)->GetFrequencies(wcharBuffer, bufferCapacity);
+		return NowSoundTrack::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
 	}
 
 	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
@@ -271,19 +271,14 @@ namespace NowSound
     bool NowSoundTrack::IsMuted() const { return _isMuted; }
     void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
 
-	bool NowSoundTrack::GetFrequencies(LPWSTR wcharBuffer, int bufferCapacity)
+	bool NowSoundTrack::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
 	{
 		if (_frequencyTracker == nullptr)
 		{
 			return false;
 		}
 
-		// Buffer capacity must be enough WCHARs to equal a graph bin count array of floats
-		Check(bufferCapacity * sizeof(WCHAR) == (_graph->GetBinBounds()->size()) * sizeof(float));
-
-		float* frequencyBuffer = (float*)wcharBuffer;
-
-		return _frequencyTracker->GetLatestHistogram(frequencyBuffer, bufferCapacity / (sizeof(float) / sizeof(WCHAR)));
+		return _frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
 	}
 	
 	void NowSoundTrack::FinishRecording()
@@ -347,8 +342,7 @@ namespace NowSound
             // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
             // we fill it completely and often.
             s_audioFrame = Windows::Media::AudioFrame(
-                (uint32_t)(Clock::Instance().SampleRateHz()
-                    * MagicNumbers::AudioFrameLengthSeconds.Value()
+                (uint32_t)(MagicNumbers::AudioFrameDuration.Value()
                     * sizeof(float)
                     * Clock::Instance().ChannelCount()));
         }
@@ -363,7 +357,7 @@ namespace NowSound
         {
             // This nested scope sets the extent of the LockBuffer call below, which must close before the AddFrame call.
             // Otherwise the AddFrame will throw E_ACCESSDENIED when it tries to take a read lock on the frame.
-            uint8_t* dataInBytes{};
+            uint8_t* audioGraphInputDataInBytes{};
             uint32_t capacityInBytes{};
 
             // OMG KENNY KERR WINS AGAIN:
@@ -371,7 +365,7 @@ namespace NowSound
             Windows::Media::AudioBuffer buffer(audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
             IMemoryBufferReference reference(buffer.CreateReference());
             winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-            check_hresult(interop->GetBuffer(&dataInBytes, &capacityInBytes));
+            check_hresult(interop->GetBuffer(&audioGraphInputDataInBytes, &capacityInBytes));
 
             int sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
 
@@ -405,28 +399,28 @@ namespace NowSound
 
 			while (samplesRemaining > 0)
             {
-                // get up to one second or samplesRemaining, whichever is smaller
+                // get a slice up to samplesRemaining samples in length
                 Slice<AudioSample, float> slice(
                     _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
 				Duration<AudioSample> sliceDuration = slice.SliceDuration();
 
 				// longest is a mono stream.
 				// Now is when we must stereo-pan it.
-				float* dataInFloats = (float*)dataInBytes;
+				float* audioGraphInputDataInFloats = (float*)audioGraphInputDataInBytes;
 
 				// Record all this data in the frequency tracker.
-				_frequencyTracker->Record(dataInFloats, sliceDuration.Value());
+				_frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
 
 				// Pan each mono sample (and track its volume).
 				for (int i = 0; i < sliceDuration.Value(); i++)
 				{
 					float value = slice.Get(i, 0);
 					_volumeHistogram.Add(std::abs(value));
-					dataInFloats[i * channelCount] = (float)(leftCoefficient * value);
-					dataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
+					audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value);
+					audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
 				}
 
-                dataInBytes += slice.SliceDuration().Value() * channelCount * sizeof(float);
+                audioGraphInputDataInBytes += slice.SliceDuration().Value() * channelCount * sizeof(float);
                 _lastSampleTime = _lastSampleTime + slice.SliceDuration();
                 Check(_lastSampleTime.Value() >= 0);
                 samplesRemaining -= (int)slice.SliceDuration().Value();

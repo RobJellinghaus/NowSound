@@ -26,7 +26,7 @@ class TrackButton
 	winrt::Windows::UI::Xaml::Controls::TextBlock _textBlock;
 	std::wstring _label;
 	int64_t _recordingStartTime;
-	std::unique_ptr<WCHAR> _frequencyBuffer;
+	std::unique_ptr<float> _frequencyBuffer;
 	std::wstring _frequencyOutputString;
 
 	void RenderFrequencyBuffer(std::wstring& output);

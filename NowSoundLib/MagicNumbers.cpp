@@ -11,7 +11,7 @@ using namespace NowSound;
 // This is a balance between small (lower latency but more risk of crackling if AudioGraph is moody)
 // and large (lower CPU, but more latency in some situations... at least I'm pretty sure... need to
 // confirm this)
-const ContinuousDuration<Second> MagicNumbers::AudioFrameLengthSeconds{ (float)0.1 };
+const Duration<AudioSample> MagicNumbers::AudioFrameDuration{ 2048 };
 
 // exactly one beat per second for initial testing
 const float MagicNumbers::InitialBeatsPerMinute{ 60 };
