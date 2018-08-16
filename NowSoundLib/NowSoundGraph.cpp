@@ -151,7 +151,8 @@ namespace NowSound
 		_inputDeviceIndicesToInitialize{},
 		_audioInputs{ },
 		_changingState{ false },
-		_fftBinBounds{}
+		_fftBinBounds{},
+		_fftSize{ -1 }
 	{ }
 
 	AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }

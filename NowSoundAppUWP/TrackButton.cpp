@@ -23,22 +23,34 @@ void TrackButton::RenderFrequencyBuffer(std::wstring& output)
 
 	// _frequencyBuffer is presumed to have been updated
 	// first, get min/max of values
-	double max = 0, total = 0;
+	double max = 0;
 	float* frequencies = (float*)(_frequencyBuffer.get());
 	for (int i = 0; i < NowSoundAppMagicNumbers::OutputBinCount; i++)
 	{
 		double value = frequencies[i];
+		// drop out super tiny values -- experimentally values less than 1 are uninteresting.
+		// This will make silence not have huge variance from tiny max values.
+		if (value < 1)
+		{
+			continue;
+		}
+
 		max = value > max ? value : max;
-		total += value;
 	}
 
-	// scale to the max
-	std::wstring result{ (size_t)NowSoundAppMagicNumbers::OutputBinCount, L'0' };
-	for (int i = 0; i < NowSoundAppMagicNumbers::OutputBinCount; i++)
+	// scale to the max, dude
+	if (max == 0)
 	{
-		double scaledValue = frequencies[i] / max;
-		WCHAR digit = L'0' + (WCHAR)std::floor(scaledValue * 9);
-		output[i] = digit;
+		output.replace(0, std::wstring::npos, output.size(), L'0');
+	}
+	else
+	{
+		for (int i = 0; i < NowSoundAppMagicNumbers::OutputBinCount; i++)
+		{
+			double scaledValue = frequencies[i] / max;
+			WCHAR digit = L'0' + (WCHAR)std::floor(scaledValue * 9);
+			output[i] = digit;
+		}
 	}
 }
 
@@ -153,9 +165,10 @@ TrackButton::TrackButton(NowSoundApp* app)
 	_label{ L"Uninitialized" },
 	_trackState{ NowSoundTrackState::TrackUninitialized },
 	_frequencyBuffer{ new WCHAR[NowSoundAppMagicNumbers::FrequencyBufferWCharCapacity] },
-	_frequencyOutputString{ (size_t)NowSoundAppMagicNumbers::OutputBinCount, L'0' }
+	_frequencyOutputString{} // fill constructor doesn't resolve correctly here
 
 {
+	_frequencyOutputString.resize(NowSoundAppMagicNumbers::OutputBinCount, L'0');
 	UpdateUI();
 
 	StackPanel trackPanel{};

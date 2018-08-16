@@ -22,7 +22,20 @@ Histogram::Histogram(int capacity)
 void Histogram::Add(float value)
 {
 	std::lock_guard<std::mutex> guard(_mutex);
+	AddImpl(value);
+}
 
+void Histogram::AddAll(float* data, int count, bool absoluteValue)
+{
+	std::lock_guard<std::mutex> guard(_mutex);
+	for (int i = 0; i < count; i++)
+	{
+		AddImpl(absoluteValue ? (float)std::abs(data[i]) : data[i]);
+	}
+}
+
+void Histogram::AddImpl(float value)
+{
 	if (_valuesInInsertionOrder.size() == 0)
 	{
 		_valuesInInsertionOrder.push_back(value);

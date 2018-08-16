@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "Check.h"
 #include "NowSoundApp.h"
+#include "NowSoundAppMagicNumbers.h"
 
 #include <string>
 #include <sstream>
@@ -181,6 +182,13 @@ fire_and_forget NowSoundApp::LaunchedAsync()
 	// how many input devices?
 	NowSoundGraphInfo info = NowSoundGraph_Info();
 
+	NowSoundGraph_InitializeFFT(
+		NowSoundAppMagicNumbers::OutputBinCount,
+		NowSoundAppMagicNumbers::CentralFrequency,
+		NowSoundAppMagicNumbers::OctaveDivisions,
+		NowSoundAppMagicNumbers::CentralFrequencyBin,
+		NowSoundAppMagicNumbers::FftBinSize);
+
 	co_await _uiThread;
 
 	// Fill out the list of input devices and require the user to select at least one.
@@ -242,12 +250,8 @@ fire_and_forget NowSoundApp::LaunchedAsync()
 
 fire_and_forget NowSoundApp::InputDevicesSelectedAsync()
 {
-    co_await resume_background();
-    // wait only one second (and hopefully much less) for graph to become initialized.
-    // 1000 second timeout is for early stage debugging.
-    const int timeoutInSeconds = 1000;
-    co_await WaitForGraphState(NowSound::NowSoundGraphState::GraphInitialized, timeSpanFromSeconds(timeoutInSeconds));
-
+	const int timeoutInSeconds = 1000;
+	
     NowSoundGraph_CreateAudioGraphAsync(/*deviceInfo*/); // TODO: actual output device selection
 
     co_await WaitForGraphState(NowSoundGraphState::GraphCreated, timeSpanFromSeconds(timeoutInSeconds));

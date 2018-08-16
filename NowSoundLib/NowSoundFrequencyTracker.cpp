@@ -88,27 +88,48 @@ namespace NowSound
 			if (_recordingBufferSize == _fftSize)
 			{
 				// this buffer is full.
-				int transformingBufferIndex = _recordingBufferIndex;
-				_bufferStates[transformingBufferIndex] = BufferState::Transforming;
-				bool found = false;
+				// If we are still transforming something, then just reset this buffer.
+				bool reset = false;
 				for (int i = 0; i < BufferCount; i++)
 				{
-					if (_bufferStates[i] == BufferState::Available)
+					if (_bufferStates[i] == BufferState::Transforming)
 					{
-						found = true;
-						_recordingBufferIndex = i;
-						_recordingBufferSize = 0;
-						_bufferStates[i] = BufferState::Recording;
+						// just reset this one
+						reset = true;
 						break;
 					}
 				}
 
-				// We had better have found an available buffer, or we need more buffers or task cancellation or something
-				// because we are not managing to keep up.
-				Check(found);
+				if (reset)
+				{
+					// Throw away the data and start again.  If we are running behind on transformation,
+					// it won't help us catch up to continually cancel the overly slow transformations.
+					_recordingBufferSize = 0;
+				}
+				else
+				{
+					int transformingBufferIndex = _recordingBufferIndex;
+					_bufferStates[transformingBufferIndex] = BufferState::Transforming;
+					bool found = false;
+					for (int i = 0; i < BufferCount; i++)
+					{
+						if (_bufferStates[i] == BufferState::Available)
+						{
+							found = true;
+							_recordingBufferIndex = i;
+							_recordingBufferSize = 0;
+							_bufferStates[i] = BufferState::Recording;
+							break;
+						}
+					}
 
-				// Spawn task to transform the buffer.
-				create_task([this, transformingBufferIndex]() -> void { TransformBufferAsync(transformingBufferIndex); });
+					// We had better have found an available buffer, or we need more buffers or task cancellation or something
+					// because we are not managing to keep up.
+					Check(found);
+
+					// Spawn task to transform the buffer.
+					create_task([this, transformingBufferIndex]() -> void { TransformBufferAsync(transformingBufferIndex); });
+				}
 			}
 
 			sampleCount -= samplesToRecord;

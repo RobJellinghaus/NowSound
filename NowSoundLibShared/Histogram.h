@@ -37,6 +37,9 @@ private:
 	// Recalculate min/max if necessary.
 	void EnsureMinMaxKnown();
 
+	// Add implementation (no locking).
+	void AddImpl(float value);
+
 public:
 	Histogram(int capacity);
 
@@ -45,5 +48,7 @@ public:
 	float Average() const;
 
 	// Add a new value to this histogram.
-	virtual void Add(float value);
+	void Add(float value);
+
+	void AddAll(float* data, int count, bool absoluteValue);
 };

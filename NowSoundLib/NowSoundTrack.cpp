@@ -164,7 +164,9 @@ namespace NowSound
 		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
 		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
 		_pan{ initialPan },
-		_frequencyTracker{ new NowSoundFrequencyTracker(_graph->GetBinBounds(), _graph->FftSize()) }
+		_frequencyTracker{ _graph->FftSize() < 0
+			? ((NowSoundFrequencyTracker*)nullptr)
+			: new NowSoundFrequencyTracker(_graph->GetBinBounds(), _graph->FftSize()) }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -271,6 +273,11 @@ namespace NowSound
 
 	bool NowSoundTrack::GetFrequencies(LPWSTR wcharBuffer, int bufferCapacity)
 	{
+		if (_frequencyTracker == nullptr)
+		{
+			return false;
+		}
+
 		// Buffer capacity must be enough WCHARs to equal a graph bin count array of floats
 		Check(bufferCapacity * sizeof(WCHAR) == (_graph->GetBinBounds()->size()) * sizeof(float));
 
@@ -328,7 +335,6 @@ namespace NowSound
             return;
         }
 
-        // we are looping; let's play!
         float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::Instance().SampleRateHz() / Clock::TicksPerSecond);
 
         _requiredSamplesHistogram.Add((float)requiredSamples);
@@ -467,6 +473,13 @@ namespace NowSound
 
             // and actually record the full amount of available data
             _audioStream.Append(duration, data);
+			// and volume track
+			_volumeHistogram.AddAll(data, duration.Value(), true);
+			// and provide it to frequency histogram as well
+			if (_frequencyTracker != nullptr)
+			{
+				_frequencyTracker->Record(data, duration.Value());
+			}
             break;
         }
 
