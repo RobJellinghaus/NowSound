@@ -17,5 +17,5 @@ public:
 	// The central frequency of the histogram; this is middle C.
 	static const double CentralFrequency;
 	// The bin (out of OutputBinCount) in which the central frequency should be mapped; zero-indexed.
-	static const int CentralFrequencyBin = 10;
+	static const int CentralFrequencyBin = 9;
 };

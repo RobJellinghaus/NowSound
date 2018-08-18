@@ -56,7 +56,7 @@ namespace NowSound
 		// Initialize the FFT bins and other state.
 		void InitializeFFT(
 			int outputBinCount,
-			double centralFrequency,
+			float centralFrequency,
 			int octaveDivisions,
 			int centralBinIndex,
 			int fftSize);

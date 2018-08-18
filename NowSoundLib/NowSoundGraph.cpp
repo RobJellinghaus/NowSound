@@ -88,7 +88,7 @@ namespace NowSound
 
 	void NowSoundGraph_InitializeFFT(
 		int outputBinCount,
-		double centralFrequency,
+		float centralFrequency,
 		int octaveDivisions,
 		int centralBinIndex,
 		int fftSize)
@@ -275,7 +275,7 @@ namespace NowSound
 
 	void NowSoundGraph::InitializeFFT(
 		int outputBinCount,
-		double centralFrequency,
+		float centralFrequency,
 		int octaveDivisions,
 		int centralBinIndex,
 		int fftSize)

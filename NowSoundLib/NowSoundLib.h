@@ -70,7 +70,7 @@ namespace NowSound
 			// How many output bins in the (logarithmic) frequency histogram?
 			int outputBinCount,
 			// What central frequency to use for the histogram?
-			double centralFrequency,
+			float centralFrequency,
 			// How many divisions to make in each octave?
 			int octaveDivisions,
 			// Which bin index should be centered on centralFrequency?
