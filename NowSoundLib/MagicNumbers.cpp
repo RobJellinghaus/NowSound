@@ -8,10 +8,12 @@
 
 using namespace NowSound;
 
+// TODO: move all these magic numbers out of the library! They are tuning parameters to be configured by clients.
+
 // This is a balance between small (lower latency but more risk of crackling if AudioGraph is moody)
 // and large (lower CPU, but more latency in some situations... at least I'm pretty sure... need to
 // confirm this)
-const Duration<AudioSample> MagicNumbers::AudioFrameDuration{ 2048 };
+const Duration<AudioSample> MagicNumbers::AudioFrameDuration{ 480 };
 
 // exactly one beat per second for initial testing
 const float MagicNumbers::InitialBeatsPerMinute{ 60 };
@@ -22,11 +24,12 @@ const int MagicNumbers::BeatsPerMeasure{ 4 };
 // Could be much larger but not really any reason to
 const int MagicNumbers::InitialAudioBufferCount{ 8 };
 
-// 1 second is a reasonable length for each preallocated audio buffer; not too much fragmentation (not that it matters,
-// each 1 sec buffer is only 384KB)
+// 1 second of stereo float audio at 48Khz is only 384KB.  One second buffer ensures minimal fragmentation
+// regardless of loop length.
 const Duration<Second> MagicNumbers::AudioBufferSizeInSeconds{ 1 };
 
 // 1/5 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
+// TODO: make this be dynamically settable.
 const ContinuousDuration<Second> MagicNumbers::PreRecordingDuration{ (float)0.2 };
 
 // This could easily be huge but 1000 is fine for getting at least a second's worth of per-track history at audio rate.
