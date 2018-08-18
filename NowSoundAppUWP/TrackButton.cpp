@@ -67,12 +67,8 @@ void TrackButton::UpdateUI()
 	{
 		NowSoundTrackInfo trackInfo = NowSoundTrack_Info(_trackId);
 
-		bool valid = NowSoundTrack_GetFrequencies(_trackId, _frequencyBuffer.get(), NowSoundAppMagicNumbers::OutputBinCount);
-
-		if (valid)
-		{
-			RenderFrequencyBuffer(_frequencyOutputString);
-		}
+		NowSoundTrack_GetFrequencies(_trackId, _frequencyBuffer.get(), NowSoundAppMagicNumbers::OutputBinCount);
+		RenderFrequencyBuffer(_frequencyOutputString);
 
 		wstr << std::fixed << std::setprecision(2)
 			<< L" | Start (beats): " << trackInfo.StartTimeInBeats

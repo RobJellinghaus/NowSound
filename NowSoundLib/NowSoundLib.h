@@ -128,7 +128,7 @@ namespace NowSound
 		// and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
 		// "pass in StringBuilder", known to work well).
 		// Returns true if there was enough data to update the buffer, or false if there was not.
-		__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity);
+		__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity);
 
 		// True if this is muted.
         // 

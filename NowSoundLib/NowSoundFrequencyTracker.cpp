@@ -23,40 +23,29 @@ namespace NowSound
 		int fftSize)
 		: _bufferStates{},
 		_fftBuffers{},
-		_outputBuffers{},
+		_outputBuffer{},
 		_latestOutputBufferIndex{ -1 },
 		_recordingBufferIndex{ 0 },
 		_recordingBufferSize{ 0 },
 		_binBounds(bounds),
 		_fftSize{ fftSize }
 	{
+		_outputBuffer = std::unique_ptr<float>(new float[bounds->size()]);
+		std::fill(_outputBuffer.get(), _outputBuffer.get() + bounds->size(), 0);
 		for (int i = 0; i < BufferCount; i++)
 		{
 			_bufferStates.push_back(BufferState::Available);
 			_fftBuffers.push_back(std::unique_ptr<Complex>(new Complex[fftSize]));
-			_outputBuffers.push_back(std::unique_ptr<float>(new float[bounds->size()]));
 		}
 		_bufferStates[0] = BufferState::Recording;
 	}
 
-	bool NowSoundFrequencyTracker::GetLatestHistogram(float* outputBuffer, int capacity)
+	void NowSoundFrequencyTracker::GetLatestHistogram(float* outputBuffer, int capacity)
 	{
 		Check(capacity == _binBounds->size());
 
-		// lock the buffer mutex while we copy the latest data out -- this is very fast because the output data is tiny
-		std::lock_guard<std::mutex> guard(_bufferMutex);
-
-		if (_latestOutputBufferIndex < 0)
-		{
-			// no data yet
-			return false;
-		}
-		else
-		{
-			float* outputStart = _outputBuffers[_latestOutputBufferIndex].get();
-			std::copy(outputStart, outputStart + _binBounds->size(), outputBuffer);
-			return true;
-		}
+		// No thread synchronization here.  Slightly inconsistent data is fine.
+		std::copy(_outputBuffer.get(), _outputBuffer.get() + _binBounds->size(), outputBuffer);
 	}
 
 	void NowSoundFrequencyTracker::Record(float* monoInputBuffer, int sampleCount)
@@ -149,7 +138,7 @@ namespace NowSound
 		RosettaFFT::optimized_fft(fftArray);
 
 		// and rescale it!
-		RosettaFFT::RescaleFFT(*_binBounds, fftArray, _outputBuffers[transformingBufferIndex].get(), _binBounds->size());
+		RosettaFFT::RescaleFFT(*_binBounds, fftArray, _outputBuffer.get(), _binBounds->size());
 
 		// and now release our transforming buffer and update output buffer index!
 		std::lock_guard<std::mutex> guard(_bufferMutex);

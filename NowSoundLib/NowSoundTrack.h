@@ -136,7 +136,7 @@ namespace NowSound
         void FinishRecording();
 
 		// Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
-		bool GetFrequencies(void* floatBuffer, int floatBufferCapacity);
+		void GetFrequencies(void* floatBuffer, int floatBufferCapacity);
 
 		// True if this is muted.
         // 

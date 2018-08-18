@@ -49,8 +49,10 @@ namespace NowSound
 		// The FFT buffers themselves.
 		std::vector<std::unique_ptr<RosettaFFT::Complex>> _fftBuffers;
 
-		// The output buffers.
-		std::vector<std::unique_ptr<float>> _outputBuffers;
+		// The single lock-free output buffer.
+		// This may get written and read concurrently, which is fine; slightly inconsistent data
+		// is better than locking overhead.
+		std::unique_ptr<float> _outputBuffer;
 
 		// The currently recording buffer index.
 		int _recordingBufferIndex;
@@ -80,7 +82,7 @@ namespace NowSound
 			int fftSize);
 
 		// Get the latest histogram of output values.
-		bool GetLatestHistogram(float* outputBuffer, int capacity);
+		void GetLatestHistogram(float* outputBuffer, int capacity);
 
 		// Record the given amount of float data.
 		void Record(float* monoInputBuffer, int sampleCount);

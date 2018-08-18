@@ -89,9 +89,9 @@ namespace NowSound
         NowSoundTrack::Track(trackId)->FinishRecording();
     }
 
-	__declspec(dllexport) bool NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
+	__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
 	{
-		return NowSoundTrack::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+		NowSoundTrack::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
 	}
 
 	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
@@ -271,14 +271,14 @@ namespace NowSound
     bool NowSoundTrack::IsMuted() const { return _isMuted; }
     void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
 
-	bool NowSoundTrack::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
+	void NowSoundTrack::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
 	{
 		if (_frequencyTracker == nullptr)
 		{
-			return false;
+			return;
 		}
 
-		return _frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
+		_frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
 	}
 	
 	void NowSoundTrack::FinishRecording()
