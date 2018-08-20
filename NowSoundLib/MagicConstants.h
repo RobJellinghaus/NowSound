@@ -8,12 +8,18 @@
 // Constants that are assigned based on manual tuning.
 // These are collected into one location to avoid their being scattered subtly around the code.
 // Effectively, there should be no constant numeric values other than 0 or 1 anywhere in NowSoundLib
-// except in MagicNumbers.cpp.
+// except in MagicConstants.cpp.
 namespace NowSound
 {
-    class MagicNumbers
+    class MagicConstants
     {
     public:
+		// Request the lowest latency?
+		// All things being equal this is obviously what we want; however unfortunately Windows, and Windows
+		// drivers for audio hardware, can be very unpredictable regarding performance of actual low latency
+		// capture and playback.
+		static const bool UseLowestLatency;
+
         // The length of the audio frame used for copying data both on input and output.
         // Making this shorter potentially reduces latency or at least input variability.
         // Making this longer reduces the number of times frame input nodes require data,

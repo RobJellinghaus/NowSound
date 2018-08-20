@@ -12,7 +12,7 @@
 #include "Check.h"
 #include "Clock.h"
 #include "GetBuffer.h"
-#include "MagicNumbers.h"
+#include "MagicConstants.h"
 #include "NowSoundGraph.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
@@ -149,7 +149,7 @@ namespace NowSound
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
-            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration),
+            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
             1, // mono streams only for now (and maybe indefinitely)
             NowSoundGraph::Instance()->GetAudioAllocator(),
             /*maxBufferedDuration:*/ 0,
@@ -160,9 +160,9 @@ namespace NowSound
         _lastSampleTime{ Clock::Instance().Now() },
         _isMuted{ false },
         _debugLog{},
-        _requiredSamplesHistogram { MagicNumbers::AudioQuantumHistogramCapacity },
-		_sinceLastSampleTimingHistogram{ MagicNumbers::AudioQuantumHistogramCapacity },
-		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() },
+        _requiredSamplesHistogram { MagicConstants::AudioQuantumHistogramCapacity },
+		_sinceLastSampleTimingHistogram{ MagicConstants::AudioQuantumHistogramCapacity },
+		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() },
 		_pan{ initialPan },
 		_frequencyTracker{ _graph->FftSize() < 0
 			? ((NowSoundFrequencyTracker*)nullptr)
@@ -177,10 +177,10 @@ namespace NowSound
         Check(NowSoundGraph::Instance()->State() == NowSoundGraphState::GraphRunning);
 
 		/* HACK: try NOT pre-recording any data... just push the start time back
-        if (MagicNumbers::PreRecordingDuration.Value() > 0)
+        if (MagicConstants::PreRecordingDuration.Value() > 0)
         {
             // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-			Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicNumbers::PreRecordingDuration);
+			Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
                 sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensationDuration,
                 latencyCompensationDuration);
@@ -202,7 +202,7 @@ namespace NowSound
     void NowSoundTrack::DebugLog(const std::wstring& entry)
     {
         _debugLog.push(entry);
-        if (_debugLog.size() > MagicNumbers::DebugLogCapacity)
+        if (_debugLog.size() > MagicConstants::DebugLogCapacity)
         {
             _debugLog.pop();
         }
@@ -342,14 +342,14 @@ namespace NowSound
             // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
             // we fill it completely and often.
             s_audioFrame = Windows::Media::AudioFrame(
-                (uint32_t)(MagicNumbers::AudioFrameDuration.Value()
+                (uint32_t)(MagicConstants::AudioFrameDuration.Value()
                     * sizeof(float)
                     * Clock::Instance().ChannelCount()));
         }
         Windows::Media::AudioFrame audioFrame = s_audioFrame;
 #else
         Windows::Media::AudioFrame audioFrame((uint32_t)(Clock::Instance().SampleRateHz()
-            * MagicNumbers::AudioFrameLengthSeconds.Value()
+            * MagicConstants::AudioFrameLengthSeconds.Value()
             * sizeof(float)
             * Clock::Instance().ChannelCount()));
 #endif
@@ -371,7 +371,7 @@ namespace NowSound
 
             /*
             uint32_t requiredBytes = requiredSamples * sampleSizeInBytes;
-            uint32_t maxInputBytes = MagicNumbers::MaxInputSamples * sampleSizeInBytes;
+            uint32_t maxInputBytes = MagicConstants::MaxInputSamples * sampleSizeInBytes;
 #undef max // never never should have been a macro
             uint32_t bytesRemaining = std::max(requiredBytes, maxInputBytes);
             */

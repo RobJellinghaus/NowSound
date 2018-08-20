@@ -309,7 +309,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GetBuffer.h" />
-    <ClInclude Include="MagicNumbers.h" />
+    <ClInclude Include="MagicConstants.h" />
     <ClInclude Include="NowSoundFrequencyTracker.h" />
     <ClInclude Include="NowSoundGraph.h" />
     <ClInclude Include="NowSoundInput.h" />
@@ -320,7 +320,7 @@
     <ClInclude Include="rosetta_fft.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MagicNumbers.cpp" />
+    <ClCompile Include="MagicConstants.cpp" />
     <ClCompile Include="NowSoundFrequencyTracker.cpp" />
     <ClCompile Include="NowSoundGraph.cpp" />
     <ClCompile Include="NowSoundInput.cpp" />

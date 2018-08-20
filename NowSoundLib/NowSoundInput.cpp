@@ -8,7 +8,7 @@
 #include "Clock.h"
 #include "GetBuffer.h"
 #include "Histogram.h"
-#include "MagicNumbers.h"
+#include "MagicConstants.h"
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
@@ -39,7 +39,7 @@ namespace NowSound
 		_recorders{},
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
 		_incomingAudioStreamRecorder{ &_incomingAudioStream },
-		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicNumbers::RecentVolumeDuration).Value() }
+		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() }
 	{
 		_inputDevice.AddOutgoingConnection(_frameOutputNode);
 	}
@@ -110,7 +110,7 @@ namespace NowSound
 			if (latencyInSamples == 0)
 			{
 				// sorry audiograph, don't really believe you when you say zero latency.
-				latencyInSamples = MagicNumbers::AudioFrameDuration.Value();
+				latencyInSamples = MagicConstants::AudioFrameDuration.Value();
 			}
 
 			uint32_t latencyBufferSize = (uint32_t)latencyInSamples * sampleSizeInBytes;

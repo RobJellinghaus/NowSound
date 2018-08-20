@@ -8,7 +8,7 @@
 #include "Clock.h"
 #include "GetBuffer.h"
 #include "Histogram.h"
-#include "MagicNumbers.h"
+#include "MagicConstants.h"
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
@@ -194,8 +194,22 @@ namespace NowSound
 	{
 		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
 		AudioGraphSettings settings(AudioRenderCategory::Media);
-		settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
-		settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
+
+		// AudioGraph seems fine under NowSoundApp with LowestLatency, but in Holofunk it gives inconsistent glitching.
+		// Maybe it's just Windows and there's no real hope for click-free low latency even with WASAPI, given that
+		// the WASAPI sample app has a low latency bug!
+		// Anyway let's just see what we get with this.
+
+		// TODO: prosecute the WASAPI UWP low latency sample tone generator bug on TASCAM.
+		// TODO: reproduce the WASAPI UWP low latency sample tone generator bug on RealTek and/or Microsoft HD Audio.
+		//		 (Laptop has little to lose from this)
+
+		if (MagicConstants::UseLowestLatency)
+		{
+			settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
+			settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
+		}
+
 		// leaving PrimaryRenderDevice uninitialized will use default output device
 		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
 
@@ -220,12 +234,12 @@ namespace NowSound
 		Clock::Initialize(
 			info.SampleRateHz,
 			info.ChannelCount,
-			MagicNumbers::InitialBeatsPerMinute,
-			MagicNumbers::BeatsPerMeasure);
+			MagicConstants::InitialBeatsPerMinute,
+			MagicConstants::BeatsPerMeasure);
 
 		_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
-			(int)(Clock::Instance().BytesPerSecond() * MagicNumbers::AudioBufferSizeInSeconds.Value()),
-			MagicNumbers::InitialAudioBufferCount));
+			(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
+			MagicConstants::InitialAudioBufferCount));
 
 		// save the local across the co_await statement
 		std::vector<DeviceInformation>& inputDeviceInfoRef = _inputDeviceInfos;
