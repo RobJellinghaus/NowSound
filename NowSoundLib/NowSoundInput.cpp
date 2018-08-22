@@ -42,6 +42,14 @@ namespace NowSound
 		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() }
 	{
 		_inputDevice.AddOutgoingConnection(_frameOutputNode);
+
+		// TODO: figure out how to not have this be a HORRIBLE HORRIBLE HACK
+		if (inputId == AudioInput1)
+		{
+			// only add ONE connection from input device to output node
+			// TODO: figure out how in the heck sound effects will work with this
+			_inputDevice.AddOutgoingConnection(nowSoundGraph->AudioDeviceOutputNode());
+		}
 	}
 
 	NowSoundInputInfo NowSoundInput::Info()

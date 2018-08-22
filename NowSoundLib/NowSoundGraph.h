@@ -173,11 +173,11 @@ namespace NowSound
         winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
 
         // The default audio output node.  TODO: support device selection.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode GetAudioDeviceOutputNode() const;
+        winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
-        BufferAllocator<float>* GetAudioAllocator() const;
+        BufferAllocator<float>* AudioAllocator() const;
 
 		// Create an input device (or a pair of them, if monoPair is true).
 		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
@@ -189,7 +189,7 @@ namespace NowSound
         void HandleIncomingAudio();
 
 		// Access the vector of frequency bins, when generating frequency histograms.
-		const std::vector<RosettaFFT::FrequencyBinBounds>* GetBinBounds() const;
+		const std::vector<RosettaFFT::FrequencyBinBounds>* BinBounds() const;
 
 		// Access to the FFT size.
 		int FftSize() const;

@@ -151,7 +151,7 @@ namespace NowSound
         _audioStream(
             Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
             1, // mono streams only for now (and maybe indefinitely)
-            NowSoundGraph::Instance()->GetAudioAllocator(),
+            NowSoundGraph::Instance()->AudioAllocator(),
             /*maxBufferedDuration:*/ 0,
             /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
@@ -166,7 +166,7 @@ namespace NowSound
 		_pan{ initialPan },
 		_frequencyTracker{ _graph->FftSize() < 0
 			? ((NowSoundFrequencyTracker*)nullptr)
-			: new NowSoundFrequencyTracker(_graph->GetBinBounds(), _graph->FftSize()) }
+			: new NowSoundFrequencyTracker(_graph->BinBounds(), _graph->FftSize()) }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -196,7 +196,7 @@ namespace NowSound
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
-		_audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->GetAudioDeviceOutputNode());
+		_audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->AudioDeviceOutputNode());
     }
 
     void NowSoundTrack::DebugLog(const std::wstring& entry)

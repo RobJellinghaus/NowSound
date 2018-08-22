@@ -157,9 +157,9 @@ namespace NowSound
 
 	AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
-	AudioDeviceOutputNode NowSoundGraph::GetAudioDeviceOutputNode() const { return _deviceOutputNode; }
+	AudioDeviceOutputNode NowSoundGraph::AudioDeviceOutputNode() const { return _deviceOutputNode; }
 
-	BufferAllocator<float>* NowSoundGraph::GetAudioAllocator() const { return _audioAllocator.get(); }
+	BufferAllocator<float>* NowSoundGraph::AudioAllocator() const { return _audioAllocator.get(); }
 
 	void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
 	{
@@ -308,7 +308,7 @@ namespace NowSound
 			fftSize);
 	}
 
-	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::GetBinBounds() const { return &_fftBinBounds; }
+	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
 	int NowSoundGraph::FftSize() const { return _fftSize; }
 

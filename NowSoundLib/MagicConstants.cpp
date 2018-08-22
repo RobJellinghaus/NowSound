@@ -10,13 +10,13 @@ using namespace NowSound;
 
 // TODO: move all these magic numbers out of the library! They are tuning parameters to be configured by clients.
 
-// Tragically this seems more stable when not used :-( :-( :-( :-( :-(
-const bool MagicConstants::UseLowestLatency = false;
+// If true, create audio graph with UseLowestLatency and RawMode.
+const bool MagicConstants::UseLowestLatency = true;
 
 // This is a balance between small (lower latency but more risk of crackling if AudioGraph is moody)
 // and large (lower CPU, but more latency in some situations... at least I'm pretty sure... need to
 // confirm this)
-const Duration<AudioSample> MagicConstants::AudioFrameDuration{ 512 };
+const Duration<AudioSample> MagicConstants::AudioFrameDuration{ 480 };
 
 // exactly one beat per second for initial testing
 const float MagicConstants::InitialBeatsPerMinute{ 60 };

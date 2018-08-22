@@ -13,7 +13,7 @@ public:
 	// Number of output bins; this can be whatever we want to see, rendering-wise.
 	static const int OutputBinCount = 20;
 	// Number of divisions per octave (e.g. setting this to 3 equals four semitones per bin, 12 divided by 3).
-	static const int OctaveDivisions = 4;
+	static const int OctaveDivisions = 5;
 	// The central frequency of the histogram; this is middle C.
 	static const double CentralFrequency;
 	// The bin (out of OutputBinCount) in which the central frequency should be mapped; zero-indexed.
