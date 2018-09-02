@@ -19,17 +19,13 @@ using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::Devices::Enumeration;
-using namespace Windows::Foundation;
-using namespace Windows::Media;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
+using namespace winrt::Windows::ApplicationModel::Core;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::System;
+using namespace winrt::Windows::Storage;
+using namespace winrt::Windows::Storage::Pickers;
+using namespace winrt::Windows::UI::Core;
+using namespace winrt::Windows::UI::Composition;
 
 namespace NowSound
 {
@@ -142,9 +138,9 @@ namespace NowSound
 	NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
 	NowSoundGraph::NowSoundGraph()
-		: _audioGraph{ nullptr },
+		: // _audioGraph{ nullptr },
 		_audioGraphState{ NowSoundGraphState::GraphUninitialized },
-		_deviceOutputNode{ nullptr },
+		// _deviceOutputNode{ nullptr },
 		_audioAllocator{ nullptr },
 		_trackId{ TrackId::TrackIdUndefined },
 		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
@@ -155,9 +151,9 @@ namespace NowSound
 		_fftSize{ -1 }
 	{ }
 
-	AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
+	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
-	AudioDeviceOutputNode NowSoundGraph::AudioDeviceOutputNode() const { return _deviceOutputNode; }
+	// AudioDeviceOutputNode NowSoundGraph::AudioDeviceOutputNode() const { return _deviceOutputNode; }
 
 	BufferAllocator<float>* NowSoundGraph::AudioAllocator() const { return _audioAllocator.get(); }
 
@@ -187,12 +183,9 @@ namespace NowSound
 	void NowSoundGraph::InitializeAsync()
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
-		create_task([this]() -> IAsyncAction { co_await InitializeAsyncImpl(); });
-	}
 
-	IAsyncAction NowSoundGraph::InitializeAsyncImpl()
-	{
 		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
+#if false
 		AudioGraphSettings settings(AudioRenderCategory::Media);
 
 		// AudioGraph seems fine under NowSoundApp with LowestLatency, but in Holofunk it gives inconsistent glitching.
@@ -253,11 +246,14 @@ namespace NowSound
 			inputDeviceInfoRef.push_back(device);
 		}
 
+#endif
+
 		ChangeState(NowSoundGraphState::GraphInitialized);
 	}
 
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
+#if false
 		// TODO: verify not on audio graph thread
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
 			_audioGraph.EncodingProperties().SampleRate(),
@@ -266,18 +262,18 @@ namespace NowSound
 			_audioGraph.LatencyInSamples(),
 			_audioGraph.SamplesPerQuantum(),
 			(int32_t)_inputDeviceInfos.size());
-
-		return graphInfo;
+#endif
+		return NowSoundGraphInfo();
 	}
 
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Id().c_str(), _TRUNCATE);
+		// wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Id().c_str(), _TRUNCATE);
 	}
 
 	void NowSoundGraph::InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
-		wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
+		// wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Name().c_str(), _TRUNCATE);
 	}
 
 	void NowSoundGraph::InitializeDeviceInputs(int deviceIndex)
@@ -312,8 +308,9 @@ namespace NowSound
 
 	int NowSoundGraph::FftSize() const { return _fftSize; }
 
-	IAsyncAction NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
+	void NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
 	{
+#if false
 		// Create a device input node
 		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
 			Windows::Media::Capture::MediaCategory::Media,
@@ -334,8 +331,10 @@ namespace NowSound
 		{
 			CreateInputDeviceFromNode(inputNode, (int)i);
 		}
+#endif
 	}
 
+#if false
 	void NowSoundGraph::CreateInputDeviceFromNode(AudioDeviceInputNode inputNode, int channel)
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
@@ -348,17 +347,15 @@ namespace NowSound
 
 		_audioInputs.emplace_back(std::move(input));
 	}
+#endif
 
 	void NowSoundGraph::CreateAudioGraphAsync(/*NowSound_DeviceInfo outputDevice*/) // TODO: output device selection?
     {
         // TODO: verify not on audio graph thread
 
         PrepareToChangeState(NowSoundGraphState::GraphInitialized);
-        create_task([this]() -> IAsyncAction { co_await CreateAudioGraphAsyncImpl(); });
-    }
 
-    IAsyncAction NowSoundGraph::CreateAudioGraphAsyncImpl()
-    {
+#if false
 		// Create a device output node
         CreateAudioDeviceOutputNodeResult deviceOutputNodeResult = co_await _audioGraph.CreateDeviceOutputNodeAsync();
 
@@ -380,6 +377,7 @@ namespace NowSound
 		{
 			co_await CreateInputDeviceAsync(_inputDeviceIndicesToInitialize[i]);
 		}
+#endif
 
         ChangeState(NowSoundGraphState::GraphCreated);
     }
@@ -423,7 +421,7 @@ namespace NowSound
         PrepareToChangeState(NowSoundGraphState::GraphCreated);
 
         // not actually async!  But let's not expose that, maybe this might be async later or we might add async stuff here.
-        _audioGraph.Start();
+        // _audioGraph.Start();
 
         // As of now, we will start getting HandleIncomingAudio() callbacks.
 
@@ -446,8 +444,9 @@ namespace NowSound
 		return id;
     }
 
-    IAsyncAction NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
+    void NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
     {
+#if false
         // This must be called on the UI thread.
         FileOpenPicker picker;
         picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
@@ -479,6 +478,7 @@ namespace NowSound
 
         fileInput.AddOutgoingConnection(_deviceOutputNode);
         fileInput.Start();
+#endif
     }
 
     void NowSoundGraph::PlayUserSelectedSoundFileAsync()
@@ -492,7 +492,7 @@ namespace NowSound
 
     void NowSoundGraph::HandleIncomingAudio()
     {
-		Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
+		// Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
 
 		for (std::unique_ptr<NowSoundInput>& input : _audioInputs)
 		{

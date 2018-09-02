@@ -95,13 +95,10 @@ namespace NowSound
         NowSoundGraph();
 
 		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-		winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
-
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-        winrt::Windows::Foundation::IAsyncAction CreateAudioGraphAsyncImpl();
+        void CreateAudioGraphAsyncImpl();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        winrt::Windows::Foundation::IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
+        void PlayUserSelectedSoundFileAsyncImpl();
 
         // Check that the expected state is the current state, and that no current state change is happening;
         // then mark that a state change is now happening.
@@ -120,16 +117,16 @@ namespace NowSound
         bool _changingState;
 
         // The AudioGraph managed by this NowSoundGraph.
-        winrt::Windows::Media::Audio::AudioGraph _audioGraph;
+        // winrt::Windows::Media::Audio::AudioGraph _audioGraph;
 
         // The state of this graph.
         NowSoundGraphState _audioGraphState;
 
         // The default output device. TODO: support multiple output devices.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
+        // winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
 
 		// The AudioGraph DeviceInformation structures for all input devices.
-		::std::vector<winrt::Windows::Devices::Enumeration::DeviceInformation> _inputDeviceInfos;
+		// ::std::vector<winrt::Windows::Devices::Enumeration::DeviceInformation> _inputDeviceInfos;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         std::unique_ptr<BufferAllocator<float>> _audioAllocator;
@@ -170,20 +167,20 @@ namespace NowSound
 #endif
 
         // The (currently singleton) AudioGraph.
-        winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
+        // winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
 
         // The default audio output node.  TODO: support device selection.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
+        // winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* AudioAllocator() const;
 
 		// Create an input device (or a pair of them, if monoPair is true).
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
+		void CreateInputDeviceAsync(int deviceIndex);
 
 		// Create an input device (or a pair of them, if monoPair is true).
-		void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, int channel);
+		// void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, int channel);
 
 		// A graph quantum has started; handle any available input audio.
         void HandleIncomingAudio();

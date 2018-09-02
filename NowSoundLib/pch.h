@@ -12,3 +12,9 @@
 #include "winrt/Windows.UI.Composition.h"
 #include "winrt/Windows.UI.Core.h"
 WINRT_WARNING_PUSH
+
+#include <Windows.h>
+#include <wrl\implements.h>
+#include <mfapi.h>
+#include <AudioClient.h>
+#include <mmdeviceapi.h>

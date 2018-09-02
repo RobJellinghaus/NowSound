@@ -16,39 +16,37 @@
 using namespace std;
 using namespace winrt;
 
-using namespace Windows::Foundation;
-using namespace Windows::Media;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media;
 
 namespace NowSound
 {
 	NowSoundInput::NowSoundInput(
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
-		AudioDeviceInputNode inputNode,
+		// AudioDeviceInputNode inputNode,
 		BufferAllocator<float>* audioAllocator,
 		int channel)
 		: _nowSoundGraph{ nowSoundGraph },
 		_audioInputId{ inputId },
-		_inputDevice{ inputNode },
+		// _inputDevice{ inputNode },
 		_channel{ channel },
 		_pan{ 0.5 },
 		// TODO: make NowSoundInputs on the same device share FrameOutputNodes as well as DeviceInputNodes
-		_frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
+		// _frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
 		_recorders{},
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
 		_incomingAudioStreamRecorder{ &_incomingAudioStream },
 		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() }
 	{
-		_inputDevice.AddOutgoingConnection(_frameOutputNode);
+		// _inputDevice.AddOutgoingConnection(_frameOutputNode);
 
 		// TODO: figure out how to not have this be a HORRIBLE HORRIBLE HACK
 		if (inputId == AudioInput1)
 		{
 			// only add ONE connection from input device to output node
 			// TODO: figure out how in the heck sound effects will work with this
-			_inputDevice.AddOutgoingConnection(nowSoundGraph->AudioDeviceOutputNode());
+			// _inputDevice.AddOutgoingConnection(nowSoundGraph->AudioDeviceOutputNode());
 		}
 	}
 
@@ -79,6 +77,7 @@ namespace NowSound
 
 	void NowSoundInput::HandleIncomingAudio()
 	{
+#if false
 		AudioFrame frame = _frameOutputNode.GetFrame();
 
 		// The frame has this many channels.
@@ -170,5 +169,6 @@ namespace NowSound
 				_recorders.erase(std::find(_recorders.begin(), _recorders.end(), completedRecorder));
 			}
 		}
+#endif
 	}
 }

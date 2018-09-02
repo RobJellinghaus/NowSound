@@ -9,9 +9,9 @@ using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::Foundation;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::Audio;
+using namespace winrt::Windows::Media::Render;
 
 std::unique_ptr<NowSound::Clock> NowSound::Clock::s_instance;
 

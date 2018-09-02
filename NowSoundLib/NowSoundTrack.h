@@ -42,7 +42,7 @@ namespace NowSound
 
 #if STATIC_AUDIO_FRAME
         // Audio frame, reused for copying audio.
-        static winrt::Windows::Media::AudioFrame s_audioFrame;
+        // static winrt::Windows::Media::AudioFrame s_audioFrame;
 #endif
 
 		// The graph that created this.
@@ -68,7 +68,7 @@ namespace NowSound
 
         // The node this track uses for emitting data into the audio graph.
         // This is the output node for this Track, but the input node for the audio graph.
-        winrt::Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
+        // winrt::Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
 
         // The stream containing this Track's data; this is an owning reference.
         BufferedSliceStream<AudioSample, float> _audioStream;
@@ -153,9 +153,11 @@ namespace NowSound
         void Delete();
 
         // The quantum has started; consume input audio for this recording.
+		/*
         void FrameInputNode_QuantumStarted(
             winrt::Windows::Media::Audio::AudioFrameInputNode sender,
             winrt::Windows::Media::Audio::FrameInputNodeQuantumStartedEventArgs args);
+			*/
 
         // Record from (that is, copy from) the source data.
         virtual bool Record(Duration<AudioSample> duration, float* source);

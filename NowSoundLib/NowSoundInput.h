@@ -31,7 +31,7 @@ namespace NowSound
 		const AudioInputId _audioInputId;
 
 		// The input device. Note that this device input node may be shared between multiple NowSoundInputs.
-		winrt::Windows::Media::Audio::AudioDeviceInputNode _inputDevice;
+		// winrt::Windows::Media::Audio::AudioDeviceInputNode _inputDevice;
 
 		// The channel to select from the input device.
 		int _channel;
@@ -40,7 +40,7 @@ namespace NowSound
 		float _pan;
 
 		// The frame output node which allows buffering input audio into memory.
-		winrt::Windows::Media::Audio::AudioFrameOutputNode _frameOutputNode;
+		// winrt::Windows::Media::Audio::AudioFrameOutputNode _frameOutputNode;
 
 		// Vector of active Recorders; these are non-owning pointers borrowed from the collection of Tracks
 		// held by NowSoundTrackAPI.
@@ -70,7 +70,7 @@ namespace NowSound
 		NowSoundInput(
 			NowSoundGraph* audioGraph,
 			AudioInputId audioInputId,
-			winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
+			// winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
 			BufferAllocator<float>* audioAllocator,
 			int channel);
 

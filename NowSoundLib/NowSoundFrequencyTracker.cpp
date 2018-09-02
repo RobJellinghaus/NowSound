@@ -14,7 +14,7 @@ using namespace RosettaFFT;
 using namespace std;
 using namespace std::chrono;
 using namespace winrt;
-using namespace Windows::Foundation;
+using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {

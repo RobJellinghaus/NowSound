@@ -15,14 +15,14 @@ using namespace NowSound;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::ApplicationModel::Activation;
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
-using namespace Windows::UI::Xaml;
-using namespace Windows::UI::Xaml::Controls;
-using namespace Windows::System;
+using namespace winrt::Windows::ApplicationModel::Activation;
+using namespace winrt::Windows::ApplicationModel::Core;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::UI::Core;
+using namespace winrt::Windows::UI::Composition;
+using namespace winrt::Windows::UI::Xaml;
+using namespace winrt::Windows::UI::Xaml::Controls;
+using namespace winrt::Windows::System;
 
 const int TicksPerSecond = 10000000;
 
