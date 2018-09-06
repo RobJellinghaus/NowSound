@@ -22,7 +22,39 @@
 
 namespace NowSound
 {
-    // A single graph implementing the NowSoundGraphAPI operations.
+	// NB: All states >= DeviceStateInitialized will allow some methods
+	// to be called successfully on the Audio Client
+	enum class DeviceState
+	{
+		DeviceStateUnInitialized,
+		DeviceStateInError,
+		DeviceStateDiscontinuity,
+		DeviceStateFlushing,
+		DeviceStateActivated,
+		DeviceStateInitialized,
+		DeviceStateStarting,
+		DeviceStatePlaying,
+		DeviceStateCapturing,
+		DeviceStatePausing,
+		DeviceStatePaused,
+		DeviceStateStopping,
+		DeviceStateStopped
+	};
+	
+	struct DEVICEPROPS
+	{
+		bool IsHWOffload;
+		bool IsTonePlayback;
+		bool IsBackground;
+		bool IsRawSupported;
+		bool IsRawChosen;
+		bool IsLowLatency;
+		REFERENCE_TIME hnsBufferDuration;
+		int32_t Frequency;
+		// IRandomAccessStream^    ContentStream;
+	};
+
+	// A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
     public: // API methods called by the NowSoundGraphAPI P/Invoke bridge methods
@@ -94,9 +126,6 @@ namespace NowSound
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
 
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-        void CreateAudioGraphAsyncImpl();
-
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
         void PlayUserSelectedSoundFileAsyncImpl();
 
@@ -107,6 +136,18 @@ namespace NowSound
         // Check that a state change is happening, then switch the state to newState and mark the state change
         // as no longer happening.
         void ChangeState(NowSoundGraphState newState);
+
+		// Continuation method after ActivateAudioInterfaceAsync.
+		void ContinueActivation(IActivateAudioInterfaceAsyncOperation *operation);
+
+		// COM trampoline.
+		struct NowSoundGraphActivationHandler
+			: winrt::implements<NowSoundGraphActivationHandler, IActivateAudioInterfaceCompletionHandler>
+		{
+			NowSoundGraph* _graph;
+			NowSoundGraphActivationHandler(NowSoundGraph* graph) : _graph(graph) {}
+			HRESULT ActivateCompleted(IActivateAudioInterfaceAsyncOperation *operation);
+		};
 
     private: // instance variables
 
@@ -121,6 +162,29 @@ namespace NowSound
 
         // The state of this graph.
         NowSoundGraphState _audioGraphState;
+
+		// COM trampoline instance for ActivateAudioInterfaceAsync continuation.
+		NowSoundGraphActivationHandler _handler;
+
+		// The device string of the output device.
+		std::wstring _deviceIdString;
+
+		int32_t _bufferFrames;
+		HANDLE _sampleReadyEvent;
+		MFWORKITEM_KEY _sampleReadyKey;
+		std::mutex _sampleMutex;
+
+		WAVEFORMATEX* _mixFormat;
+		uint32_t _defaultPeriodInFrames;
+		uint32_t _fundamentalPeriodInFrames;
+		uint32_t _maxPeriodInFrames;
+		uint32_t _minPeriodInFrames;
+
+		com_ptr<IAudioClient3> _audioClient;
+		com_ptr<IAudioRenderClient> _audioRenderClient;
+		com_ptr<IMFAsyncResult> _sampleReadyAsyncResult;
+
+		DEVICEPROPS _deviceProps;
 
         // The default output device. TODO: support multiple output devices.
         // winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;

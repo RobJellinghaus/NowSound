@@ -21,6 +21,7 @@ using namespace winrt;
 
 using namespace winrt::Windows::ApplicationModel::Core;
 using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::Devices;
 using namespace winrt::Windows::System;
 using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Pickers;
@@ -148,7 +149,21 @@ namespace NowSound
 		_audioInputs{ },
 		_changingState{ false },
 		_fftBinBounds{},
-		_fftSize{ -1 }
+		_fftSize{ -1 },
+		_sampleReadyEvent{ CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS) },
+		_bufferFrames{ 0 },
+		_sampleReadyKey{},
+		_sampleMutex{},
+		_mixFormat{},
+		_defaultPeriodInFrames{},
+		_fundamentalPeriodInFrames{},
+		_maxPeriodInFrames{},
+		_minPeriodInFrames{},
+		_audioClient{},
+		_audioRenderClient{},
+		_sampleReadyAsyncResult{},
+		_deviceProps{},
+		_handler{ this }
 	{ }
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
@@ -180,38 +195,49 @@ namespace NowSound
 		return _audioGraphState;
 	}
 
+	HRESULT NowSoundGraph::NowSoundGraphActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOperation *operation)
+	{
+		_graph->ContinueActivation(operation);
+	}
+
 	void NowSoundGraph::InitializeAsync()
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
 		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
-#if false
-		AudioGraphSettings settings(AudioRenderCategory::Media);
 
-		// AudioGraph seems fine under NowSoundApp with LowestLatency, but in Holofunk it gives inconsistent glitching.
-		// Maybe it's just Windows and there's no real hope for click-free low latency even with WASAPI, given that
-		// the WASAPI sample app has a low latency bug!
-		// Anyway let's just see what we get with this.
+		winrt::hstring defaultRenderDeviceId = MediaDevice::GetDefaultAudioRenderId(AudioDeviceRole::Default);
+		IActivateAudioInterfaceAsyncOperation *asyncOp;
 
-		// TODO: prosecute the WASAPI UWP low latency sample tone generator bug on TASCAM.
-		// TODO: reproduce the WASAPI UWP low latency sample tone generator bug on RealTek and/or Microsoft HD Audio.
-		//		 (Laptop has little to lose from this)
+		check_hresult(ActivateAudioInterfaceAsync(
+			defaultRenderDeviceId.c_str(),
+			__uuidof(IAudioClient3),
+			nullptr,
+			&_handler,
+			&asyncOp));
 
+		// manually expanded code for "SAFE_RELEASE(asyncOp);" in original code
+		if (asyncOp != nullptr)
+		{
+			asyncOp->Release();
+			asyncOp = nullptr;
+		}
+	}
+
+	void NowSoundGraph::ContinueActivation(IActivateAudioInterfaceAsyncOperation *operation)
+	{
+		/* TODO: low latency setup in WASAPI
 		if (MagicConstants::UseLowestLatency)
 		{
 			settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
 			settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
 		}
+		*/
 
-		// leaving PrimaryRenderDevice uninitialized will use default output device
-		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-		if (result.Status() != AudioGraphCreationStatus::Success)
-		{
-			// Cannot create graph
-			Check(false);
-			return;
-		}
+		HRESULT hrActivateResult = S_OK;
+		winrt::com_ptr<::IUnknown> punkAudioInterface;
+		check_hresult(operation->GetActivateResult(&hrActivateResult, punkAudioInterface.put()));
+		check_hresult(punkAudioInterface->QueryInterface(_audioClient.put()));
 
 		// NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
 		// this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
