@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "stdint.h"
-
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "NowSoundLibTypes.h"

@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include "stdint.h"
-
 #include <deque>
 
 // Simple histogram structure for tracking statistics over a bounded set of float values.

@@ -5,8 +5,6 @@
 
 #include <vector>
 
-#include "stdint.h"
-
 #include "NowSoundFrequencyTracker.h"
 
 using namespace concurrency;

@@ -9,8 +9,6 @@
 #include <vector>
 #include <string>
 
-#include "stdint.h"
-
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
@@ -180,9 +178,9 @@ namespace NowSound
 		uint32_t _maxPeriodInFrames;
 		uint32_t _minPeriodInFrames;
 
-		com_ptr<IAudioClient3> _audioClient;
-		com_ptr<IAudioRenderClient> _audioRenderClient;
-		com_ptr<IMFAsyncResult> _sampleReadyAsyncResult;
+		winrt::com_ptr<IAudioClient3> _audioClient;
+		winrt::com_ptr<IAudioRenderClient> _audioRenderClient;
+		winrt::com_ptr<IMFAsyncResult> _sampleReadyAsyncResult;
 
 		DEVICEPROPS _deviceProps;
 

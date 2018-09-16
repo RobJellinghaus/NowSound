@@ -6,8 +6,6 @@
 #include <string>
 #include <sstream>
 
-#include "stdint.h"
-
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Clock.h"

@@ -7,8 +7,6 @@
 
 #include <future>
 
-#include "stdint.h"
-
 #include "Check.h"
 
 namespace NowSound

@@ -198,6 +198,7 @@ namespace NowSound
 	HRESULT NowSoundGraph::NowSoundGraphActivationHandler::ActivateCompleted(IActivateAudioInterfaceAsyncOperation *operation)
 	{
 		_graph->ContinueActivation(operation);
+		return S_OK;
 	}
 
 	void NowSoundGraph::InitializeAsync()
@@ -224,6 +225,11 @@ namespace NowSound
 		}
 	}
 
+	// the only sample rates that are particularly relevant for our purposes
+	const int SampleRatesToProbe[] = { 44100, 48000, 88200, 96000 };
+
+	const int BitsPerSampleToProbe[] = { 16, 24, 32 };
+
 	void NowSoundGraph::ContinueActivation(IActivateAudioInterfaceAsyncOperation *operation)
 	{
 		/* TODO: low latency setup in WASAPI
@@ -235,14 +241,38 @@ namespace NowSound
 		*/
 
 		HRESULT hrActivateResult = S_OK;
+		// Is this best practice?  Compare to "reinterpret_cast to IUnknown**" guidance on 
+		// https://docs.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/consume-com
 		winrt::com_ptr<::IUnknown> punkAudioInterface;
 		check_hresult(operation->GetActivateResult(&hrActivateResult, punkAudioInterface.put()));
-		check_hresult(punkAudioInterface->QueryInterface(_audioClient.put()));
+		_audioClient = punkAudioInterface.as<IAudioClient3>();
 
-		// NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
-		// this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
-		// Probable compiler bug?  TODO: replicate the bug in test app.
-		_audioGraph = result.Graph();
+		// Calculate whatever GraphInfo fields are easier to cache on initialization (especially sample rate).
+		// WASAPI provides the IsFormatSupported query-like API to determine the full set of hardware capabilities,
+		// but this is overkill for our purposes so we just use it simply once upfront; any data we get from it
+		// we cache for later calls to Info().
+		std::wstringstream wstr{};
+		for (int candidateSampleRate : SampleRatesToProbe)
+		{
+			for (int bitsPerSample : BitsPerSampleToProbe)
+			{
+				WAVEFORMATEX format{ 0 };
+				format.wFormatTag = WAVE_FORMAT_PCM;
+				format.nChannels = 2; // TODO: extend beyond stereo
+				format.nSamplesPerSec = candidateSampleRate;
+				format.nAvgBytesPerSec = format.nChannels * candidateSampleRate * bitsPerSample;
+				format.wBitsPerSample = (WORD)bitsPerSample; // won't settle for less, sorry
+				format.cbSize = 0;
+				WAVEFORMATEX closestMatch{};
+				WAVEFORMATEX* closestMatchPtr = &closestMatch;
+
+				bool isSupported = _audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &closestMatchPtr);
+
+				wstr << "Sample rate " << candidateSampleRate << ", bitsPerSample " << bitsPerSample << ", exclusive: " << (isSupported ? L"YES" : L"NO") << std::endl;
+			}
+		}
+
+		std::wstring ws = wstr.str();
 
 		NowSoundGraphInfo info = Info();
 
@@ -260,6 +290,7 @@ namespace NowSound
 			(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
 			MagicConstants::InitialAudioBufferCount));
 
+		/* TODO: WASAPI device info collection
 		// save the local across the co_await statement
 		std::vector<DeviceInformation>& inputDeviceInfoRef = _inputDeviceInfos;
 
@@ -271,25 +302,31 @@ namespace NowSound
 		{
 			inputDeviceInfoRef.push_back(device);
 		}
-
-#endif
+		*/
 
 		ChangeState(NowSoundGraphState::GraphInitialized);
 	}
 
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
-#if false
+		// evidently no way to just ask WASAPI for sample rate, have to probe for which format(s?)
+		// is/are supported
+		WAVEFORMATEX format;
+
 		// TODO: verify not on audio graph thread
+		/*
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
+			_audioClient->
 			_audioGraph.EncodingProperties().SampleRate(),
 			_audioGraph.EncodingProperties().ChannelCount(),
 			_audioGraph.EncodingProperties().BitsPerSample(),
 			_audioGraph.LatencyInSamples(),
 			_audioGraph.SamplesPerQuantum(),
 			(int32_t)_inputDeviceInfos.size());
-#endif
-		return NowSoundGraphInfo();
+			*/
+
+		NowSoundGraphInfo info{};
+		return info;
 	}
 
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)

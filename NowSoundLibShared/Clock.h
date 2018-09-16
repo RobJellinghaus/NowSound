@@ -5,8 +5,6 @@
 
 #include "pch.h"
 
-#include "stdint.h"
-
 #include "Check.h"
 #include "Time.h"
 

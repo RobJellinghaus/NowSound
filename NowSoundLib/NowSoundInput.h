@@ -5,8 +5,6 @@
 #include <future>
 #include <vector>
 
-#include "stdint.h"
-
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
