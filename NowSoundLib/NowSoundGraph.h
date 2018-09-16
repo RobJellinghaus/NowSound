@@ -172,7 +172,8 @@ namespace NowSound
 		MFWORKITEM_KEY _sampleReadyKey;
 		std::mutex _sampleMutex;
 
-		WAVEFORMATEX* _mixFormat;
+		WAVEFORMATEX _audioClientFormat;
+
 		uint32_t _defaultPeriodInFrames;
 		uint32_t _fundamentalPeriodInFrames;
 		uint32_t _maxPeriodInFrames;

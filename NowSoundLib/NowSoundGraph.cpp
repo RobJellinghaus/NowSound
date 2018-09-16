@@ -154,7 +154,7 @@ namespace NowSound
 		_bufferFrames{ 0 },
 		_sampleReadyKey{},
 		_sampleMutex{},
-		_mixFormat{},
+		_audioClientFormat{},
 		_defaultPeriodInFrames{},
 		_fundamentalPeriodInFrames{},
 		_maxPeriodInFrames{},
@@ -205,8 +205,6 @@ namespace NowSound
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
-		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
-
 		winrt::hstring defaultRenderDeviceId = MediaDevice::GetDefaultAudioRenderId(AudioDeviceRole::Default);
 		IActivateAudioInterfaceAsyncOperation *asyncOp;
 
@@ -230,16 +228,28 @@ namespace NowSound
 
 	const int BitsPerSampleToProbe[] = { 16, 24, 32 };
 
+	uint32_t ConvertHnsToFrames(REFERENCE_TIME hnsPeriod, uint32_t samplesPerSec)
+	{
+		return (uint32_t)( // frames =
+			1.0 * hnsPeriod * // hns *
+			samplesPerSec / // (frames / s) /
+			1000 / // (ms / s) /
+			10000 // (hns / s) /
+			+ 0.5); // rounding
+	}
+
+	REFERENCE_TIME ConvertFramesToHns(uint32_t frames, uint32_t samplesPerSec)
+	{
+		return (REFERENCE_TIME)(
+			10000.0 * // (hns / ms) *
+			1000 * // (ms / s) *
+			frames / // frames /
+			samplesPerSec  // (frames / s)
+			+ 0.5); // rounding
+	}
+
 	void NowSoundGraph::ContinueActivation(IActivateAudioInterfaceAsyncOperation *operation)
 	{
-		/* TODO: low latency setup in WASAPI
-		if (MagicConstants::UseLowestLatency)
-		{
-			settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
-			settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
-		}
-		*/
-
 		HRESULT hrActivateResult = S_OK;
 		// Is this best practice?  Compare to "reinterpret_cast to IUnknown**" guidance on 
 		// https://docs.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/consume-com
@@ -252,6 +262,10 @@ namespace NowSound
 		// but this is overkill for our purposes so we just use it simply once upfront; any data we get from it
 		// we cache for later calls to Info().
 		std::wstringstream wstr{};
+		int32_t desiredRate = 48000; // we will stick with this for now
+		int32_t desiredBitsPerSample = 32; // float is our friend
+		bool desiredFormatSupported = false;
+
 		for (int candidateSampleRate : SampleRatesToProbe)
 		{
 			for (int bitsPerSample : BitsPerSampleToProbe)
@@ -260,19 +274,137 @@ namespace NowSound
 				format.wFormatTag = WAVE_FORMAT_PCM;
 				format.nChannels = 2; // TODO: extend beyond stereo
 				format.nSamplesPerSec = candidateSampleRate;
-				format.nAvgBytesPerSec = format.nChannels * candidateSampleRate * bitsPerSample;
+				format.nAvgBytesPerSec = format.nChannels * candidateSampleRate * (bitsPerSample / 8);
 				format.wBitsPerSample = (WORD)bitsPerSample; // won't settle for less, sorry
+				format.nBlockAlign = format.wBitsPerSample / 8;
 				format.cbSize = 0;
-				WAVEFORMATEX closestMatch{};
-				WAVEFORMATEX* closestMatchPtr = &closestMatch;
 
-				bool isSupported = _audioClient->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, &format, &closestMatchPtr);
+				bool isSupported = _audioClient->IsFormatSupported(
+					AUDCLNT_SHAREMODE_EXCLUSIVE, // we want full control
+					&format, // see if this format is valid
+					nullptr); // exclusive mode doesn't support "closest available mode"
 
-				wstr << "Sample rate " << candidateSampleRate << ", bitsPerSample " << bitsPerSample << ", exclusive: " << (isSupported ? L"YES" : L"NO") << std::endl;
+				wstr << "Sample rate " << candidateSampleRate << ", bitsPerSample " << bitsPerSample << ", exclusive: " << (isSupported ? "YES" : "NO") << std::endl;
+
+				if (isSupported && (desiredRate == candidateSampleRate) && (desiredBitsPerSample == bitsPerSample))
+				{
+					desiredFormatSupported = true;
+					_audioClientFormat = format;
+				}
 			}
 		}
 
 		std::wstring ws = wstr.str();
+
+		Check(desiredFormatSupported);
+
+		// Is offload capable?
+		BOOL isOffloadCapable;
+		check_hresult(_audioClient->IsOffloadCapable(AUDIO_STREAM_CATEGORY::AudioCategory_Media, &isOffloadCapable));
+		Check(isOffloadCapable); // all good audio interfaces are, you know
+
+		/* Experiment: doesn't seem to work -- this call succeeds, but later causes 0x8889025 (AUDCLNT_E_NONOFFLOAD_MODE_ONLY) error from Initialize
+		AudioClientProperties audioClientProperties{};
+		audioClientProperties.cbSize = sizeof(AudioClientProperties);
+		audioClientProperties.bIsOffload = TRUE;
+		audioClientProperties.eCategory = AudioCategory_Media;
+		check_hresult(_audioClient->SetClientProperties(&audioClientProperties));
+		*/
+
+		// get the periodicity of the device
+		REFERENCE_TIME hnsPeriod;
+		check_hresult(_audioClient->GetDevicePeriod(
+			NULL, // don't care about the engine period
+			&hnsPeriod)); // only the device period
+
+		// need to know how many frames that is
+		uint32_t expectedFramesInBuffer = ConvertHnsToFrames(hnsPeriod, _audioClientFormat.nSamplesPerSec);
+		// had better be block-aligned
+		Check((expectedFramesInBuffer % _audioClientFormat.nBlockAlign) == 0);
+		wstr << "The default period for this device is " << hnsPeriod << " hundred-nanoseconds, or " << expectedFramesInBuffer << " frames." << std::endl;
+
+		// HACK... we cheated and we know the number of frames should be 128, not 104.
+		REFERENCE_TIME hnsActualPeriod = ConvertFramesToHns(128, _audioClientFormat.nSamplesPerSec);
+
+		/* Evidently can't call this before initialization...?
+		REFERENCE_TIME minBufferDuration, maxBufferDuration;
+		check_hresult(_audioClient->GetBufferSizeLimits(
+			&_audioClientFormat,
+			true, // yes, event driven
+			&minBufferDuration,
+			&maxBufferDuration));
+
+		// what about the minimum buffer size?
+		uint32_t expectedFramesInMinimumBuffer = ConvertHnsToFrames(minBufferDuration, _audioClientFormat.nSamplesPerSec);
+
+		wstr << "The minimum buffer duration is " << minBufferDuration << " hundred-nanoseconds, or " << expectedFramesInMinimumBuffer << " frames." << std::endl;
+		*/
+
+		ws = wstr.str();
+
+		// call IAudioClient::Initialize the first time
+		// this may very well fail if the device period is unaligned
+		// TODO: HELP: why does this not succeed, when _audioClientFormat was confirmed as being supported in the loop above?
+		HRESULT hr = _audioClient->Initialize(
+			AUDCLNT_SHAREMODE_EXCLUSIVE,
+			AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+			hnsActualPeriod, // hnsPeriod,
+			hnsActualPeriod, // hnsPeriod,
+			&_audioClientFormat,
+			nullptr);
+
+		uint32_t actualFramesInBuffer;
+
+		if (AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED == hr)
+		{
+			// this is sort of half-initialized...
+			check_hresult(_audioClient->GetBufferSize(&actualFramesInBuffer));
+			Check(actualFramesInBuffer != expectedFramesInBuffer);
+			wstr << "Buffer size not aligned, can't yet support the alignment dance" << std::endl;
+			// get the buffer size, which will be aligned
+
+			// throw away this IAudioClient
+			// TODO: can't we just call Initialize on it again???
+			_audioClient = nullptr;
+
+			// calculate the new aligned periodicity
+			hnsPeriod = ConvertFramesToHns(actualFramesInBuffer, _audioClientFormat.nSamplesPerSec);
+
+			Check(false);
+			// eventually, implement the below... but asynchronously... yeesh
+
+			/*
+			// activate a new IAudioClient
+			hr = pMMDevice->Activate(
+				__uuidof(IAudioClient),
+				CLSCTX_ALL, NULL,
+				(void**)&pAudioClient
+			);
+			if (FAILED(hr)) {
+				printf("IMMDevice::Activate(IAudioClient) failed: hr = 0x%08x\n", hr);
+				return hr;
+			}
+
+			// try initialize again
+			printf("Trying again with periodicity of %I64u hundred-nanoseconds, or %u frames.\n", hnsPeriod, nFramesInBuffer);
+			hr = pAudioClient->Initialize(
+				AUDCLNT_SHAREMODE_EXCLUSIVE,
+				AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+				hnsPeriod, hnsPeriod, pWfx, NULL
+			);
+
+			if (FAILED(hr))
+			{
+				printf("IAudioClient::Initialize failed, even with an aligned buffer: hr = 0x%08x\n", hr);
+				pAudioClient->Release();
+				return hr;
+			}
+			*/
+		}
+		else
+		{
+			check_hresult(hr);
+		}
 
 		NowSoundGraphInfo info = Info();
 
@@ -309,21 +441,14 @@ namespace NowSound
 
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
-		// evidently no way to just ask WASAPI for sample rate, have to probe for which format(s?)
-		// is/are supported
-		WAVEFORMATEX format;
-
 		// TODO: verify not on audio graph thread
-		/*
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
-			_audioClient->
-			_audioGraph.EncodingProperties().SampleRate(),
-			_audioGraph.EncodingProperties().ChannelCount(),
-			_audioGraph.EncodingProperties().BitsPerSample(),
-			_audioGraph.LatencyInSamples(),
-			_audioGraph.SamplesPerQuantum(),
-			(int32_t)_inputDeviceInfos.size());
-			*/
+			_audioClientFormat.nSamplesPerSec,
+			_audioClientFormat.nChannels,
+			_audioClientFormat.wBitsPerSample,
+			0, // TODO: _audioGraph.LatencyInSamples(),
+			0, // TODO: _audioGraph.SamplesPerQuantum(),
+			0); // TODO: (int32_t)_inputDeviceInfos.size());
 
 		NowSoundGraphInfo info{};
 		return info;
