@@ -324,7 +324,7 @@ namespace NowSound
         TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
         _lastQuantumTime = dateTimeNow;
 
-        if (IsMuted() || _state != NowSoundTrackState::TrackLooping)
+        if (_state != NowSoundTrackState::TrackLooping)
         {
             // copy nothing to anywhere
             return;
@@ -411,13 +411,16 @@ namespace NowSound
 				// Record all this data in the frequency tracker.
 				_frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
 
-				// Pan each mono sample (and track its volume).
+				// Pan each mono sample (and track its volume), if we're not muted.
 				for (int i = 0; i < sliceDuration.Value(); i++)
 				{
 					float value = slice.Get(i, 0);
 					_volumeHistogram.Add(std::abs(value));
-					audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value);
-					audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
+					if (!IsMuted())
+					{
+						audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value * mute);
+						audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
+					}
 				}
 
                 audioGraphInputDataInBytes += slice.SliceDuration().Value() * channelCount * sizeof(float);
