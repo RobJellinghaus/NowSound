@@ -263,7 +263,7 @@ namespace NowSound
 		// we cache for later calls to Info().
 		std::wstringstream wstr{};
 		int32_t desiredRate = 48000; // we will stick with this for now
-		int32_t desiredBitsPerSample = 32; // float is our friend
+		int32_t desiredBitsPerSample = 24; // float is our friend
 		bool desiredFormatSupported = false;
 
 		for (int candidateSampleRate : SampleRatesToProbe)
@@ -279,10 +279,11 @@ namespace NowSound
 				format.nBlockAlign = format.wBitsPerSample / 8;
 				format.cbSize = 0;
 
-				bool isSupported = _audioClient->IsFormatSupported(
+				HRESULT isSupportedResult = _audioClient->IsFormatSupported(
 					AUDCLNT_SHAREMODE_EXCLUSIVE, // we want full control
 					&format, // see if this format is valid
 					nullptr); // exclusive mode doesn't support "closest available mode"
+				bool isSupported = isSupportedResult == S_OK;
 
 				wstr << "Sample rate " << candidateSampleRate << ", bitsPerSample " << bitsPerSample << ", exclusive: " << (isSupported ? "YES" : "NO") << std::endl;
 
