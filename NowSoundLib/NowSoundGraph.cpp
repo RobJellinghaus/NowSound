@@ -263,7 +263,7 @@ namespace NowSound
 		// we cache for later calls to Info().
 		std::wstringstream wstr{};
 		int32_t desiredRate = 48000; // we will stick with this for now
-		int32_t desiredBitsPerSample = 24; // gonna have to go down to 7FFFFF
+		int32_t desiredBitsPerSample = 24; 
 		bool desiredFormatSupported = false;
 
 		for (int candidateSampleRate : SampleRatesToProbe)
@@ -275,7 +275,7 @@ namespace NowSound
 				format.nChannels = 2; // TODO: extend beyond stereo
 				format.nSamplesPerSec = candidateSampleRate;
 				format.nAvgBytesPerSec = format.nChannels * candidateSampleRate * (bitsPerSample / 8);
-				format.wBitsPerSample = (WORD)bitsPerSample; // won't settle for less, sorry
+				format.wBitsPerSample = (WORD)bitsPerSample;
 				format.nBlockAlign = format.wBitsPerSample / 8;
 				format.cbSize = 0;
 
@@ -287,29 +287,32 @@ namespace NowSound
 
 				wstr << "Sample rate " << candidateSampleRate << ", bitsPerSample " << bitsPerSample << ", exclusive: " << (isSupported ? "YES" : "NO") << std::endl;
 
-				if (isSupported && (desiredRate == candidateSampleRate) && (desiredBitsPerSample == bitsPerSample))
+				if (desiredRate == candidateSampleRate && desiredBitsPerSample == bitsPerSample)
 				{
-					desiredFormatSupported = true;
 					_audioClientFormat = format;
+					desiredFormatSupported = isSupported;
 				}
 			}
 		}
 
 		std::wstring ws = wstr.str();
 
-		Check(desiredFormatSupported);
+		// Ha ha! Format supported? WHO CARES?
+		// https://stackoverflow.com/questions/7665865/wasapi-iaudioclient-initialize-succeeds-even-when-iaudioclient-isformatsuppor
+		// clearly says that a format can *say* it's not supported but *still actually work in Initialize*.  :-P  :-P  :-P
+		// Check(desiredFormatSupported);
 
 		// Is offload capable?
 		BOOL isOffloadCapable;
 		check_hresult(_audioClient->IsOffloadCapable(AUDIO_STREAM_CATEGORY::AudioCategory_Media, &isOffloadCapable));
-		Check(isOffloadCapable); // all good audio interfaces are, you know
+		//Check(isOffloadCapable); // all good audio interfaces are, you know
 
 		// Experiment with this:
 		// With this code in place, Initialize returns 0x88890025 (AUDCLNT_E_NONOFFLOAD_MODE_ONLY), a somewhat undocumented error.
 		// WITHOUT this code, GetBufferSizeLimits returns 0x88890024 (AUDCLNT_E_OFFLOAD_MODE_ONLY)!
 		//		If GetBufferSizeLimits is not called, then Initialize returns 0x8889000f (AUDCLNT_E_ENDPOINT_CREATE_FAILED)....
 		// The code seems damned if it does and damned if it doesn't...?!
-		const bool callSetClientProperties = true;
+		const bool callSetClientProperties = false;
 		if (callSetClientProperties)
 		{
 			AudioClientProperties audioClientProperties{};
@@ -333,7 +336,7 @@ namespace NowSound
 		// DOUBLE HACK... except how about 480 because that might be the minimum buffer :-((((
 		REFERENCE_TIME hnsActualPeriod = ConvertFramesToHns(480, _audioClientFormat.nSamplesPerSec);
 
-		const bool callGetBufferSizeLimits = true;
+		const bool callGetBufferSizeLimits = false;
 		if (callGetBufferSizeLimits)
 		{
 			REFERENCE_TIME minBufferDuration, maxBufferDuration;
@@ -418,7 +421,7 @@ namespace NowSound
 
 		// insist on stereo float samples.  TODO: generalize channel count
 		Check(info.ChannelCount == 2);
-		Check(info.BitsPerSample == 32);
+		Check(info.BitsPerSample == 24);
 
 		Clock::Initialize(
 			info.SampleRateHz,
@@ -450,7 +453,7 @@ namespace NowSound
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
 		// TODO: verify not on audio graph thread
-		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
+		NowSoundGraphInfo info = CreateNowSoundGraphInfo(
 			_audioClientFormat.nSamplesPerSec,
 			_audioClientFormat.nChannels,
 			_audioClientFormat.wBitsPerSample,
@@ -458,7 +461,6 @@ namespace NowSound
 			0, // TODO: _audioGraph.SamplesPerQuantum(),
 			0); // TODO: (int32_t)_inputDeviceInfos.size());
 
-		NowSoundGraphInfo info{};
 		return info;
 	}
 
