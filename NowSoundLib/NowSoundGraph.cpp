@@ -263,7 +263,7 @@ namespace NowSound
 		// we cache for later calls to Info().
 		std::wstringstream wstr{};
 		int32_t desiredRate = 48000; // we will stick with this for now
-		int32_t desiredBitsPerSample = 24; // float is our friend
+		int32_t desiredBitsPerSample = 24; // gonna have to go down to 7FFFFF
 		bool desiredFormatSupported = false;
 
 		for (int candidateSampleRate : SampleRatesToProbe)
@@ -304,13 +304,20 @@ namespace NowSound
 		check_hresult(_audioClient->IsOffloadCapable(AUDIO_STREAM_CATEGORY::AudioCategory_Media, &isOffloadCapable));
 		Check(isOffloadCapable); // all good audio interfaces are, you know
 
-		/* Experiment: doesn't seem to work -- this call succeeds, but later causes 0x8889025 (AUDCLNT_E_NONOFFLOAD_MODE_ONLY) error from Initialize
-		AudioClientProperties audioClientProperties{};
-		audioClientProperties.cbSize = sizeof(AudioClientProperties);
-		audioClientProperties.bIsOffload = TRUE;
-		audioClientProperties.eCategory = AudioCategory_Media;
-		check_hresult(_audioClient->SetClientProperties(&audioClientProperties));
-		*/
+		// Experiment with this:
+		// With this code in place, Initialize returns 0x88890025 (AUDCLNT_E_NONOFFLOAD_MODE_ONLY), a somewhat undocumented error.
+		// WITHOUT this code, GetBufferSizeLimits returns 0x88890024 (AUDCLNT_E_OFFLOAD_MODE_ONLY)!
+		//		If GetBufferSizeLimits is not called, then Initialize returns 0x8889000f (AUDCLNT_E_ENDPOINT_CREATE_FAILED)....
+		// The code seems damned if it does and damned if it doesn't...?!
+		const bool callSetClientProperties = true;
+		if (callSetClientProperties)
+		{
+			AudioClientProperties audioClientProperties{};
+			audioClientProperties.cbSize = sizeof(AudioClientProperties);
+			audioClientProperties.bIsOffload = TRUE;
+			audioClientProperties.eCategory = AudioCategory_Media;
+			check_hresult(_audioClient->SetClientProperties(&audioClientProperties));
+		}
 
 		// get the periodicity of the device
 		REFERENCE_TIME hnsPeriod;
@@ -320,32 +327,32 @@ namespace NowSound
 
 		// need to know how many frames that is
 		uint32_t expectedFramesInBuffer = ConvertHnsToFrames(hnsPeriod, _audioClientFormat.nSamplesPerSec);
-		// had better be block-aligned
-		Check((expectedFramesInBuffer % _audioClientFormat.nBlockAlign) == 0);
 		wstr << "The default period for this device is " << hnsPeriod << " hundred-nanoseconds, or " << expectedFramesInBuffer << " frames." << std::endl;
 
 		// HACK... we cheated and we know the number of frames should be 128, not 104.
-		REFERENCE_TIME hnsActualPeriod = ConvertFramesToHns(128, _audioClientFormat.nSamplesPerSec);
+		// DOUBLE HACK... except how about 480 because that might be the minimum buffer :-((((
+		REFERENCE_TIME hnsActualPeriod = ConvertFramesToHns(480, _audioClientFormat.nSamplesPerSec);
 
-		/* Evidently can't call this before initialization...?
-		REFERENCE_TIME minBufferDuration, maxBufferDuration;
-		check_hresult(_audioClient->GetBufferSizeLimits(
-			&_audioClientFormat,
-			true, // yes, event driven
-			&minBufferDuration,
-			&maxBufferDuration));
+		const bool callGetBufferSizeLimits = true;
+		if (callGetBufferSizeLimits)
+		{
+			REFERENCE_TIME minBufferDuration, maxBufferDuration;
+			check_hresult(_audioClient->GetBufferSizeLimits(
+				&_audioClientFormat,
+				true, // yes, event driven
+				&minBufferDuration,
+				&maxBufferDuration));
 
-		// what about the minimum buffer size?
-		uint32_t expectedFramesInMinimumBuffer = ConvertHnsToFrames(minBufferDuration, _audioClientFormat.nSamplesPerSec);
+			// what about the minimum buffer size?
+			uint32_t expectedFramesInMinimumBuffer = ConvertHnsToFrames(minBufferDuration, _audioClientFormat.nSamplesPerSec);
 
-		wstr << "The minimum buffer duration is " << minBufferDuration << " hundred-nanoseconds, or " << expectedFramesInMinimumBuffer << " frames." << std::endl;
-		*/
+			wstr << "The minimum buffer duration is " << minBufferDuration << " hundred-nanoseconds, or " << expectedFramesInMinimumBuffer << " frames." << std::endl;
+		}
 
 		ws = wstr.str();
 
 		// call IAudioClient::Initialize the first time
 		// this may very well fail if the device period is unaligned
-		// TODO: HELP: why does this not succeed, when _audioClientFormat was confirmed as being supported in the loop above?
 		HRESULT hr = _audioClient->Initialize(
 			AUDCLNT_SHAREMODE_EXCLUSIVE,
 			AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
