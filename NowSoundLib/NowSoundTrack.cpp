@@ -412,14 +412,14 @@ namespace NowSound
 				_frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
 
 				// Pan each mono sample (and track its volume), if we're not muted.
-				for (int i = 0; i < sliceDuration.Value(); i++)
+				if (!IsMuted())
 				{
-					float value = slice.Get(i, 0);
-					_volumeHistogram.Add(std::abs(value));
-					if (!IsMuted())
+					for (int i = 0; i < sliceDuration.Value(); i++)
 					{
-						audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value * mute);
-						audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient * value);
+						float value = slice.Get(i, 0);
+						_volumeHistogram.Add(std::abs(value));
+						audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value);
+						audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient);
 					}
 				}
 

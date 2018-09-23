@@ -322,7 +322,7 @@ namespace NowSound
 
 		if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
 		{
-			// Cannot create device output node
+			// Cannot create device input node
 			Check(false);
 			return;
 		}
