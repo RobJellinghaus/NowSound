@@ -6,7 +6,7 @@
 #include <queue>
 #include <string>
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include "Clock.h"
 #include "Histogram.h"

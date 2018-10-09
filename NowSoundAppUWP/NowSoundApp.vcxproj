@@ -341,11 +341,6 @@
     <None Include="Video_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NowSoundLib\NowSoundLib.vcxproj">
-      <Project>{ad53a971-252d-477f-84d5-4c847b57f486}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>

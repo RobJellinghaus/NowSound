@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "pch.h"
+#include "stdafx.h"
 
 namespace NowSound
 {

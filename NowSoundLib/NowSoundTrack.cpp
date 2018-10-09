@@ -1,7 +1,7 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <string>
 #include <sstream>
@@ -26,13 +26,7 @@ using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace winrt::Windows::ApplicationModel::Core;
 using namespace winrt::Windows::Foundation;
-using namespace winrt::Windows::UI::Core;
-using namespace winrt::Windows::UI::Composition;
-using namespace winrt::Windows::System;
-using namespace winrt::Windows::Storage;
-using namespace winrt::Windows::Storage::Pickers;
 
 namespace NowSound
 {

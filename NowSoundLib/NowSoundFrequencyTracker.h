@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include "Clock.h"
 #include "Histogram.h"
