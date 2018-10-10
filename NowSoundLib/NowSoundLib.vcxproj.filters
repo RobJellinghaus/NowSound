@@ -48,6 +48,12 @@
     <ClInclude Include="rosetta_fft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="JuceLibraryCode\AppConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="JuceLibraryCode\JuceHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -78,6 +84,30 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rosetta_fft.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_basics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_devices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_formats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_processors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_data_structures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_events.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
