@@ -1,6 +1,10 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+// Why isn't this file just named "Time.h"?
+// FUNNY YOU SHOULD ASK:
+// https://stackoverflow.com/questions/23907008/compilation-error-error-c2039-clock-t-is-not-a-member-of-global-namespace
+
 #pragma once
 
 #include "stdafx.h"

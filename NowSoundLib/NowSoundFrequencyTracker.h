@@ -14,7 +14,7 @@
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "rosetta_fft.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

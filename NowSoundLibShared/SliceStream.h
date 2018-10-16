@@ -11,7 +11,7 @@
 #include "Check.h"
 #include "IntervalMapper.h"
 #include "Slice.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

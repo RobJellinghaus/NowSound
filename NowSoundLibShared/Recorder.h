@@ -4,7 +4,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 #include "SliceStream.h"
 
 namespace NowSound

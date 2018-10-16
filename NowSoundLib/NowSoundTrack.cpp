@@ -19,7 +19,7 @@
 #include "Recorder.h"
 #include "Slice.h"
 #include "SliceStream.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 using namespace concurrency;
 using namespace std;

@@ -4,7 +4,7 @@
 // Licensed under the MIT license
 
 #include "stdafx.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Check.h"
 
 namespace NowSound
 {

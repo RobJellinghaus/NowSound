@@ -6,7 +6,7 @@
 #include "Histogram.h"
 #include "Slice.h"
 #include "SliceStream.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace NowSound;

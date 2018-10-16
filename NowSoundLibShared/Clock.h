@@ -8,7 +8,7 @@
 #include "stdint.h"
 
 #include "Check.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

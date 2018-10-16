@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 
+#include "Check.h"
 #include "Histogram.h"
 
 using namespace NowSound;

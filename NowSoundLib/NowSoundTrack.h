@@ -13,7 +13,7 @@
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 // set to 1 to reuse a static AudioFrame; 0 will allocate a new AudioFrame in each audio quantum event handler
 #define STATIC_AUDIO_FRAME 1
