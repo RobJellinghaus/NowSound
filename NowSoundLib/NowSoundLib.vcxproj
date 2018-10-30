@@ -60,7 +60,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
       <AdditionalIncludeDirectories>$(SolutionDir)/NowSoundLib;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

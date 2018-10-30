@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NowSoundApp", "NowSoundAppUWP\NowSoundApp.vcxproj", "{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C53B5361-EE7C-4963-B676-CD6A2E35D37F} = {C53B5361-EE7C-4963-B676-CD6A2E35D37F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UnitTestsDesktop", "UnitTestsDesktop\UnitTestsDesktop.vcxproj", "{5E8663C5-4AD0-4AF8-AB80-468FDA9A8551}"
 EndProject
