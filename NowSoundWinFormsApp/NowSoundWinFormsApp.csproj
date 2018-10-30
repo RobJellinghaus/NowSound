@@ -79,5 +79,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NowSoundPInvokeLib\NowSoundPInvokeLib.csproj">
+      <Project>{67f935ba-4a12-4a42-88ec-4716424cb73d}</Project>
+      <Name>NowSoundPInvokeLib</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

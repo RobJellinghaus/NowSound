@@ -16,6 +16,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NowSoundLib", "NowSoundLib\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowSoundWinFormsApp", "NowSoundWinFormsApp\NowSoundWinFormsApp.csproj", "{0B0DC251-4664-4215-83E8-16C554B26137}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowSoundPInvokeLib", "NowSoundPInvokeLib\NowSoundPInvokeLib.csproj", "{67F935BA-4A12-4A42-88EC-4716424CB73D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C53B5361-EE7C-4963-B676-CD6A2E35D37F} = {C53B5361-EE7C-4963-B676-CD6A2E35D37F}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		NowSoundLibShared\NowSoundLibShared.vcxitems*{074254a5-9e44-4721-82b3-7c1179461f0c}*SharedItemsImports = 9
@@ -83,6 +88,22 @@ Global
 		{0B0DC251-4664-4215-83E8-16C554B26137}.Release|x64.Build.0 = Release|Any CPU
 		{0B0DC251-4664-4215-83E8-16C554B26137}.Release|x86.ActiveCfg = Release|Any CPU
 		{0B0DC251-4664-4215-83E8-16C554B26137}.Release|x86.Build.0 = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|ARM.Build.0 = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|x64.Build.0 = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Debug|x86.Build.0 = Debug|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|ARM.ActiveCfg = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|ARM.Build.0 = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|x64.ActiveCfg = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|x64.Build.0 = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|x86.ActiveCfg = Release|Any CPU
+		{67F935BA-4A12-4A42-88EC-4716424CB73D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
