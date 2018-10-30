@@ -95,12 +95,6 @@
     <ClCompile Include="JuceLibraryCode\include_juce_audio_formats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JuceLibraryCode\include_juce_audio_processors.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="JuceLibraryCode\include_juce_audio_utils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="JuceLibraryCode\include_juce_core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +102,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="JuceLibraryCode\include_juce_events.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_processors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_audio_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_gui_basics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JuceLibraryCode\include_juce_gui_extra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
