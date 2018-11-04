@@ -3,6 +3,7 @@
 
 using NowSoundLib;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,14 +44,30 @@ namespace NowSoundWinFormsApp
             // and let's P/Invoke up in here!
             NowSoundGraphAPI.InitializeAsync();
 
-            await AwaitAudioGraphState(NowSoundGraphState.GraphInitialized);
+            bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphInitialized, timeoutMsec: 10);
 
-            Console.WriteLine("Pseudo-awaited");
+            Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");
         }
 
-        private async Task AwaitAudioGraphState(NowSoundGraphState desiredState)
+        private async Task<bool> AwaitAudioGraphState(NowSoundGraphState desiredState, int timeoutMsec)
         {
+            DateTime startTime = DateTime.Now;
+
             // TODO: do something
+            while (true)
+            {
+                NowSoundGraphState currentState = NowSoundGraphAPI.State();
+                if (currentState == desiredState)
+                {
+                    return true;
+                }
+                if (((DateTime.Now.Ticks - startTime.Ticks) / 10000) > timeoutMsec)
+                {
+                    return false;
+                }
+
+                await Task.Delay(1);
+            }
         }
 
         #region Windows Form Designer generated code
