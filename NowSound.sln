@@ -16,7 +16,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NowSoundLib", "NowSoundLib\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowSoundWinFormsApp", "NowSoundWinFormsApp\NowSoundWinFormsApp.csproj", "{0B0DC251-4664-4215-83E8-16C554B26137}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NowSoundPInvokeLib", "NowSoundPInvokeLib\NowSoundPInvokeLib.csproj", "{67F935BA-4A12-4A42-88EC-4716424CB73D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NowSoundPInvokeLib", "NowSoundPInvokeLib\NowSoundPInvokeLib.csproj", "{67F935BA-4A12-4A42-88EC-4716424CB73D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C53B5361-EE7C-4963-B676-CD6A2E35D37F} = {C53B5361-EE7C-4963-B676-CD6A2E35D37F}
 	EndProjectSection
@@ -41,8 +41,6 @@ Global
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|ARM.ActiveCfg = Debug|x64
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x64.ActiveCfg = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x64.Build.0 = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x64.Deploy.0 = Debug|x64
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x86.ActiveCfg = Debug|x64
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|Any CPU.ActiveCfg = Release|x64
 		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|ARM.ActiveCfg = Release|x64

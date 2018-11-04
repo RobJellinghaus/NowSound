@@ -1,4 +1,12 @@
-﻿namespace NowSoundWinFormsApp
+﻿// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
+// Licensed under the MIT license
+
+using NowSoundLib;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace NowSoundWinFormsApp
 {
     partial class Form1
     {
@@ -6,6 +14,11 @@
         /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// This thread polls for a given audio state.
+        /// </summary>
+        private Thread _audioPollThread; 
 
         /// <summary>
         /// Clean up any resources being used.
@@ -18,6 +31,26 @@
                 components.Dispose();
             }
             base.Dispose(disposing);
+        }
+
+        protected override async void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            // let's see when this gets called
+            Console.WriteLine("OnLoad");
+
+            // and let's P/Invoke up in here!
+            NowSoundGraphAPI.InitializeAsync();
+
+            await AwaitAudioGraphState(NowSoundGraphState.GraphInitialized);
+
+            Console.WriteLine("Pseudo-awaited");
+        }
+
+        private async Task AwaitAudioGraphState(NowSoundGraphState desiredState)
+        {
+            // TODO: do something
         }
 
         #region Windows Form Designer generated code
