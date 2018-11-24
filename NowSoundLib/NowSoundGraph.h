@@ -20,6 +20,8 @@
 #include "rosetta_fft.h"
 #include "SliceStream.h"
 
+#include "JuceHeader.h" // here goes nothin...
+
 namespace NowSound
 {
     // A single graph implementing the NowSoundGraphAPI operations.
@@ -112,6 +114,10 @@ namespace NowSound
 
         // The singleton (for now) graph.
         static ::std::unique_ptr<NowSoundGraph> s_instance;
+
+		// The AudioDeviceManager held by this Graph.
+		// This is conceptually a singleton (just as the NowSoundGraph is), but we scope it within this type.
+		juce::AudioDeviceManager _audioDeviceManager;
 
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;

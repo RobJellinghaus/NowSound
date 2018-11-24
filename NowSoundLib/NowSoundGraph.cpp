@@ -134,6 +134,7 @@ namespace NowSound
 	NowSoundGraph::NowSoundGraph()
 		: // _audioGraph{ nullptr },
 		_audioGraphState{ NowSoundGraphState::GraphUninitialized },
+		_audioDeviceManager{},
 		// _deviceOutputNode{ nullptr },
 		_audioAllocator{ nullptr },
 		_trackId{ TrackId::TrackIdUndefined },
@@ -178,8 +179,16 @@ namespace NowSound
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
-		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
+		juce::String initialiseResult = _audioDeviceManager.initialise(
+			/*numInputChannelsNeeded*/ 2,
+			/*numOutputChannelsNeeded*/ 2,
+			/*savedState*/ nullptr,
+			/*selectDefaultDeviceOnFailure*/ true);
+
+		Check(initialiseResult == L"");
+
 #if false
+		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
 		AudioGraphSettings settings(AudioRenderCategory::Media);
 
 		// AudioGraph seems fine under NowSoundApp with LowestLatency, but in Holofunk it gives inconsistent glitching.

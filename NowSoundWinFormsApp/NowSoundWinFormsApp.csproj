@@ -86,9 +86,4 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>copy $(SolutionDir)\NowSoundLib\x64\Debug\NowSoundLib.dll $(SolutionDir)\NowSoundWinFormsApp\bin\Debug
-copy $(SolutionDir)\NowSoundLib\x64\Debug\NowSoundLib.pdb $(SolutionDir)\NowSoundWinFormsApp\bin\Debug
-</PostBuildEvent>
-  </PropertyGroup>
 </Project>

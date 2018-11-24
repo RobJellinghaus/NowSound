@@ -59,7 +59,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
-      <AdditionalIncludeDirectories>$(SolutionDir)/NowSoundLib;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\NowSoundLib;$(SolutionDir)\NowSoundLib\JuceLibraryCode;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -151,4 +151,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemDefinitionGroup>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)\NowSoundLib\x64\Debug\NowSoundLib.* $(SolutionDir)\NowSoundWinFormsApp\bin\Debug</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
 </Project>
