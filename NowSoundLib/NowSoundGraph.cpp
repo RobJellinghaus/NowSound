@@ -185,43 +185,12 @@ namespace NowSound
 			/*savedState*/ nullptr,
 			/*selectDefaultDeviceOnFailure*/ true);
 
+		// empty string means all good
 		Check(initialiseResult == L"");
 
-#if false
-		// MAKE THE CLOCK NOW.  It won't start running until the graph does.
-		AudioGraphSettings settings(AudioRenderCategory::Media);
-
-		// AudioGraph seems fine under NowSoundApp with LowestLatency, but in Holofunk it gives inconsistent glitching.
-		// Maybe it's just Windows and there's no real hope for click-free low latency even with WASAPI, given that
-		// the WASAPI sample app has a low latency bug!
-		// Anyway let's just see what we get with this.
-
-		// TODO: prosecute the WASAPI UWP low latency sample tone generator bug on TASCAM.
-		// TODO: reproduce the WASAPI UWP low latency sample tone generator bug on RealTek and/or Microsoft HD Audio.
-		//		 (Laptop has little to lose from this)
-
-		if (MagicConstants::UseLowestLatency)
-		{
-			settings.QuantumSizeSelectionMode(Windows::Media::Audio::QuantumSizeSelectionMode::LowestLatency);
-			settings.DesiredRenderDeviceAudioProcessing(Windows::Media::AudioProcessing::Raw);
-		}
-
-		// leaving PrimaryRenderDevice uninitialized will use default output device
-		CreateAudioGraphResult result = co_await AudioGraph::CreateAsync(settings);
-
-		if (result.Status() != AudioGraphCreationStatus::Success)
-		{
-			// Cannot create graph
-			Check(false);
-			return;
-		}
-
-		// NOTE that if this logic is inlined into the create_task lambda in InitializeAsync,
-		// this assignment blows up saying that it is assigning to a value of 0xFFFFFFFFFFFF.
-		// Probable compiler bug?  TODO: replicate the bug in test app.
-		_audioGraph = result.Graph();
-
 		NowSoundGraphInfo info = Info();
+
+#if false
 
 		// insist on stereo float samples.  TODO: generalize channel count
 		Check(info.ChannelCount == 2);
@@ -256,16 +225,16 @@ namespace NowSound
 
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
-#if false
 		// TODO: verify not on audio graph thread
+		juce::AudioIODevice* currentAudioDevice = _audioDeviceManager.getCurrentAudioDevice();
+
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
-			_audioGraph.EncodingProperties().SampleRate(),
-			_audioGraph.EncodingProperties().ChannelCount(),
-			_audioGraph.EncodingProperties().BitsPerSample(),
-			_audioGraph.LatencyInSamples(),
-			_audioGraph.SamplesPerQuantum(),
+			currentAudioDevice->getCurrentSampleRate(),
+			currentAudioDevice->getOutputChannelNames().size(),
+			currentAudioDevice->getCurrentBitDepth(),
+			0, // don't know how to get latency?
+			currentAudioDevice->getCurrentBufferSizeSamples(),
 			(int32_t)_inputDeviceInfos.size());
-#endif
 		return NowSoundGraphInfo();
 	}
 
