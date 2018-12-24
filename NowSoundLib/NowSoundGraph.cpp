@@ -184,12 +184,40 @@ namespace NowSound
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
+		OwnedArray<AudioIODeviceType> types;
+		_audioDeviceManager.createAudioDeviceTypes(types);
+
 		juce::String initialiseResult = _audioDeviceManager.initialise(
 			/*numInputChannelsNeeded*/ 2,
 			/*numOutputChannelsNeeded*/ 2,
 			/*savedState*/ nullptr,
 			/*selectDefaultDeviceOnFailure*/ true);
 
+		for (int i = 0; i < types.size(); ++i)
+		{
+			String typeName(types[i]->getTypeName());  // This will be things like "DirectSound", "CoreAudio", etc.
+
+			types[i]->scanForDevices();                 // This must be called before getting the list of devices
+
+			// "Windows Audio" sample buffer size seems to be 480 on Surface BOok.
+			// "DirectSound" sample buffer 
+			if (typeName == L"DirectSound")
+			{
+				_audioDeviceManager.setCurrentAudioDeviceType(typeName, /*treatAsChosenDevice*/ true);
+
+				// let's try to drop the buffer size
+				AudioDeviceManager::AudioDeviceSetup setup{};
+				_audioDeviceManager.getAudioDeviceSetup(setup);
+
+				setup.bufferSize = 96;
+				setup.useDefaultInputChannels = true;
+				setup.useDefaultOutputChannels = true;
+				_audioDeviceManager.setAudioDeviceSetup(setup, /*treatAsChosenDevice*/ true);
+			}
+
+			StringArray deviceNames(types[i]->getDeviceNames());  // This will now return a list of available devices of this type
+		}
+		
 		// empty string means all good
 		Check(initialiseResult == L"");
 
@@ -233,11 +261,13 @@ namespace NowSound
 		// TODO: verify not on audio graph thread
 		juce::AudioIODevice* currentAudioDevice = _audioDeviceManager.getCurrentAudioDevice();
 
+		auto availableBufferSizes = currentAudioDevice->getAvailableBufferSizes();
+
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
 			currentAudioDevice->getCurrentSampleRate(),
 			currentAudioDevice->getOutputChannelNames().size(),
 			currentAudioDevice->getCurrentBitDepth(),
-			0, // don't know how to get latency?
+			currentAudioDevice->getOutputLatencyInSamples(),
 			currentAudioDevice->getCurrentBufferSizeSamples());
 		return graphInfo;
 	}
