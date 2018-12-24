@@ -30,18 +30,19 @@ namespace NowSound
 			2,
 			3,
 			4,
-			5,
-			6);
+			5
+			// JUCETODO: , 6
+			);
 	}
 
 	__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo()
 	{
 		return CreateNowSoundTimeInfo(
+			// JUCETODO: 1,
 			1,
-			2,
+			(float)2,
 			(float)3,
-			(float)4,
-			(float)5);
+			(float)4);
 	}
 
 	NowSoundGraphState NowSoundGraph_State()
@@ -61,6 +62,7 @@ namespace NowSound
 		return NowSoundGraph::Instance()->Info();
 	}
 
+#ifdef INPUT_DEVICE_SELECTION // JUCETODO
 	void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
 		NowSoundGraph::Instance()->InputDeviceId(deviceIndex, wcharBuffer, bufferCapacity);
@@ -75,6 +77,7 @@ namespace NowSound
 	{
 		NowSoundGraph::Instance()->InitializeDeviceInputs(deviceIndex);
 	}
+#endif
 
 	void NowSoundGraph_InitializeFFT(
 		int outputBinCount,
@@ -96,10 +99,12 @@ namespace NowSound
 		return NowSoundGraph::Instance()->TimeInfo();
 	}
 
+#ifdef INPUT_DEVICE_SELECTION
 	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
 	{
 		return NowSoundGraph::Instance()->InputInfo(audioInputId);
 	}
+#endif
 
 	void NowSoundGraph_StartAudioGraphAsync()
 	{
@@ -139,7 +144,7 @@ namespace NowSound
 		_audioAllocator{ nullptr },
 		_trackId{ TrackId::TrackIdUndefined },
 		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
-		_inputDeviceIndicesToInitialize{},
+		// JUCETODO: _inputDeviceIndicesToInitialize{},
 		_audioInputs{ },
 		_changingState{ false },
 		_fftBinBounds{},
@@ -233,11 +238,11 @@ namespace NowSound
 			currentAudioDevice->getOutputChannelNames().size(),
 			currentAudioDevice->getCurrentBitDepth(),
 			0, // don't know how to get latency?
-			currentAudioDevice->getCurrentBufferSizeSamples(),
-			(int32_t)_inputDeviceInfos.size());
-		return NowSoundGraphInfo();
+			currentAudioDevice->getCurrentBufferSizeSamples());
+		return graphInfo;
 	}
 
+#ifdef INPUT_DEVICE_SELECTION
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
 	{
 		// wcsncpy_s(wcharBuffer, bufferCapacity, _inputDeviceInfos[deviceIndex].Id().c_str(), _TRUNCATE);
@@ -254,6 +259,7 @@ namespace NowSound
 
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
 	}
+#endif
 
 	void NowSoundGraph::InitializeFFT(
 		int outputBinCount,
@@ -365,7 +371,7 @@ namespace NowSound
 		int64_t completeBeats = (int64_t)durationBeats.Value();
 
 		NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
-			(int32_t)_audioInputs.size(),
+			// JUCETODO: (int32_t)_audioInputs.size(),
 			now.Value(),
 			durationBeats.Value(),
 			Clock::Instance().BeatsPerMinute(),
@@ -405,7 +411,7 @@ namespace NowSound
         // TODO: verify not on audio graph thread
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 		Check(audioInput >= 1);
-		Check(audioInput < _audioInputs.size() + 1);
+		// Check(audioInput < _audioInputs.size() + 1);
 
         // by construction this will be greater than TrackId::Undefined
         TrackId id = (TrackId)((int)_trackId + 1);

@@ -46,14 +46,14 @@ namespace NowSound
 		NowSoundGraphInfo Info();
 
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Initialize given input device.  One mono input will be created per channel of the device.
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
-		void InitializeDeviceInputs(int deviceIndex);
+		// JUCETODO: void InitializeDeviceInputs(int deviceIndex);
 
 		// Initialize the FFT bins and other state.
 		void InitializeFFT(
@@ -95,9 +95,6 @@ namespace NowSound
 
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
-
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-        void CreateAudioGraphAsyncImpl();
 
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
         void PlayUserSelectedSoundFileAsyncImpl();
@@ -144,7 +141,7 @@ namespace NowSound
 		AudioInputId _nextAudioInputId;
 
 		// The audio device indices to initialize.
-		::std::vector<int> _inputDeviceIndicesToInitialize;
+		// ::std::vector<int> _inputDeviceIndicesToInitialize;
 
 		// The vector of frequency bins.
 		::std::vector<RosettaFFT::FrequencyBinBounds> _fftBinBounds;

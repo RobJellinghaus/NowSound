@@ -34,14 +34,15 @@ namespace NowSound
 			// The number of samples per audio graph quantum, also reported by the graph itself.
 			int32_t SamplesPerQuantum;
 			// The number of input devices.
-			int32_t InputDeviceCount;
+			// JUCETODO: consider reintroducing input device selection.
+			// int32_t InputDeviceCount;
 		} NowSoundGraphInfo;
 
 		// Time information from a Created or Running graph.
 		typedef struct NowSoundTimeInfo
 		{
 			// The number of AudioInputs defined in the graph.
-			int32_t AudioInputCount;
+			// int32_t AudioInputCount;
 			// The number of samples elapsed since the audio graph started.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
@@ -180,11 +181,12 @@ namespace NowSound
 			int32_t channelCount,
 			int32_t bitsPerSample,
 			int32_t latencyInSamples,
-			int32_t samplesPerQuantum,
-			int32_t inputDeviceCount);
+			int32_t samplesPerQuantum
+			// JUCETODO: , int32_t inputDeviceCount
+			);
 
 		NowSoundTimeInfo CreateNowSoundTimeInfo(
-			int32_t audioInputCount,
+			//JUCETODO: int32_t audioInputCount,
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,
