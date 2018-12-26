@@ -301,7 +301,7 @@ namespace NowSound
 
 	const double Pi = std::atan(1) * 4;
 
-#if false
+#if JUCETODO
 	void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
     {
         Check(sender == _audioFrameInputNode);

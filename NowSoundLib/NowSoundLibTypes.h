@@ -102,11 +102,11 @@ namespace NowSound
         } NowSoundTrackTimeInfo;
 
         // The states of a NowSound graph.
-        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
+        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Graph
         // to disambiguate them from the TrackState identifiers.
         enum NowSoundGraphState
         {
-            // InitializeAsync() has not yet been called.
+            // Initial condition before InitializeAsync() is called.
             GraphUninitialized,
 
             // Some error has occurred; GetLastError() will have details.
@@ -115,13 +115,7 @@ namespace NowSound
             // A gap in incoming audio data was detected; this should ideally never happen.
             // NOTYET: Discontinuity,
 
-            // InitializeAsync() has completed; devices can now be queried.
-            GraphInitialized,
-
-            // CreateAudioGraphAsync() has completed; other methods can now be called.
-            GraphCreated,
-
-            // The audio graph has been started and is running.
+            // The audio graph has been initialized and is running.
             GraphRunning,
 
             // The audio graph has been stopped.

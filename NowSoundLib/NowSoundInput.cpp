@@ -23,7 +23,7 @@ namespace NowSound
 	NowSoundInput::NowSoundInput(
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
-		// AudioDeviceInputNode inputNode,
+		// JUCETODO: AudioDeviceInputNode inputNode,
 		BufferAllocator<float>* audioAllocator,
 		int channel)
 		: _nowSoundGraph{ nowSoundGraph },
@@ -76,7 +76,7 @@ namespace NowSound
 
 	void NowSoundInput::HandleIncomingAudio()
 	{
-#if false
+#if JUCETODO
 		AudioFrame frame = _frameOutputNode.GetFrame();
 
 		// The frame has this many channels.
