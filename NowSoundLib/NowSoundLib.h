@@ -46,7 +46,7 @@ namespace NowSound
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        __declspec(dllexport) void NowSoundGraph_InitializeAsync();
+        __declspec(dllexport) void NowSoundGraph_Initialize();
 
 		// Get the info for the created graph.
 		// Graph must be at least Created.

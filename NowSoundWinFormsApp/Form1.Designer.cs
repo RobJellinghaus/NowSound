@@ -42,8 +42,10 @@ namespace NowSoundWinFormsApp
             Console.WriteLine("OnLoad");
 
             // and let's P/Invoke up in here!
-            NowSoundGraphAPI.InitializeAsync();
+            NowSoundGraphAPI.Initialize();
 
+            // No longer necessary really since JUCE initialization is synchronous.
+            // JUCETODO: clean this up eventually.
             bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphInitialized, timeoutMsec: 10);
 
             Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");

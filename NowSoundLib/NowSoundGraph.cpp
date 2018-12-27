@@ -50,9 +50,9 @@ namespace NowSound
 		return NowSoundGraph::Instance()->State();
 	}
 
-	void NowSoundGraph_InitializeAsync()
+	void NowSoundGraph_Initialize()
 	{
-		NowSoundGraph::Instance()->InitializeAsync();
+		NowSoundGraph::Instance()->Initialize();
 	}
 
 	NowSoundGraphInfo NowSoundGraph_Info()
@@ -170,7 +170,7 @@ namespace NowSound
 		return _audioGraphState;
 	}
 
-	void NowSoundGraph::InitializeAsync()
+	void NowSoundGraph::Initialize()
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 

@@ -285,14 +285,16 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_InitializeAsync();
+        static extern void NowSoundGraph_Initialize();
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        public static void InitializeAsync()
+        // Must be called from message/UI thread. May have a momentary delay as JUCE doesn't support
+        // async initialization.
+        public static void Initialize()
         {
 #if UNITY_WINRT
-            NowSoundGraph_InitializeAsync();
+            NowSoundGraph_Initialize();
 #endif
         }
 

@@ -39,7 +39,7 @@ namespace NowSound
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        void InitializeAsync();
+        void Initialize();
 
 		// Get the graph info for the created graph.
 		// Graph must be at least Initialized.
