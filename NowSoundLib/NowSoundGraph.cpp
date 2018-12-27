@@ -237,6 +237,18 @@ namespace NowSound
 			(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
 			MagicConstants::InitialAudioBufferCount));
 
+		// set up audio processor player and graph
+		juce::AudioProcessorGraph::AudioGraphIOProcessor* inputNode =
+			new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
+		juce::AudioProcessorGraph::AudioGraphIOProcessor* outputNode =
+			new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+
+		juce::AudioProcessorGraph::Node::Ptr inputNodePtr = _audioProcessorGraph.addNode(inputNode);
+		juce::AudioProcessorGraph::Node::Ptr outputNodePtr = _audioProcessorGraph.addNode(outputNode);
+		_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, 0 },{ outputNodePtr->nodeID, 0 } });
+		_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, 1 },{ outputNodePtr->nodeID, 1 } });
+		_audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
+
 		ChangeState(NowSoundGraphState::GraphRunning);
 	}
 

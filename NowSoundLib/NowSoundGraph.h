@@ -108,6 +108,12 @@ namespace NowSound
 		// This is conceptually a singleton (just as the NowSoundGraph is), but we scope it within this type.
 		juce::AudioDeviceManager _audioDeviceManager;
 
+		// Callback object which couples the device manager to the audio processor graph.
+		juce::AudioProcessorPlayer _audioProcessorPlayer;
+
+		// The audio processor graph.
+		juce::AudioProcessorGraph _audioProcessorGraph;
+
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;
 
