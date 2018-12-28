@@ -20,7 +20,7 @@
 #include "rosetta_fft.h"
 #include "SliceStream.h"
 
-#include "JuceHeader.h" // here goes nothin...
+#include "JuceHeader.h"
 
 namespace NowSound
 {

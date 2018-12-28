@@ -174,40 +174,47 @@ namespace NowSound
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
-		OwnedArray<AudioIODeviceType> types;
-		_audioDeviceManager.createAudioDeviceTypes(types);
+		// Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
+		// Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
+		// 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
+		// similar heartache.
+		juce::String desiredDeviceType = L"Windows Audio";
+
+		{
+			// This whole code block was an experiment in trying to force the device type to be
+			// DirectSound before initialization, to avoid the 1500msec Thread.Sleep when setting
+			// the device type after initialization.
+			// If Windows Audio is the desired AND default device type anyway, then all of this
+			// can get punted out the window and we can just call initialise() with no rigmarole.
+			_audioDeviceManager.createDeviceTypesIfNeeded();
+			const OwnedArray<AudioIODeviceType>& types = _audioDeviceManager.getAvailableDeviceTypes();
+			for (int i = 0; i < types.size(); i++)
+			{
+				String typeName(types[i]->getTypeName());  // This will be things like "DirectSound", "CoreAudio", etc.
+				if (typeName == desiredDeviceType)
+				{
+					types[i]->scanForDevices();
+					StringArray deviceNames(types[i]->getDeviceNames());  // This will now return a list of available devices of this type
+				}
+			}
+		}
+		// NOW we can call this...?????  But it seems kind of stupid since it goes through the whole initialise() path.
+		_audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ true);
+
+		AudioDeviceManager::AudioDeviceSetup setup{};
+		setup.bufferSize = 96;
+		setup.sampleRate = 48000;
+		setup.useDefaultInputChannels = true;
+		setup.useDefaultOutputChannels = true;
 
 		juce::String initialiseResult = _audioDeviceManager.initialise(
 			/*numInputChannelsNeeded*/ 2,
 			/*numOutputChannelsNeeded*/ 2,
 			/*savedState*/ nullptr,
-			/*selectDefaultDeviceOnFailure*/ true);
+			/*selectDefaultDeviceOnFailure*/ true,
+			/*preferredDefaultDeviceName*/ String(),
+			/*preferredSetupOptions*/ &setup);
 
-		for (int i = 0; i < types.size(); ++i)
-		{
-			String typeName(types[i]->getTypeName());  // This will be things like "DirectSound", "CoreAudio", etc.
-
-			types[i]->scanForDevices();                 // This must be called before getting the list of devices
-
-			// "Windows Audio" sample buffer size seems to be 480 on Surface BOok.
-			// "DirectSound" sample buffer 
-			if (typeName == L"DirectSound")
-			{
-				_audioDeviceManager.setCurrentAudioDeviceType(typeName, /*treatAsChosenDevice*/ true);
-
-				// let's try to drop the buffer size
-				AudioDeviceManager::AudioDeviceSetup setup{};
-				_audioDeviceManager.getAudioDeviceSetup(setup);
-
-				setup.bufferSize = 96;
-				setup.useDefaultInputChannels = true;
-				setup.useDefaultOutputChannels = true;
-				_audioDeviceManager.setAudioDeviceSetup(setup, /*treatAsChosenDevice*/ true);
-			}
-
-			StringArray deviceNames(types[i]->getDeviceNames());  // This will now return a list of available devices of this type
-		}
-		
 		// empty string means all good; anything else means error
 		if (initialiseResult != L"")
 		{
@@ -228,11 +235,6 @@ namespace NowSound
 			MagicConstants::InitialBeatsPerMinute,
 			MagicConstants::BeatsPerMeasure);
 
-		for (int i = 0; i < 2; i++)
-		{
-			CreateInputDeviceForChannel(i);
-		}
-
 		_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
 			(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
 			MagicConstants::InitialAudioBufferCount));
@@ -245,8 +247,12 @@ namespace NowSound
 
 		juce::AudioProcessorGraph::Node::Ptr inputNodePtr = _audioProcessorGraph.addNode(inputNode);
 		juce::AudioProcessorGraph::Node::Ptr outputNodePtr = _audioProcessorGraph.addNode(outputNode);
-		_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, 0 },{ outputNodePtr->nodeID, 0 } });
-		_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, 1 },{ outputNodePtr->nodeID, 1 } });
+		for (int i = 0; i < info.ChannelCount; i++)
+		{
+			CreateInputDeviceForChannel(i);
+			_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, i }, { outputNodePtr->nodeID, i } });
+		}
+
 		_audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
 
 		ChangeState(NowSoundGraphState::GraphRunning);

@@ -21,7 +21,7 @@ namespace NowSound
 	class NowSoundGraph;
 
 	// A single mono audio input and its associated objects.
-	class NowSoundInput
+	class NowSoundInput // : public juce::AudioProcessor
 	{
 	private:
 		// The NowSoundAudioGraph that created this input.
