@@ -94,6 +94,7 @@ namespace NowSound
 		// similar heartache.
 		juce::String desiredDeviceType = L"Windows Audio";
 
+#ifdef INITIALIZATION_HACKERY
 		{
 			// This whole code block was an experiment in trying to force the device type to be
 			// DirectSound before initialization, to avoid the 1500msec Thread.Sleep when setting
@@ -114,6 +115,7 @@ namespace NowSound
 		}
 		// NOW we can call this...?????  But it seems kind of stupid since it goes through the whole initialise() path.
 		_audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ true);
+#endif
 
 		AudioDeviceManager::AudioDeviceSetup setup{};
 		setup.bufferSize = 96;
@@ -137,11 +139,20 @@ namespace NowSound
 			return;
 		}
 
+		int minSampleRate = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes()[0];
+		Check(minSampleRate == 96);
+
+		// we expect WASAPI, and we don't want this to wiggle around on us without us realizing we're
+		// suddenly using something else; otherwise all our test results will be incomplete
+		Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"Windows Audio");
+
 		NowSoundGraphInfo info = Info();
 
 		// insist on stereo float samples.  TODO: generalize channel count
+		// For right now let's just make absolutely sure these values are all precisely as we intend every time.
 		Check(info.ChannelCount == 2);
 		Check(info.BitsPerSample == 32);
+		Check(info.SamplesPerQuantum == 96);
 
 		Clock::Initialize(
 			info.SampleRateHz,
