@@ -29,6 +29,10 @@ namespace NowSound
     {
     public: // API methods called by the NowSoundGraphAPI P/Invoke bridge methods
 
+        // Initialize the audio graph subsystem.
+        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
+        void Initialize();
+
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is one of the only two methods that may be called in any state whatoever.
         // All other methods declare which state the graph must be in to call the method, and the state
@@ -36,10 +40,6 @@ namespace NowSound
         // TODO: consider having some separate mutual exclusion to prevent multiple concurrent methods
         // from firing (don't want the graph to, e.g., get started twice in a race).
         NowSoundGraphState State() const;
-
-        // Initialize the audio graph subsystem such that device information can be queried.
-        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        void Initialize();
 
 		// Get the graph info for the created graph.
 		// Graph must be at least Initialized.
@@ -75,15 +75,11 @@ namespace NowSound
         // Graph must be Started.
         void PlayUserSelectedSoundFileAsync();
 
-        // Tear down the whole graph.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        void DestroyAudioGraphAsync();
-
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
-    private: // Constructor and internal implementations
+	private: // Constructor and internal implementations
 
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
@@ -101,7 +97,7 @@ namespace NowSound
 
     private: // instance variables
 
-        // The singleton (for now) graph.
+        // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().
         static ::std::unique_ptr<NowSoundGraph> s_instance;
 
 		// The AudioDeviceManager held by this Graph.
@@ -147,6 +143,12 @@ namespace NowSound
 
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();
+
+		// Create the singleton graph instance and initialize it.
+		static void InitializeInstance();
+
+		// Shut down the singleton graph instance and release it.
+		static void ShutdownInstance();
 
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
 

@@ -362,18 +362,6 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_CreateAudioGraphAsync();
-
-        // Create the audio graph.
-        // Graph must be Initialized.  On completion, graph becomes Created.
-        public static void CreateAudioGraphAsync()
-        {
-#if UNITY_WINRT
-            NowSoundGraph_CreateAudioGraphAsync();
-#endif
-        }
-
-        [DllImport("NowSoundLib")]
         static extern NowSoundTimeInfo NowSoundGraph_TimeInfo();
 
         // Get the current audio graph time.
@@ -384,18 +372,6 @@ namespace NowSoundLib
             return new TimeInfo(NowSoundGraph_TimeInfo());
 #else
             return new TimeInfo();
-#endif
-        }
-
-        [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_StartAudioGraphAsync();
-
-        // Start the audio graph.
-        // Graph must be Created.  On completion, graph becomes Started.
-        public static void StartAudioGraphAsync()
-        {
-#if UNITY_WINRT
-            NowSoundGraph_StartAudioGraphAsync();
 #endif
         }
 
@@ -438,6 +414,20 @@ namespace NowSoundLib
             return TrackId.Undefined;
 #endif
         }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_ShutdownInstance();
+
+        // Shut down the graph and dispose its singleton instance.  On completion, state becomes Uninitialized.
+        // Must be called from message/UI thread. May have a momentary delay as JUCE doesn't support
+        // async initialization.
+        public static void ShutdownInstance()
+        {
+#if UNITY_WINRT
+            NowSoundGraph_ShutdownInstance();
+#endif
+        }
+
     }
 
     // Interface used to invoke operations on a particular audio track.

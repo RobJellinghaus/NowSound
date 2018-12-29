@@ -23,108 +23,22 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo()
-	{
-		return CreateNowSoundGraphInfo(
-			1,
-			2,
-			3,
-			4,
-			5
-			// JUCETODO: , 6
-			);
-	}
-
-	__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo()
-	{
-		return CreateNowSoundTimeInfo(
-			// JUCETODO: 1,
-			1,
-			(float)2,
-			(float)3,
-			(float)4);
-	}
-
-	NowSoundGraphState NowSoundGraph_State()
-	{
-		return NowSoundGraph::Instance()->State();
-	}
-
-	void NowSoundGraph_Initialize()
-	{
-		NowSoundGraph::Instance()->Initialize();
-	}
-
-	NowSoundGraphInfo NowSoundGraph_Info()
-	{
-		// externally, this can only be called once Initialize is complete; internally, NowSoundGraph::Info() is called *during* Initialize
-		Check(NowSoundGraph::Instance()->State() > NowSoundGraphState::GraphUninitialized);
-		return NowSoundGraph::Instance()->Info();
-	}
-
-#ifdef INPUT_DEVICE_SELECTION // JUCETODO
-	void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
-	{
-		NowSoundGraph::Instance()->InputDeviceId(deviceIndex, wcharBuffer, bufferCapacity);
-	}
-
-	void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
-	{
-		NowSoundGraph::Instance()->InputDeviceName(deviceIndex, wcharBuffer, bufferCapacity);
-	}
-
-	void NowSoundGraph_InitializeDeviceInputs(int deviceIndex)
-	{
-		NowSoundGraph::Instance()->InitializeDeviceInputs(deviceIndex);
-	}
-#endif
-
-	void NowSoundGraph_InitializeFFT(
-		int outputBinCount,
-		float centralFrequency,
-		int octaveDivisions,
-		int centralBinIndex,
-		int fftSize)
-	{
-		NowSoundGraph::Instance()->InitializeFFT(outputBinCount, centralFrequency, octaveDivisions, centralBinIndex, fftSize);
-	}
-
-	NowSoundTimeInfo NowSoundGraph_TimeInfo()
-	{
-		return NowSoundGraph::Instance()->TimeInfo();
-	}
-
-#ifdef INPUT_DEVICE_SELECTION
-	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
-	{
-		return NowSoundGraph::Instance()->InputInfo(audioInputId);
-	}
-#endif
-
-	void NowSoundGraph_PlayUserSelectedSoundFileAsync()
-	{
-		NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
-	}
-
-	void NowSoundGraph_DestroyAudioGraphAsync()
-	{
-		NowSoundGraph::Instance()->DestroyAudioGraphAsync();
-	}
-
-	TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId)
-	{
-		return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
-	}
-
 	TimeSpan timeSpanFromSeconds(int seconds)
 	{
 		// TimeSpan is in 100ns units
 		return TimeSpan(seconds * Clock::TicksPerSecond);
 	}
 
-	std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ new NowSoundGraph() };
+	std::unique_ptr<NowSoundGraph> NowSoundGraph::s_instance{ nullptr };
 
 	NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
+
+	void NowSoundGraph::InitializeInstance()
+	{
+		std::unique_ptr<NowSoundGraph> temp{ new NowSoundGraph() };
+		s_instance = std::move(temp);
+		s_instance.get()->Initialize();
+	}
 
 	NowSoundGraph::NowSoundGraph()
 		: // _audioGraph{ nullptr },
@@ -446,8 +360,10 @@ namespace NowSound
         PlayUserSelectedSoundFileAsyncImpl();
     }
 
-    void NowSoundGraph::DestroyAudioGraphAsync()
+    void NowSoundGraph::ShutdownInstance()
     {
+		// drop the singleton
+		s_instance = nullptr;
     }
 
     void NowSoundGraph::HandleIncomingAudio()

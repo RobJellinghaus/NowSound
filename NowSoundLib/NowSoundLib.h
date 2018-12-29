@@ -44,9 +44,9 @@ namespace NowSound
         // This is the only method that may be called in any state whatoever.
         __declspec(dllexport) NowSoundGraphState NowSoundGraph_State();
 
-        // Initialize the audio graph subsystem such that device information can be queried.
-        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        __declspec(dllexport) void NowSoundGraph_Initialize();
+		// Initialize the audio graph subsystem such that device information can be queried.
+		// Graph must be Uninitialized.  On completion, graph becomes Initialized.
+		__declspec(dllexport) void NowSoundGraph_Initialize();
 
 		// Get the info for the created graph.
 		// Graph must be at least Created.
@@ -54,16 +54,16 @@ namespace NowSound
 
 		// Get the ID of the given device.
 		// Graph must be at least Initialized.
-		__declspec(dllexport) void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Get the name of the given device.
 		// Graph must be at least Initialized.
-		__declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 		
 		// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
 		// input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
 		// but only the first will be returned.
-		__declspec(dllexport) void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
+		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
 
 		// Initialize the FFT subsystem, which for now must be done before graph creation.
 		__declspec(dllexport) void NowSoundGraph_InitializeFFT(
@@ -78,10 +78,6 @@ namespace NowSound
 			// How many samples as input to and output from the FFT?
 			int fftSize);
 
-		// Create the audio graph.
-        // Graph must be Initialized.  On completion, graph becomes Created.
-        __declspec(dllexport) void NowSoundGraph_CreateAudioGraphAsync();
-
 		// Get the time info for the created graph.
 		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_TimeInfo();
@@ -90,17 +86,13 @@ namespace NowSound
 		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
 
-		// Start the audio graph.
-        // Graph must be Created.  On completion, graph becomes Running.
-        __declspec(dllexport) void NowSoundGraph_StartAudioGraphAsync();
-
         // Play a user-selected sound file.
         // Graph must be Started.
         __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
         // Tear down the whole graph.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        __declspec(dllexport) void NowSoundGraph_DestroyAudioGraphAsync();
+        __declspec(dllexport) void NowSoundGraph_Shutdown();
 
         // Create a new track and begin recording.
         __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
