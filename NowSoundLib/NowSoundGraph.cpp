@@ -145,6 +145,8 @@ namespace NowSound
 		int minBufferSize = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes()[0];
 		_audioDeviceManager.getAudioDeviceSetup(setup);
 		setup.bufferSize = minBufferSize;
+
+		// setting treatAsChosenDevice to true can leak an XmlElement... not sure what's up with that
 		_audioDeviceManager.setAudioDeviceSetup(setup, /*treatAsChosenDevice*/ false);
 
 		// now check that it was effective
@@ -247,6 +249,8 @@ namespace NowSound
 			Clock::Instance().SampleRateHz(),
 			fftSize);
 	}
+
+	const std::vector<std::unique_ptr<NowSoundInput>>& NowSoundGraph::Inputs() const { return _audioInputs; }
 
 	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
@@ -384,15 +388,5 @@ namespace NowSound
     {
 		// drop the singleton
 		s_instance = nullptr;
-    }
-
-    void NowSoundGraph::HandleIncomingAudio()
-    {
-		// Clock::Instance().AdvanceFromAudioGraph(_audioGraph.SamplesPerQuantum());
-
-		for (std::unique_ptr<NowSoundInput>& input : _audioInputs)
-		{
-			input->HandleIncomingAudio();
-		}
     }
 }

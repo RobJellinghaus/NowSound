@@ -16,12 +16,35 @@
 #include "Recorder.h"
 #include "SliceStream.h"
 
+#include "JuceHeader.h"
+
 namespace NowSound
 {
 	class NowSoundGraph;
 
+	// Separates its input channels to feed multiple distinct NowSoundInput instances.
+	class NowSoundDemux : public juce::AudioProcessor
+	{
+		NowSoundGraph* _graph;
+
+	public:
+		NowSoundDemux(NowSoundGraph* graph);
+
+		const juce::String getName() const override;
+
+		void prepareToPlay(
+			double sampleRate,
+			int maximumExpectedSamplesPerBlock) override;
+
+		void releaseResources() override;
+
+		void processBlock(
+			AudioBuffer<float>& buffer,
+			MidiBuffer& midiMessages) override;
+	};
+
 	// A single mono audio input and its associated objects.
-	class NowSoundInput // : public juce::AudioProcessor
+	class NowSoundInput
 	{
 	private:
 		// The NowSoundAudioGraph that created this input.
@@ -88,6 +111,6 @@ namespace NowSound
 
 		// Handle any audio incoming for this input.
 		// This method is invoked by audio quantum processing, as an audio activity.
-		void HandleIncomingAudio();
+		void HandleIncomingAudio(const float* incomingBuffer, int bufferCount);
 	};
 }

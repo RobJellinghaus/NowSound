@@ -169,8 +169,8 @@ namespace NowSound
 		// JUCETODO: support actual multiple input devices.
 		void CreateInputDeviceForChannel(int channel);
 
-		// A graph quantum has started; handle any available input audio.
-        void HandleIncomingAudio();
+		// Access the vector of inputs.
+		const std::vector<std::unique_ptr<NowSoundInput>>& Inputs() const;
 
 		// Access the vector of frequency bins, when generating frequency histograms.
 		const std::vector<RosettaFFT::FrequencyBinBounds>* BinBounds() const;
