@@ -46,7 +46,7 @@ namespace NowSound
 
 		// Initialize the audio graph subsystem such that device information can be queried.
 		// Graph must be Uninitialized.  On completion, graph becomes Initialized.
-		__declspec(dllexport) void NowSoundGraph_Initialize();
+		__declspec(dllexport) void NowSoundGraph_InitializeInstance();
 
 		// Get the info for the created graph.
 		// Graph must be at least Created.
@@ -92,7 +92,7 @@ namespace NowSound
 
         // Tear down the whole graph.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        __declspec(dllexport) void NowSoundGraph_Shutdown();
+        __declspec(dllexport) void NowSoundGraph_ShutdownInstance();
 
         // Create a new track and begin recording.
         __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);

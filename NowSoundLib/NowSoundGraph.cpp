@@ -52,7 +52,8 @@ namespace NowSound
 		_audioInputs{ },
 		_changingState{ false },
 		_fftBinBounds{},
-		_fftSize{ -1 }
+		_fftSize{ -1 },
+		_stateMutex{}
 	{ }
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
@@ -64,6 +65,7 @@ namespace NowSound
 	void NowSoundGraph::PrepareToChangeState(NowSoundGraphState expectedState)
 	{
 		std::lock_guard<std::mutex> guard(_stateMutex);
+
 		Check(_audioGraphState == expectedState);
 		Check(!_changingState);
 		_changingState = true;
@@ -72,6 +74,7 @@ namespace NowSound
 	void NowSoundGraph::ChangeState(NowSoundGraphState newState)
 	{
 		std::lock_guard<std::mutex> guard(_stateMutex);
+
 		Check(_changingState);
 		Check(newState != _audioGraphState);
 		_changingState = false;
@@ -139,8 +142,14 @@ namespace NowSound
 			return;
 		}
 
-		int minSampleRate = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes()[0];
-		Check(minSampleRate == 96);
+		int minBufferSize = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes()[0];
+		_audioDeviceManager.getAudioDeviceSetup(setup);
+		setup.bufferSize = minBufferSize;
+		_audioDeviceManager.setAudioDeviceSetup(setup, /*treatAsChosenDevice*/ false);
+
+		// now check that it was effective
+		_audioDeviceManager.getAudioDeviceSetup(setup);
+		Check(minBufferSize == setup.bufferSize);
 
 		// we expect WASAPI, and we don't want this to wiggle around on us without us realizing we're
 		// suddenly using something else; otherwise all our test results will be incomplete
@@ -152,7 +161,7 @@ namespace NowSound
 		// For right now let's just make absolutely sure these values are all precisely as we intend every time.
 		Check(info.ChannelCount == 2);
 		Check(info.BitsPerSample == 32);
-		Check(info.SamplesPerQuantum == 96);
+		Check(info.SamplesPerQuantum == minBufferSize);
 
 		Clock::Initialize(
 			info.SampleRateHz,

@@ -17,11 +17,6 @@ namespace NowSoundWinFormsApp
         private System.ComponentModel.IContainer components = null;
 
         /// <summary>
-        /// This thread polls for a given audio state.
-        /// </summary>
-        private Thread _audioPollThread; 
-
-        /// <summary>
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
@@ -43,7 +38,7 @@ namespace NowSoundWinFormsApp
             Console.WriteLine("OnLoad");
 
             // and let's P/Invoke up in here!
-            NowSoundGraphAPI.Initialize();
+            NowSoundGraphAPI.InitializeInstance();
 
             // No longer necessary really since JUCE initialization is synchronous.
             // JUCETODO: clean this up eventually.
