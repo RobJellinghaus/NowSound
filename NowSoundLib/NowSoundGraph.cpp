@@ -91,6 +91,16 @@ namespace NowSound
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
+		// Before anything else, ensure that a MessageManager exists.
+		// This is because, in this code, unless we do this, we get a crash with this stack:
+		// >	NowSoundLib.dll!juce::Timer::startTimer(int interval) Line 327	C++
+		//	NowSoundLib.dll!juce::DeviceChangeDetector::triggerAsyncDeviceChangeCallback() Line 108	C++
+		//	NowSoundLib.dll!juce::WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::notify() Line 1517	C++
+		//	NowSoundLib.dll!juce::WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::OnPropertyValueChanged(const wchar_t * __formal, const _tagpropertykey __formal) Line 1512	C++
+		//	MMDevAPI.dll!00007ffdcb280f02()	Unknown
+		// Not yet investigated....
+		MessageManager::getInstance();
+
 		// Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
 		// Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
 		// 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
@@ -142,7 +152,13 @@ namespace NowSound
 			return;
 		}
 
-		int minBufferSize = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes()[0];
+		juce::Array<int> bufferSizes = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes();
+		Check(bufferSizes.size() > 0);
+		int minBufferSize = bufferSizes[0];
+		if (bufferSizes.size() > 1)
+		{
+			Check(bufferSizes[0] < bufferSizes[1]);
+		}
 		_audioDeviceManager.getAudioDeviceSetup(setup);
 		setup.bufferSize = minBufferSize;
 
@@ -189,7 +205,22 @@ namespace NowSound
 			_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, i }, { outputNodePtr->nodeID, i } });
 		}
 
+		// thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
+		_audioProcessorGraph.setPlayConfigDetails(
+			info.ChannelCount,
+			info.ChannelCount,
+			// call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
+			// TODO: consider making NowSoundInfo.SampleRate into a double
+			_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+			info.SamplesPerQuantum);
+
+		_audioProcessorGraph.prepareToPlay(
+			_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+			info.SamplesPerQuantum);
+
 		_audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
+
+		_audioDeviceManager.getCurrentAudioDevice()->start(&_audioProcessorPlayer);
 
 		ChangeState(NowSoundGraphState::GraphRunning);
 	}
@@ -197,16 +228,26 @@ namespace NowSound
 	NowSoundGraphInfo NowSoundGraph::Info()
 	{
 		// TODO: verify not on audio graph thread
-		juce::AudioIODevice* currentAudioDevice = _audioDeviceManager.getCurrentAudioDevice();
+		juce::AudioIODevice* device = _audioDeviceManager.getCurrentAudioDevice();
 
-		auto availableBufferSizes = currentAudioDevice->getAvailableBufferSizes();
+		auto activeInputChannels = device->getActiveInputChannels();
+		auto activeOutputChannels = device->getActiveOutputChannels();
+		auto maxInputChannels = activeInputChannels.getHighestBit() + 1;
+		auto maxOutputChannels = activeOutputChannels.getHighestBit() + 1;
+		if (maxInputChannels != maxOutputChannels)
+		{
+			throw "Don't yet support different numbers of input vs output channels";
+		}
+
+		auto availableBufferSizes = device->getAvailableBufferSizes();
 
 		NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
-			currentAudioDevice->getCurrentSampleRate(),
-			currentAudioDevice->getOutputChannelNames().size(),
-			currentAudioDevice->getCurrentBitDepth(),
-			currentAudioDevice->getOutputLatencyInSamples(),
-			currentAudioDevice->getCurrentBufferSizeSamples());
+			device->getCurrentSampleRate(),
+			maxInputChannels,
+			device->getCurrentBitDepth(),
+			device->getOutputLatencyInSamples(),
+			device->getCurrentBufferSizeSamples());
+
 		return graphInfo;
 	}
 
