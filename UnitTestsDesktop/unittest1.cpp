@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "stdafx.h"
 #include "CppUnitTest.h"
 
 #include "BufferAllocator.h"
@@ -6,7 +6,7 @@
 #include "Histogram.h"
 #include "Slice.h"
 #include "SliceStream.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace NowSound;

@@ -11,11 +11,11 @@
 using namespace NowSound;
 using namespace winrt;
 
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Xaml;
-using namespace Windows::UI::Xaml::Controls;
-using namespace Windows::System;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::UI::Core;
+using namespace winrt::Windows::UI::Xaml;
+using namespace winrt::Windows::UI::Xaml::Controls;
+using namespace winrt::Windows::System;
 
 void TrackButton::RenderFrequencyBuffer(std::wstring& output)
 {
@@ -168,13 +168,13 @@ TrackButton::TrackButton(NowSoundApp* app)
 	UpdateUI();
 
 	StackPanel trackPanel{};
-	trackPanel.Orientation(Windows::UI::Xaml::Controls::Orientation::Horizontal);
+	trackPanel.Orientation(winrt::Windows::UI::Xaml::Controls::Orientation::Horizontal);
 	trackPanel.Children().Append(_button);
 	trackPanel.Children().Append(_combo);
 	trackPanel.Children().Append(_textBlock);
 	app->GetStackPanel().Children().Append(trackPanel);
 
-	_button.Click([this](IInspectable const&, RoutedEventArgs const&)
+	_button.Click([this](winrt::Windows::Foundation::IInspectable const&, RoutedEventArgs const&)
 	{
 		HandleClick();
 	});

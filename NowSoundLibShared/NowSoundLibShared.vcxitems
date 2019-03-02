@@ -24,7 +24,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Recorder.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Slice.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SliceStream.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Time.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NowSoundTime.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Check.cpp" />

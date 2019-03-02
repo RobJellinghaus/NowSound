@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "pch.h"
-#include "Time.h"
+#include "stdafx.h"
+#include "NowSoundTime.h"
 #include "SliceStream.h"
 
 namespace NowSound

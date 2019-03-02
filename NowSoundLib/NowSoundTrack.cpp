@@ -1,7 +1,7 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <string>
 #include <sstream>
@@ -19,99 +19,20 @@
 #include "Recorder.h"
 #include "Slice.h"
 #include "SliceStream.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 using namespace concurrency;
 using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::Foundation;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
-using namespace Windows::System;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Pickers;
+using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	__declspec(dllexport) NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo()
-	{
-		return CreateNowSoundTrackInfo(
-			1,
-			(float)2,
-			3,
-			4,
-			(float)5,
-			6,
-			(float)7,
-			8,
-			(float)9,
-			(float)10,
-			(float)11,
-			(float)12,
-			(float)13,
-			(float)14,
-			(float)15,
-			(float)16);
-	}
-
-	__declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
-	{
-		return NowSoundTrack::Track(trackId)->State();
-	}
-
-	__declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->BeatDuration().Value();
-    }
-
-    __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->BeatPositionUnityNow().Value();
-    }
-
-    __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->ExactDuration().Value();
-    }
-
-    __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->Info();
-    }
-
-	__declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
-    {
-        NowSoundTrack::Track(trackId)->FinishRecording();
-    }
-
-	__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
-	{
-		NowSoundTrack::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
-	}
-
-	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
-    {
-        return NowSoundTrack::Track(trackId)->IsMuted();
-    }
-
-    __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
-    {
-        NowSoundTrack::Track(trackId)->SetIsMuted(isMuted);
-    }
-
-    __declspec(dllexport) void NowSoundTrack_Delete(TrackId trackId)
-    {
-        NowSoundTrack::DeleteTrack(trackId);
-    }
-
     std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrack::s_tracks{};
 
-    Windows::Media::AudioFrame NowSoundTrack::s_audioFrame{ nullptr };
+    // Windows::Media::AudioFrame NowSoundTrack::s_audioFrame{ nullptr };
 
     void NowSoundTrack::DeleteTrack(TrackId trackId)
     {
@@ -156,7 +77,7 @@ namespace NowSound
             /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
-        _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
+        // _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _lastSampleTime{ Clock::Instance().Now() },
         _isMuted{ false },
         _debugLog{},
@@ -192,11 +113,13 @@ namespace NowSound
         // audio thread.
         // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
         // In general, what is the most synchronous / fastest way to switch from recording to playing?
+		/*
         _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
         {
             FrameInputNode_QuantumStarted(sender, args);
         });
 		_audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->AudioDeviceOutputNode());
+		*/
     }
 
     void NowSoundTrack::DebugLog(const std::wstring& entry)
@@ -294,17 +217,20 @@ namespace NowSound
     {
         // TODO: ThreadContract.RequireUnity();
 
-        _audioFrameInputNode.Stop();
+        // _audioFrameInputNode.Stop();
 
+		/*
         while (_audioFrameInputNode.OutgoingConnections().Size() > 0)
         {
             _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections().GetAt(0).Destination());
         }
         // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
+		*/
     }
 
 	const double Pi = std::atan(1) * 4;
 
+#if JUCETODO
 	void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
     {
         Check(sender == _audioFrameInputNode);
@@ -432,6 +358,7 @@ namespace NowSound
 
         sender.AddFrame(audioFrame);
     }
+#endif
 
     // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
     bool NowSoundTrack::Record(Duration<AudioSample> duration, float* data)

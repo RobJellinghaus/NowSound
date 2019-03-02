@@ -1,7 +1,7 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "pch.h"
+#include "stdafx.h"
 #include "Clock.h"
 
 using namespace NowSound;
@@ -9,9 +9,7 @@ using namespace std;
 using namespace std::chrono;
 using namespace winrt;
 
-using namespace Windows::Foundation;
-using namespace Windows::Media::Audio;
-using namespace Windows::Media::Render;
+using namespace winrt::Windows::Foundation;
 
 std::unique_ptr<NowSound::Clock> NowSound::Clock::s_instance;
 

@@ -3,12 +3,12 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include "stdint.h"
 
 #include "Check.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

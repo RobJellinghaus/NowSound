@@ -7,14 +7,14 @@
 #include <string>
 #include <vector>
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include "Clock.h"
 #include "Histogram.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "rosetta_fft.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

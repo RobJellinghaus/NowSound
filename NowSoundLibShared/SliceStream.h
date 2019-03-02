@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <algorithm>
 
@@ -11,7 +11,7 @@
 #include "Check.h"
 #include "IntervalMapper.h"
 #include "Slice.h"
-#include "Time.h"
+#include "NowSoundTime.h"
 
 namespace NowSound
 {

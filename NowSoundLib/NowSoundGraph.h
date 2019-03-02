@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <future>
 #include <vector>
@@ -20,12 +20,18 @@
 #include "rosetta_fft.h"
 #include "SliceStream.h"
 
+#include "JuceHeader.h"
+
 namespace NowSound
 {
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
     public: // API methods called by the NowSoundGraphAPI P/Invoke bridge methods
+
+        // Initialize the audio graph subsystem.
+        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
+        void Initialize();
 
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is one of the only two methods that may be called in any state whatoever.
@@ -35,23 +41,19 @@ namespace NowSound
         // from firing (don't want the graph to, e.g., get started twice in a race).
         NowSoundGraphState State() const;
 
-        // Initialize the audio graph subsystem such that device information can be queried.
-        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        void InitializeAsync();
-
 		// Get the graph info for the created graph.
 		// Graph must be at least Initialized.
 		NowSoundGraphInfo Info();
 
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Get the name of the input device with the given index (from 0 to Info().InputDeviceCount-1).
-		void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
+		// JUCETODO: void InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
 		// Initialize given input device.  One mono input will be created per channel of the device.
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
-		void InitializeDeviceInputs(int deviceIndex);
+		// JUCETODO: void InitializeDeviceInputs(int deviceIndex);
 
 		// Initialize the FFT bins and other state.
 		void InitializeFFT(
@@ -61,10 +63,6 @@ namespace NowSound
 			int centralBinIndex,
 			int fftSize);
 			
-		// Create the audio graph.
-		// Graph must be Initialized.  On completion, graph becomes Created.
-		void CreateAudioGraphAsync();
-
 		// Info about the current graph time.
 		// Graph must be Created or Running.
 		NowSoundTimeInfo TimeInfo();
@@ -73,35 +71,21 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
-		// Start the audio graph.
-        // Graph must be Created.  On completion, graph becomes Running.
-        void StartAudioGraphAsync();
-
         // Play a user-selected sound file.
         // Graph must be Started.
         void PlayUserSelectedSoundFileAsync();
-
-        // Tear down the whole graph.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        void DestroyAudioGraphAsync();
 
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
-    private: // Constructor and internal implementations
+	private: // Constructor and internal implementations
 
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
 
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-		winrt::Windows::Foundation::IAsyncAction InitializeAsyncImpl();
-
-		// Async helper method, to work around compiler bug with lambdas which await and capture this.
-        winrt::Windows::Foundation::IAsyncAction CreateAudioGraphAsyncImpl();
-
         // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        winrt::Windows::Foundation::IAsyncAction PlayUserSelectedSoundFileAsyncImpl();
+        void PlayUserSelectedSoundFileAsyncImpl();
 
         // Check that the expected state is the current state, and that no current state change is happening;
         // then mark that a state change is now happening.
@@ -111,25 +95,29 @@ namespace NowSound
         // as no longer happening.
         void ChangeState(NowSoundGraphState newState);
 
+        // Set minimum buffer size in the device manager.
+        void setBufferSizeToMinimum();
+
     private: // instance variables
 
-        // The singleton (for now) graph.
+        // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().
         static ::std::unique_ptr<NowSoundGraph> s_instance;
+
+		// The AudioDeviceManager held by this Graph.
+		// This is conceptually a singleton (just as the NowSoundGraph is), but we scope it within this type.
+		juce::AudioDeviceManager _audioDeviceManager;
+
+		// Callback object which couples the device manager to the audio processor graph.
+		juce::AudioProcessorPlayer _audioProcessorPlayer;
+
+		// The audio processor graph.
+		juce::AudioProcessorGraph _audioProcessorGraph;
 
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;
 
-        // The AudioGraph managed by this NowSoundGraph.
-        winrt::Windows::Media::Audio::AudioGraph _audioGraph;
-
         // The state of this graph.
         NowSoundGraphState _audioGraphState;
-
-        // The default output device. TODO: support multiple output devices.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode _deviceOutputNode;
-
-		// The AudioGraph DeviceInformation structures for all input devices.
-		::std::vector<winrt::Windows::Devices::Enumeration::DeviceInformation> _inputDeviceInfos;
 
         // First, an allocator for 128-second 48Khz stereo float sample buffers.
         std::unique_ptr<BufferAllocator<float>> _audioAllocator;
@@ -139,9 +127,6 @@ namespace NowSound
 
 		// The next AudioInputId to be allocated.
 		AudioInputId _nextAudioInputId;
-
-		// The audio device indices to initialize.
-		::std::vector<int> _inputDeviceIndicesToInitialize;
 
 		// The vector of frequency bins.
 		::std::vector<RosettaFFT::FrequencyBinBounds> _fftBinBounds;
@@ -162,31 +147,33 @@ namespace NowSound
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();
 
+		// Create the singleton graph instance and initialize it.
+		static void InitializeInstance();
+
+		// Shut down the singleton graph instance and release it.
+		static void ShutdownInstance();
+
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
 
-#if STATIC_AUDIO_FRAME
-        // Get the shared audio frame.
-        winrt::Windows::Media::AudioFrame GetAudioFrame();
-#endif
-
         // The (currently singleton) AudioGraph.
-        winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
+        // winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
 
         // The default audio output node.  TODO: support device selection.
-        winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
+        // winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
 
         // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* AudioAllocator() const;
 
 		// Create an input device (or a pair of them, if monoPair is true).
-		winrt::Windows::Foundation::IAsyncAction CreateInputDeviceAsync(int deviceIndex);
+		// void CreateInputDeviceAsync(int deviceIndex);
 
-		// Create an input device (or a pair of them, if monoPair is true).
-		void CreateInputDeviceFromNode(winrt::Windows::Media::Audio::AudioDeviceInputNode deviceInputNode, int channel);
+		// Create an input device for the specified channel.
+		// JUCETODO: support actual multiple input devices.
+		void CreateInputDeviceForChannel(int channel);
 
-		// A graph quantum has started; handle any available input audio.
-        void HandleIncomingAudio();
+		// Access the vector of inputs.
+		const std::vector<std::unique_ptr<NowSoundInput>>& Inputs() const;
 
 		// Access the vector of frequency bins, when generating frequency histograms.
 		const std::vector<RosettaFFT::FrequencyBinBounds>* BinBounds() const;

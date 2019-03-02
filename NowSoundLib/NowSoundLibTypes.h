@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <future>
 
@@ -34,14 +34,15 @@ namespace NowSound
 			// The number of samples per audio graph quantum, also reported by the graph itself.
 			int32_t SamplesPerQuantum;
 			// The number of input devices.
-			int32_t InputDeviceCount;
+			// JUCETODO: consider reintroducing input device selection.
+			// int32_t InputDeviceCount;
 		} NowSoundGraphInfo;
 
 		// Time information from a Created or Running graph.
 		typedef struct NowSoundTimeInfo
 		{
 			// The number of AudioInputs defined in the graph.
-			int32_t AudioInputCount;
+			// int32_t AudioInputCount;
 			// The number of samples elapsed since the audio graph started.
 			int64_t TimeInSamples;
 			// The exact current beat (including fractional part; truncate to get integral beat count).
@@ -101,11 +102,11 @@ namespace NowSound
         } NowSoundTrackTimeInfo;
 
         // The states of a NowSound graph.
-        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Track
+        // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Graph
         // to disambiguate them from the TrackState identifiers.
         enum NowSoundGraphState
         {
-            // InitializeAsync() has not yet been called.
+            // Initial condition before InitializeAsync() is called.
             GraphUninitialized,
 
             // Some error has occurred; GetLastError() will have details.
@@ -114,13 +115,7 @@ namespace NowSound
             // A gap in incoming audio data was detected; this should ideally never happen.
             // NOTYET: Discontinuity,
 
-            // InitializeAsync() has completed; devices can now be queried.
-            GraphInitialized,
-
-            // CreateAudioGraphAsync() has completed; other methods can now be called.
-            GraphCreated,
-
-            // The audio graph has been started and is running.
+            // The audio graph has been initialized and is running.
             GraphRunning,
 
             // The audio graph has been stopped.
@@ -180,11 +175,12 @@ namespace NowSound
 			int32_t channelCount,
 			int32_t bitsPerSample,
 			int32_t latencyInSamples,
-			int32_t samplesPerQuantum,
-			int32_t inputDeviceCount);
+			int32_t samplesPerQuantum
+			// JUCETODO: , int32_t inputDeviceCount
+			);
 
 		NowSoundTimeInfo CreateNowSoundTimeInfo(
-			int32_t audioInputCount,
+			//JUCETODO: int32_t audioInputCount,
 			int64_t timeInSamples,
 			float exactBeat,
 			float beatsPerMinute,

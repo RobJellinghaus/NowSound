@@ -1,7 +1,7 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "pch.h"
+#include "stdafx.h"
 
 #include <vector>
 
@@ -14,7 +14,7 @@ using namespace RosettaFFT;
 using namespace std;
 using namespace std::chrono;
 using namespace winrt;
-using namespace Windows::Foundation;
+using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
@@ -31,7 +31,7 @@ namespace NowSound
 		_fftSize{ fftSize }
 	{
 		_outputBuffer = std::unique_ptr<float>(new float[bounds->size()]);
-		std::fill(_outputBuffer.get(), _outputBuffer.get() + bounds->size(), 0);
+		// TODO: BROKEN: std::fill(_outputBuffer.get(), _outputBuffer.get() + bounds->size(), 0);
 		for (int i = 0; i < BufferCount; i++)
 		{
 			_bufferStates.push_back(BufferState::Available);
@@ -45,7 +45,7 @@ namespace NowSound
 		Check(capacity == _binBounds->size());
 
 		// No thread synchronization here.  Slightly inconsistent data is fine.
-		std::copy(_outputBuffer.get(), _outputBuffer.get() + _binBounds->size(), outputBuffer);
+		// TODO: BROKEN: std::copy(_outputBuffer.get(), _outputBuffer.get() + _binBounds->size(), outputBuffer);
 	}
 
 	void NowSoundFrequencyTracker::Record(float* monoInputBuffer, int sampleCount)
