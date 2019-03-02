@@ -95,6 +95,9 @@ namespace NowSound
         // as no longer happening.
         void ChangeState(NowSoundGraphState newState);
 
+        // Set minimum buffer size in the device manager.
+        void setBufferSizeToMinimum();
+
     private: // instance variables
 
         // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().

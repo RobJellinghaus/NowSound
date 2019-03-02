@@ -87,6 +87,41 @@ namespace NowSound
 		return _audioGraphState;
 	}
 
+    void NowSoundGraph::setBufferSizeToMinimum()
+    {
+        // Set buffer size to minimum available on current device
+        auto* device = _audioDeviceManager.getCurrentAudioDevice();
+
+        auto bufferRate = device->getCurrentSampleRate();
+        auto bufferSize = device->getCurrentBufferSizeSamples();
+
+        const bool setMinBufferSize = true;
+        if (setMinBufferSize)
+        {
+            auto bufferSizes = device->getAvailableBufferSizes();
+            int minBufferSize = bufferSizes[0];
+
+            AudioDeviceManager::AudioDeviceSetup setup;
+            _audioDeviceManager.getAudioDeviceSetup(setup);
+
+            if (setup.bufferSize > minBufferSize)
+            {
+                setup.bufferSize = minBufferSize;
+                String result = _audioDeviceManager.setAudioDeviceSetup(setup, false);
+                if (result.length() > 0)
+                {
+                    throw std::exception(result.getCharPointer());
+                }
+            }
+
+            if (minBufferSize != device->getCurrentBufferSizeSamples())
+            {
+                // die horribly
+                throw std::exception("Can't set buffer size to minimum");
+            }
+        }
+    }
+
 	void NowSoundGraph::Initialize()
 	{
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
@@ -101,125 +136,97 @@ namespace NowSound
 		// Not yet investigated....
 		MessageManager::getInstance();
 
-		// Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
-		// Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
-		// 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
-		// similar heartache.
-		juce::String desiredDeviceType = L"Windows Audio";
+        // Initialize the ASIO device.
+        {
+            // Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
+            // Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
+            // 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
+            // similar heartache.
+            // ...it does not... but neither does it provide tolerable latency; shared mode minimum buffer
+            // size of 144 samples (on FocusRite Scarlett 2i2), and exclusive mode is terribly crackly with
+            // even a 480 sample buffer (and significantly worse at minimum 144).
+            //
+            // ASIO, on the other hand, is silky smooth and crackle-free at **16** sample buffer size.
+            // So, so much for native Windows audio, they gave up the low latency game years ago and
+            // forgot how to really play.
+            juce::String desiredDeviceType = L"ASIO";
 
-#ifdef INITIALIZATION_HACKERY
-		{
-			// This whole code block was an experiment in trying to force the device type to be
-			// DirectSound before initialization, to avoid the 1500msec Thread.Sleep when setting
-			// the device type after initialization.
-			// If Windows Audio is the desired AND default device type anyway, then all of this
-			// can get punted out the window and we can just call initialise() with no rigmarole.
-			_audioDeviceManager.createDeviceTypesIfNeeded();
-			const OwnedArray<AudioIODeviceType>& types = _audioDeviceManager.getAvailableDeviceTypes();
-			for (int i = 0; i < types.size(); i++)
-			{
-				String typeName(types[i]->getTypeName());  // This will be things like "DirectSound", "CoreAudio", etc.
-				if (typeName == desiredDeviceType)
-				{
-					types[i]->scanForDevices();
-					StringArray deviceNames(types[i]->getDeviceNames());  // This will now return a list of available devices of this type
-				}
-			}
-		}
-		// NOW we can call this...?????  But it seems kind of stupid since it goes through the whole initialise() path.
-		_audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ true);
-#endif
+            const OwnedArray<AudioIODeviceType>& deviceTypes = _audioDeviceManager.getAvailableDeviceTypes();
 
-		AudioDeviceManager::AudioDeviceSetup setup{};
-		setup.bufferSize = 96;
-		setup.sampleRate = 48000;
-		setup.useDefaultInputChannels = true;
-		setup.useDefaultOutputChannels = true;
+            // Set the audio device type.  Note that this actually winds up initializing one, which we don't want
+            // but oh well.
+            _audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ false);
 
-		juce::String initialiseResult = _audioDeviceManager.initialise(
-			/*numInputChannelsNeeded*/ 2,
-			/*numOutputChannelsNeeded*/ 2,
-			/*savedState*/ nullptr,
-			/*selectDefaultDeviceOnFailure*/ true,
-			/*preferredDefaultDeviceName*/ String(),
-			/*preferredSetupOptions*/ &setup);
+            String result = _audioDeviceManager.initialiseWithDefaultDevices(2, 2);
+            if (result.length() > 0)
+            {
+                ChangeState(NowSoundGraphState::GraphInError);
+                return;
+            }
+        }
 
-		// empty string means all good; anything else means error
-		if (initialiseResult != L"")
-		{
-			// TODO: save the result for diagnostic reporting
-			ChangeState(NowSoundGraphState::GraphInError);
-			return;
-		}
+        // Set up the ASIO device, clock, and audio allocator.
+        NowSoundGraphInfo info;
+        {            
+            // we expect ASIO
+            Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"ASIO");
 
-		juce::Array<int> bufferSizes = _audioDeviceManager.getCurrentAudioDevice()->getAvailableBufferSizes();
-		Check(bufferSizes.size() > 0);
-		int minBufferSize = bufferSizes[0];
-		if (bufferSizes.size() > 1)
-		{
-			Check(bufferSizes[0] < bufferSizes[1]);
-		}
-		_audioDeviceManager.getAudioDeviceSetup(setup);
-		setup.bufferSize = minBufferSize;
+            setBufferSizeToMinimum();
 
-		// setting treatAsChosenDevice to true can leak an XmlElement... not sure what's up with that
-		_audioDeviceManager.setAudioDeviceSetup(setup, /*treatAsChosenDevice*/ false);
+            info = Info();
 
-		// now check that it was effective
-		_audioDeviceManager.getAudioDeviceSetup(setup);
-		Check(minBufferSize == setup.bufferSize);
+            // insist on stereo float samples.  TODO: generalize channel count
+            // For right now let's just make absolutely sure these values are all precisely as we intend every time.
+            Check(info.ChannelCount == 2);
+            Check(info.BitsPerSample == 32);
 
-		// we expect WASAPI, and we don't want this to wiggle around on us without us realizing we're
-		// suddenly using something else; otherwise all our test results will be incomplete
-		Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"Windows Audio");
+            Clock::Initialize(
+                info.SampleRateHz,
+                info.ChannelCount,
+                MagicConstants::InitialBeatsPerMinute,
+                MagicConstants::BeatsPerMeasure);
 
-		NowSoundGraphInfo info = Info();
+            _audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
+                (int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
+                MagicConstants::InitialAudioBufferCount));
+        }
 
-		// insist on stereo float samples.  TODO: generalize channel count
-		// For right now let's just make absolutely sure these values are all precisely as we intend every time.
-		Check(info.ChannelCount == 2);
-		Check(info.BitsPerSample == 32);
-		Check(info.SamplesPerQuantum == minBufferSize);
+        // Set up the audio processor graph and its related components.
+        {
+            _audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
+            _audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
 
-		Clock::Initialize(
-			info.SampleRateHz,
-			info.ChannelCount,
-			MagicConstants::InitialBeatsPerMinute,
-			MagicConstants::BeatsPerMeasure);
+            juce::AudioProcessorGraph::AudioGraphIOProcessor* inputNode =
+                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
+            juce::AudioProcessorGraph::AudioGraphIOProcessor* outputNode =
+                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
 
-		_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
-			(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
-			MagicConstants::InitialAudioBufferCount));
+            // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
+            _audioProcessorGraph.setPlayConfigDetails(
+                info.ChannelCount,
+                info.ChannelCount,
+                // call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
+                // TODO: consider making NowSoundInfo.SampleRate into a double
+                _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+                info.SamplesPerQuantum);
 
-		// set up audio processor player and graph
-		juce::AudioProcessorGraph::AudioGraphIOProcessor* inputNode =
-			new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
-		juce::AudioProcessorGraph::AudioGraphIOProcessor* outputNode =
-			new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+            // TBD: is double better?  Single (e.g. float32) definitely best for starters though
+            _audioProcessorGraph.setProcessingPrecision(AudioProcessor::singlePrecision);
 
-		juce::AudioProcessorGraph::Node::Ptr inputNodePtr = _audioProcessorGraph.addNode(inputNode);
-		juce::AudioProcessorGraph::Node::Ptr outputNodePtr = _audioProcessorGraph.addNode(outputNode);
-		for (int i = 0; i < info.ChannelCount; i++)
-		{
-			CreateInputDeviceForChannel(i);
-			_audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, i }, { outputNodePtr->nodeID, i } });
-		}
+            _audioProcessorGraph.prepareToPlay(
+                _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+                info.SamplesPerQuantum);
 
-		// thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
-		_audioProcessorGraph.setPlayConfigDetails(
-			info.ChannelCount,
-			info.ChannelCount,
-			// call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
-			// TODO: consider making NowSoundInfo.SampleRate into a double
-			_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
-			info.SamplesPerQuantum);
+            juce::AudioProcessorGraph::Node::Ptr inputNodePtr = _audioProcessorGraph.addNode(inputNode);
+            juce::AudioProcessorGraph::Node::Ptr outputNodePtr = _audioProcessorGraph.addNode(outputNode);
+            for (int i = 0; i < info.ChannelCount; i++)
+            {
+                CreateInputDeviceForChannel(i);
+                _audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, i }, { outputNodePtr->nodeID, i } });
+            }
+        }
 
-		_audioProcessorGraph.prepareToPlay(
-			_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
-			info.SamplesPerQuantum);
-
-		_audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
-
+        // and start everything!
 		_audioDeviceManager.getCurrentAudioDevice()->start(&_audioProcessorPlayer);
 
 		ChangeState(NowSoundGraphState::GraphRunning);
