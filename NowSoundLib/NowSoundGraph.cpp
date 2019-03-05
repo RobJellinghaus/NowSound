@@ -217,12 +217,12 @@ namespace NowSound
                 _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
                 info.SamplesPerQuantum);
 
-            juce::AudioProcessorGraph::Node::Ptr inputNodePtr = _audioProcessorGraph.addNode(inputNode);
-            juce::AudioProcessorGraph::Node::Ptr outputNodePtr = _audioProcessorGraph.addNode(outputNode);
+            _audioInputNodePtr = _audioProcessorGraph.addNode(inputNode);
+            _audioOutputNodePtr = _audioProcessorGraph.addNode(outputNode);
             for (int i = 0; i < info.ChannelCount; i++)
             {
                 CreateInputDeviceForChannel(i);
-                _audioProcessorGraph.addConnection({ { inputNodePtr->nodeID, i }, { outputNodePtr->nodeID, i } });
+                _audioProcessorGraph.addConnection({ { _audioInputNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } });
             }
         }
 
@@ -303,32 +303,6 @@ namespace NowSound
 	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
 	int NowSoundGraph::FftSize() const { return _fftSize; }
-
-#ifdef JUCETODO
-	void NowSoundGraph::CreateInputDeviceAsync(int deviceIndex)
-	{
-		// Create a device input node
-		CreateAudioDeviceInputNodeResult deviceInputNodeResult = co_await _audioGraph.CreateDeviceInputNodeAsync(
-			Windows::Media::Capture::MediaCategory::Media,
-			_audioGraph.EncodingProperties(),
-			_inputDeviceInfos[deviceIndex]);
-
-		if (deviceInputNodeResult.Status() != AudioDeviceNodeCreationStatus::Success)
-		{
-			// Cannot create device input node
-			Check(false);
-			return;
-		}
-
-		AudioDeviceInputNode inputNode = deviceInputNodeResult.DeviceInputNode();
-
-		// create one AudioInput per input channel of the device
-		for (uint32_t i = 0; i < inputNode.EncodingProperties().ChannelCount(); i++)
-		{
-			CreateInputDeviceFromNode(inputNode, (int)i);
-		}
-	}
-#endif
 
 	void NowSoundGraph::CreateInputDeviceForChannel(int channel)
 	{

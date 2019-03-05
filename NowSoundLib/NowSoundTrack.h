@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 
+#include "BaseAudioProcessor.h"
 #include "Clock.h"
 #include "Histogram.h"
 #include "NowSoundFrequencyTracker.h"
@@ -78,8 +79,6 @@ namespace NowSound
         // in Looping state.
         Time<AudioSample> _lastSampleTime;
 
-        winrt::Windows::Foundation::DateTime _lastQuantumTime;
-
         bool _isMuted;
 
         // for debug logging; need to understand micro-behavior of the frame input node
@@ -98,6 +97,40 @@ namespace NowSound
 
 		// current pan value; 0 = left, 0.5 = center, 1 = right
 		float _pan;
+
+        // Base audio processor that implements common methods.
+        class TrackAudioProcessor : public BaseAudioProcessor
+        {
+        protected:
+            const NowSoundTrack* _containingTrack;
+
+            TrackAudioProcessor(NowSoundTrack* containingTrack) : _containingTrack(containingTrack) {}
+        };
+
+        // Audio processor that records incoming data.
+        class TrackRecorderAudioProcessor : public TrackAudioProcessor
+        {
+            TrackRecorderAudioProcessor(NowSoundTrack* containingTrack) : TrackAudioProcessor(containingTrack) {}
+        public:
+            virtual const String getName() const { return L"TrackRecorder"; }
+            virtual void processBlock(
+                AudioBuffer<float>& buffer,
+                MidiBuffer& midiMessages) override;
+        };
+
+        // Audio processor that plays recorded data.
+        class TrackPlayerAudioProcessor : public TrackAudioProcessor
+        {
+            TrackPlayerAudioProcessor(NowSoundTrack* containingTrack) : TrackAudioProcessor(containingTrack) {}
+        public:
+            virtual const String getName() const { return L"TrackPlayer"; }
+            virtual void processBlock(
+                AudioBuffer<float>& buffer,
+                MidiBuffer& midiMessages) override;
+        };
+
+        TrackRecorderAudioProcessor _recorderProcessor;
+        TrackPlayerAudioProcessor _playerProcessor;
 
     public:
 		NowSoundTrack(
@@ -151,13 +184,6 @@ namespace NowSound
 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         void Delete();
-
-        // The quantum has started; consume input audio for this recording.
-		/*
-        void FrameInputNode_QuantumStarted(
-            winrt::Windows::Media::Audio::AudioFrameInputNode sender,
-            winrt::Windows::Media::Audio::FrameInputNodeQuantumStartedEventArgs args);
-			*/
 
         // Record from (that is, copy from) the source data.
         virtual bool Record(Duration<AudioSample> duration, float* source);

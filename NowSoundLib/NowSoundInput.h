@@ -7,6 +7,7 @@
 
 #include "stdint.h"
 
+#include "BaseAudioProcessor.h"
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
@@ -21,27 +22,6 @@
 namespace NowSound
 {
 	class NowSoundGraph;
-
-	// Separates its input channels to feed multiple distinct NowSoundInput instances.
-	class NowSoundDemux : public juce::AudioProcessor
-	{
-		NowSoundGraph* _graph;
-
-	public:
-		NowSoundDemux(NowSoundGraph* graph);
-
-		const juce::String getName() const override;
-
-		void prepareToPlay(
-			double sampleRate,
-			int maximumExpectedSamplesPerBlock) override;
-
-		void releaseResources() override;
-
-		void processBlock(
-			AudioBuffer<float>& buffer,
-			MidiBuffer& midiMessages) override;
-	};
 
 	// A single mono audio input and its associated objects.
 	class NowSoundInput
@@ -88,7 +68,42 @@ namespace NowSound
 		// Temporary buffer, reused across calls to HandleInputAudio.
 		std::vector<float> _monoBuffer;
 
-	public:
+        // Separates its input channels to feed multiple distinct NowSoundInput instances.
+        class NowSoundDemux : public BaseAudioProcessor
+        {
+            NowSoundGraph* _graph;
+
+        public:
+            NowSoundDemux(NowSoundGraph* graph);
+
+            const juce::String getName() const override;
+
+            void prepareToPlay(
+                double sampleRate,
+                int maximumExpectedSamplesPerBlock) override;
+
+            void releaseResources() override;
+
+            void processBlock(
+                AudioBuffer<float>& buffer,
+                MidiBuffer& midiMessages) override;
+
+            // Inherited via AudioProcessor
+            virtual double getTailLengthSeconds() const override;
+            virtual bool acceptsMidi() const override;
+            virtual bool producesMidi() const override;
+            virtual AudioProcessorEditor * createEditor() override;
+            virtual bool hasEditor() const override;
+            virtual int getNumPrograms() override;
+            virtual int getCurrentProgram() override;
+            virtual void setCurrentProgram(int index) override;
+            virtual const String getProgramName(int index) override;
+            virtual void changeProgramName(int index, const String & newName) override;
+            virtual void getStateInformation(juce::MemoryBlock & destData) override;
+            virtual void setStateInformation(const void * data, int sizeInBytes) override;
+        };
+
+    public:
 		// Construct a NowSoundInput.
 		NowSoundInput(
 			NowSoundGraph* audioGraph,

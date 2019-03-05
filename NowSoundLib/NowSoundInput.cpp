@@ -12,6 +12,7 @@
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
 #include "NowSoundTrack.h"
+#include "NowSoundInput.h"
 
 using namespace std;
 using namespace winrt;
@@ -20,26 +21,16 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	NowSoundDemux::NowSoundDemux(NowSoundGraph* graph)
+    NowSoundInput::NowSoundDemux::NowSoundDemux(NowSoundGraph* graph)
 	{
 		_graph = graph;
 	}
 
-	const juce::String NowSoundDemux::getName() const {
+	const juce::String NowSoundInput::NowSoundDemux::getName() const {
 		return L"NowSoundDemux";
 	}
 
-	void NowSoundDemux::prepareToPlay(
-		double sampleRate,
-		int maximumExpectedSamplesPerBlock)
-	{
-	}
-
-	void NowSoundDemux::releaseResources()
-	{
-	}
-
-	void NowSoundDemux::processBlock(
+	void NowSoundInput::NowSoundDemux::processBlock(
 		AudioBuffer<float>& buffer,
 		MidiBuffer& midiMessages)
 	{

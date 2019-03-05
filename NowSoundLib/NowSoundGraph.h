@@ -113,6 +113,12 @@ namespace NowSound
 		// The audio processor graph.
 		juce::AudioProcessorGraph _audioProcessorGraph;
 
+        // Ptr to the input node.
+        juce::AudioProcessorGraph::Node::Ptr _audioInputNodePtr;
+
+        // Ptr to the output node.
+        juce::AudioProcessorGraph::Node::Ptr _audioOutputNodePtr;
+
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;
 

@@ -109,17 +109,8 @@ namespace NowSound
         }
 		*/
 
-        // Now is when we create the AudioFrameInputNode, because now is when we are sure we are not on the
-        // audio thread.
-        // TODO: is it right to add this outgoing connection now? Or should this happen when switching to playing?
-        // In general, what is the most synchronous / fastest way to switch from recording to playing?
-		/*
-        _audioFrameInputNode.QuantumStarted([&](AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
-        {
-            FrameInputNode_QuantumStarted(sender, args);
-        });
-		_audioFrameInputNode.AddOutgoingConnection(NowSoundGraph::Instance()->AudioDeviceOutputNode());
-		*/
+        // Add the appropriate connections.
+
     }
 
     void NowSoundTrack::DebugLog(const std::wstring& entry)
@@ -452,4 +443,58 @@ namespace NowSound
     }
 
     int NowSoundTrack::s_zeroByteOutgoingFrameCount{};
+    const String NowSoundTrack::TrackAudioProcessor::getName() const
+    {
+        return String();
+    }
+    void NowSoundTrack::TrackAudioProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
+    {
+    }
+    void NowSoundTrack::TrackAudioProcessor::releaseResources()
+    {
+    }
+    double NowSoundTrack::TrackAudioProcessor::getTailLengthSeconds() const
+    {
+        return 0.0;
+    }
+    bool NowSoundTrack::TrackAudioProcessor::acceptsMidi() const
+    {
+        return false;
+    }
+    bool NowSoundTrack::TrackAudioProcessor::producesMidi() const
+    {
+        return false;
+    }
+    AudioProcessorEditor * NowSoundTrack::TrackAudioProcessor::createEditor()
+    {
+        return nullptr;
+    }
+    bool NowSoundTrack::TrackAudioProcessor::hasEditor() const
+    {
+        return false;
+    }
+    int NowSoundTrack::TrackAudioProcessor::getNumPrograms()
+    {
+        return 0;
+    }
+    int NowSoundTrack::TrackAudioProcessor::getCurrentProgram()
+    {
+        return 0;
+    }
+    void NowSoundTrack::TrackAudioProcessor::setCurrentProgram(int index)
+    {
+    }
+    const String NowSoundTrack::TrackAudioProcessor::getProgramName(int index)
+    {
+        return String();
+    }
+    void NowSoundTrack::TrackAudioProcessor::changeProgramName(int index, const String & newName)
+    {
+    }
+    void NowSoundTrack::TrackAudioProcessor::getStateInformation(juce::MemoryBlock & destData)
+    {
+    }
+    void NowSoundTrack::TrackAudioProcessor::setStateInformation(const void * data, int sizeInBytes)
+    {
+    }
 }
