@@ -18,7 +18,7 @@ namespace NowSoundLib
 
         public override string ToString()
         {
-            return $"CD[{m_duration}]";
+            return $"CD[{m_duration:F2}]";
         }
 
         public static explicit operator float(ContinuousDuration<TTime> duration)

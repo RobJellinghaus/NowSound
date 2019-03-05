@@ -30,6 +30,9 @@ namespace NowSoundLib
     }
 
     // Information about an audio graph.
+    // This marshalable struct corresponds to the C++ P/Invokable type.
+    // Since this has no fields that have particular units (e.g. no durations or times),
+    // we just make the marshalable struct public in this case.
     public struct NowSoundGraphInfo
     {
         public Int32 SampleRate;
@@ -41,7 +44,8 @@ namespace NowSoundLib
     }
 
     // Information about timing in a created or running graph.
-    public struct NowSoundTimeInfo
+    // This marshalable struct maps to the C++ P/Invokable type.
+    internal struct NowSoundTimeInfo
     {
         public Int32 AudioInputCount;
         public Int64 TimeInSamples;
@@ -82,7 +86,8 @@ namespace NowSoundLib
         }
     };
 
-    // Information about a track's time in NowSound terms; this marshalable struct goes over the wire.
+    // Information about a track's time in NowSound terms.
+    // This marshalable struct maps to the C++ P/Invokable type.
     // TODO: maybe someday: look at custom marshalers to avoid the explicit (no-op) copy.
     internal struct NowSoundTrackInfo
     {
