@@ -85,6 +85,6 @@ namespace NowSound
 		void GetLatestHistogram(float* outputBuffer, int capacity);
 
 		// Record the given amount of float data.
-		void Record(float* monoInputBuffer, int sampleCount);
+		void Record(const float* monoInputBuffer, int sampleCount);
 	};
 }

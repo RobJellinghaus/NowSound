@@ -26,7 +26,7 @@ void Histogram::Add(float value)
 	AddImpl(value);
 }
 
-void Histogram::AddAll(float* data, int count, bool absoluteValue)
+void Histogram::AddAll(const float* data, int count, bool absoluteValue)
 {
 	std::lock_guard<std::mutex> guard(_mutex);
 	for (int i = 0; i < count; i++)

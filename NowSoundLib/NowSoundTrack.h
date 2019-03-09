@@ -23,7 +23,7 @@ namespace NowSound
 {
 	// Represents a single looping track of recorded audio.
 	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
-    class NowSoundTrack : public IRecorder<AudioSample, float>
+    class NowSoundTrack : public BaseAudioProcessor
     {
     public:
         // non-exported methods for "internal" use
@@ -67,10 +67,6 @@ namespace NowSound
         // TODO: relax this to permit non-quantized looping.
         Duration<Beat> _beatDuration;
 
-        // The node this track uses for emitting data into the audio graph.
-        // This is the output node for this Track, but the input node for the audio graph.
-        // winrt::Windows::Media::Audio::AudioFrameInputNode _audioFrameInputNode;
-
         // The stream containing this Track's data; this is an owning reference.
         BufferedSliceStream<AudioSample, float> _audioStream;
 
@@ -98,40 +94,6 @@ namespace NowSound
 		// current pan value; 0 = left, 0.5 = center, 1 = right
 		float _pan;
 
-        // Base audio processor that implements common methods.
-        class TrackAudioProcessor : public BaseAudioProcessor
-        {
-        protected:
-            const NowSoundTrack* _containingTrack;
-
-            TrackAudioProcessor(NowSoundTrack* containingTrack) : _containingTrack(containingTrack) {}
-        };
-
-        // Audio processor that records incoming data.
-        class TrackRecorderAudioProcessor : public TrackAudioProcessor
-        {
-            TrackRecorderAudioProcessor(NowSoundTrack* containingTrack) : TrackAudioProcessor(containingTrack) {}
-        public:
-            virtual const String getName() const { return L"TrackRecorder"; }
-            virtual void processBlock(
-                AudioBuffer<float>& buffer,
-                MidiBuffer& midiMessages) override;
-        };
-
-        // Audio processor that plays recorded data.
-        class TrackPlayerAudioProcessor : public TrackAudioProcessor
-        {
-            TrackPlayerAudioProcessor(NowSoundTrack* containingTrack) : TrackAudioProcessor(containingTrack) {}
-        public:
-            virtual const String getName() const { return L"TrackPlayer"; }
-            virtual void processBlock(
-                AudioBuffer<float>& buffer,
-                MidiBuffer& midiMessages) override;
-        };
-
-        TrackRecorderAudioProcessor _recorderProcessor;
-        TrackPlayerAudioProcessor _playerProcessor;
-
     public:
 		NowSoundTrack(
 			NowSoundGraph* graph,
@@ -139,6 +101,12 @@ namespace NowSound
 			AudioInputId inputId,
 			const BufferedSliceStream<AudioSample, float>& sourceStream,
 			float initialPan);
+
+        virtual const String getName() const { return L"NowSoundTrack"; }
+
+        virtual void processBlock(
+            AudioBuffer<float>& buffer,
+            MidiBuffer& midiMessages) override;
 
         // In what state is this track?
         NowSoundTrackState State() const;
@@ -184,8 +152,5 @@ namespace NowSound
 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         void Delete();
-
-        // Record from (that is, copy from) the source data.
-        virtual bool Record(Duration<AudioSample> duration, float* source);
     };
 }

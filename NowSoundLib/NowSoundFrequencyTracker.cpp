@@ -48,7 +48,7 @@ namespace NowSound
 		// TODO: BROKEN: std::copy(_outputBuffer.get(), _outputBuffer.get() + _binBounds->size(), outputBuffer);
 	}
 
-	void NowSoundFrequencyTracker::Record(float* monoInputBuffer, int sampleCount)
+	void NowSoundFrequencyTracker::Record(const float* monoInputBuffer, int sampleCount)
 	{
 		// lock the buffers as we may very well fill the recording buffer now
 		std::lock_guard<std::mutex> guard(_bufferMutex);

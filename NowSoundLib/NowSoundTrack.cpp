@@ -221,9 +221,86 @@ namespace NowSound
 
 	const double Pi = std::atan(1) * 4;
 
-#if JUCETODO
-	void NowSoundTrack::FrameInputNode_QuantumStarted(AudioFrameInputNode sender, FrameInputNodeQuantumStartedEventArgs args)
+    void NowSoundTrack::processBlock(
+        AudioBuffer<float>& buffer,
+        MidiBuffer& midiMessages)
     {
+        // Depending on the current state of this track, we either record, or we finish recording
+        // and switch modes to looping, or we're straight looping.
+        Duration<AudioSample> duration{ buffer.getNumSamples() };
+        switch (_state)
+        {
+        case NowSoundTrackState::TrackRecording:
+        {
+            // How many complete beats after we record this data?
+            Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
+            Duration<Beat> completeBeats = (Duration<Beat>)((int)Clock::Instance().TimeToBeats(durationAsTime).Value());
+
+            // If it's more than our _beatDuration, bump our _beatDuration
+            // TODO: implement other quantization policies here
+            if (completeBeats >= _beatDuration)
+            {
+                // 1/2/4* quantization, like old times. TODO: make this selectable
+                if (_beatDuration == 1)
+                {
+                    _beatDuration = 2;
+                }
+                else if (_beatDuration == 2)
+                {
+                    _beatDuration = 4;
+                }
+                else
+                {
+                    _beatDuration = _beatDuration + Duration<Beat>(4);
+                }
+                // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
+                Check(completeBeats < BeatDuration());
+            }
+
+            // and actually record the full amount of available data
+            _audioStream.Append(duration, buffer.getReadPointer(0));
+            // and volume track
+            _volumeHistogram.AddAll(buffer.getReadPointer(0), duration.Value(), true);
+            // and provide it to frequency histogram as well
+            if (_frequencyTracker != nullptr)
+            {
+                _frequencyTracker->Record(buffer.getReadPointer(0), duration.Value());
+            }
+            break;
+        }
+
+        case NowSoundTrackState::TrackFinishRecording:
+        {
+            // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
+            Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
+
+            // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
+            Check(_audioStream.DiscreteDuration() <= roundedUpDuration);
+
+            if (_audioStream.DiscreteDuration() + duration >= roundedUpDuration)
+            {
+                // reduce duration so we only capture the exact right number of samples
+                duration = roundedUpDuration - _audioStream.DiscreteDuration();
+
+                // we are done recording altogether
+                _state = NowSoundTrackState::TrackLooping;
+                continueRecording = false;
+
+                _audioStream.Append(duration, data);
+
+                // now that we have done our final append, shut the stream at the current duration
+                _audioStream.Shut(ExactDuration());
+            }
+            else
+            {
+                // capture the full duration
+                _audioStream.Append(duration, data);
+            }
+
+            break;
+        }
+        }
+#if NOPE
         Check(sender == _audioFrameInputNode);
 
         Check(args.RequiredSamples() >= 0);
@@ -348,153 +425,8 @@ namespace NowSound
         }
 
         sender.AddFrame(audioFrame);
-    }
 #endif
-
-    // Handle incoming audio data; manage the Recording -> FinishRecording and FinishRecording -> Looping state transitions.
-    bool NowSoundTrack::Record(Duration<AudioSample> duration, float* data)
-    {
-        // TODO: ThreadContract.RequireAudioGraph();
-
-        bool continueRecording = true;
-        switch (_state)
-        {
-        case NowSoundTrackState::TrackRecording:
-        {
-            // How many complete beats after we record this data?
-            Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
-            Duration<Beat> completeBeats = (Duration<Beat>)((int)Clock::Instance().TimeToBeats(durationAsTime).Value());
-
-            // If it's more than our _beatDuration, bump our _beatDuration
-            // TODO: implement other quantization policies here
-            if (completeBeats >= _beatDuration)
-            {
-                // 1/2/4* quantization, like old times. TODO: make this selectable
-                if (_beatDuration == 1)
-                {
-                    _beatDuration = 2;
-                }
-                else if (_beatDuration == 2)
-                {
-                    _beatDuration = 4;
-                }
-                else
-                {
-                    _beatDuration = _beatDuration + Duration<Beat>(4);
-                }
-                // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
-                Check(completeBeats < BeatDuration());
-            }
-
-            // and actually record the full amount of available data
-            _audioStream.Append(duration, data);
-			// and volume track
-			_volumeHistogram.AddAll(data, duration.Value(), true);
-			// and provide it to frequency histogram as well
-			if (_frequencyTracker != nullptr)
-			{
-				_frequencyTracker->Record(data, duration.Value());
-			}
-            break;
-        }
-
-        case NowSoundTrackState::TrackFinishRecording:
-        {
-            // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
-            Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
-
-            // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-            Check(_audioStream.DiscreteDuration() <= roundedUpDuration);
-
-            if (_audioStream.DiscreteDuration() + duration >= roundedUpDuration)
-            {
-                // reduce duration so we only capture the exact right number of samples
-                duration = roundedUpDuration - _audioStream.DiscreteDuration();
-
-                // we are done recording altogether
-                _state = NowSoundTrackState::TrackLooping;
-                continueRecording = false;
-
-                _audioStream.Append(duration, data);
-
-                // now that we have done our final append, shut the stream at the current duration
-                _audioStream.Shut(ExactDuration());
-            }
-            else
-            {
-                // capture the full duration
-                _audioStream.Append(duration, data);
-            }
-
-            break;
-        }
-
-        case NowSoundTrackState::TrackLooping:
-        {
-            Check(false); // Should never still be recording once in looping state
-            return false;
-        }
-        }
-
-        _lastSampleTime = Clock::Instance().Now();
-        Check(_lastSampleTime.Value() >= 0);
-
-        return continueRecording;
     }
 
     int NowSoundTrack::s_zeroByteOutgoingFrameCount{};
-    const String NowSoundTrack::TrackAudioProcessor::getName() const
-    {
-        return String();
-    }
-    void NowSoundTrack::TrackAudioProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
-    {
-    }
-    void NowSoundTrack::TrackAudioProcessor::releaseResources()
-    {
-    }
-    double NowSoundTrack::TrackAudioProcessor::getTailLengthSeconds() const
-    {
-        return 0.0;
-    }
-    bool NowSoundTrack::TrackAudioProcessor::acceptsMidi() const
-    {
-        return false;
-    }
-    bool NowSoundTrack::TrackAudioProcessor::producesMidi() const
-    {
-        return false;
-    }
-    AudioProcessorEditor * NowSoundTrack::TrackAudioProcessor::createEditor()
-    {
-        return nullptr;
-    }
-    bool NowSoundTrack::TrackAudioProcessor::hasEditor() const
-    {
-        return false;
-    }
-    int NowSoundTrack::TrackAudioProcessor::getNumPrograms()
-    {
-        return 0;
-    }
-    int NowSoundTrack::TrackAudioProcessor::getCurrentProgram()
-    {
-        return 0;
-    }
-    void NowSoundTrack::TrackAudioProcessor::setCurrentProgram(int index)
-    {
-    }
-    const String NowSoundTrack::TrackAudioProcessor::getProgramName(int index)
-    {
-        return String();
-    }
-    void NowSoundTrack::TrackAudioProcessor::changeProgramName(int index, const String & newName)
-    {
-    }
-    void NowSoundTrack::TrackAudioProcessor::getStateInformation(juce::MemoryBlock & destData)
-    {
-    }
-    void NowSoundTrack::TrackAudioProcessor::setStateInformation(const void * data, int sizeInBytes)
-    {
-    }
 }

@@ -21,56 +21,19 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-    NowSoundInput::NowSoundDemux::NowSoundDemux(NowSoundGraph* graph)
-	{
-		_graph = graph;
-	}
-
-	const juce::String NowSoundInput::NowSoundDemux::getName() const {
-		return L"NowSoundDemux";
-	}
-
-	void NowSoundInput::NowSoundDemux::processBlock(
-		AudioBuffer<float>& buffer,
-		MidiBuffer& midiMessages)
-	{
-		Check(_graph->Info().ChannelCount == buffer.getNumChannels());
-		for (int i = 0; i < _graph->Info().ChannelCount; i++)
-		{
-			// copy however much data it is to that specific input and any recorders
-			_graph->Inputs()[i].get()->HandleIncomingAudio(
-				buffer.getArrayOfReadPointers()[i],
-				buffer.getNumSamples());
-		}
-	}
-
 	NowSoundInput::NowSoundInput(
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
-		// JUCETODO: AudioDeviceInputNode inputNode,
 		BufferAllocator<float>* audioAllocator,
 		int channel)
 		: _nowSoundGraph{ nowSoundGraph },
 		_audioInputId{ inputId },
-		// _inputDevice{ inputNode },
 		_channel{ channel },
 		_pan{ 0.5 },
-		// TODO: make NowSoundInputs on the same device share FrameOutputNodes as well as DeviceInputNodes
-		// _frameOutputNode{ nowSoundGraph->GetAudioGraph().CreateFrameOutputNode() },
-		_recorders{},
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
 		_incomingAudioStreamRecorder{ &_incomingAudioStream },
 		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() }
 	{
-		// _inputDevice.AddOutgoingConnection(_frameOutputNode);
-
-		// TODO: figure out how to not have this be a HORRIBLE HORRIBLE HACK
-		if (inputId == AudioInput1)
-		{
-			// only add ONE connection from input device to output node
-			// TODO: figure out how in the heck sound effects will work with this
-			// _inputDevice.AddOutgoingConnection(nowSoundGraph->AudioDeviceOutputNode());
-		}
 	}
 
 	NowSoundInputInfo NowSoundInput::Info()

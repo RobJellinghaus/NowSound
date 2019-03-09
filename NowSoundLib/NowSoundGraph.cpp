@@ -87,6 +87,11 @@ namespace NowSound
 		return _audioGraphState;
 	}
 
+    juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
+    {
+        return _audioProcessorGraph;
+    }
+
     void NowSoundGraph::setBufferSizeToMinimum()
     {
         // Set buffer size to minimum available on current device
@@ -196,9 +201,9 @@ namespace NowSound
             _audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
             _audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
 
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* inputNode =
+            juce::AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* outputNode =
+            juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
 
             // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
@@ -217,8 +222,8 @@ namespace NowSound
                 _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
                 info.SamplesPerQuantum);
 
-            _audioInputNodePtr = _audioProcessorGraph.addNode(inputNode);
-            _audioOutputNodePtr = _audioProcessorGraph.addNode(outputNode);
+            _audioInputNodePtr = _audioProcessorGraph.addNode(inputAudioProcessor);
+            _audioOutputNodePtr = _audioProcessorGraph.addNode(outputAudioProcessor);
             for (int i = 0; i < info.ChannelCount; i++)
             {
                 CreateInputDeviceForChannel(i);

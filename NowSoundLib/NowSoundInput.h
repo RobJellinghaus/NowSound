@@ -11,7 +11,6 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
-#include "NowSoundInput.h"
 #include "NowSoundLibTypes.h"
 #include "Option.h"
 #include "Recorder.h"
@@ -23,8 +22,8 @@ namespace NowSound
 {
 	class NowSoundGraph;
 
-	// A single mono audio input and its associated objects.
-	class NowSoundInput
+	// Container object that manages the current sound effects on a particular input, if any.
+	class NowSoundInput : public BaseAudioProcessor
 	{
 	private:
 		// The NowSoundAudioGraph that created this input.
@@ -33,25 +32,11 @@ namespace NowSound
 		// The audio input ID of this input.
 		const AudioInputId _audioInputId;
 
-		// The input device. Note that this device input node may be shared between multiple NowSoundInputs.
-		// winrt::Windows::Media::Audio::AudioDeviceInputNode _inputDevice;
-
 		// The channel to select from the input device.
 		int _channel;
 
 		// The panning value (0 = left, 1 = right).
 		float _pan;
-
-		// The frame output node which allows buffering input audio into memory.
-		// winrt::Windows::Media::Audio::AudioFrameOutputNode _frameOutputNode;
-
-		// Vector of active Recorders; these are non-owning pointers borrowed from the collection of Tracks
-		// held by NowSoundTrackAPI.
-		std::vector<IRecorder<AudioSample, float>*> _recorders;
-
-		// Mutex to prevent collision on the _recorders vector between creating a new track and handling the
-		// existing recorder collection.
-		std::mutex _recorderMutex;
 
 		// Stream that buffers the last second of input audio, for latency compensation.
 		// (Not really clear why latency compensation should be needed for NowSoundApp which shouldn't really
@@ -68,51 +53,21 @@ namespace NowSound
 		// Temporary buffer, reused across calls to HandleInputAudio.
 		std::vector<float> _monoBuffer;
 
-        // Separates its input channels to feed multiple distinct NowSoundInput instances.
-        class NowSoundDemux : public BaseAudioProcessor
-        {
-            NowSoundGraph* _graph;
-
-        public:
-            NowSoundDemux(NowSoundGraph* graph);
-
-            const juce::String getName() const override;
-
-            void prepareToPlay(
-                double sampleRate,
-                int maximumExpectedSamplesPerBlock) override;
-
-            void releaseResources() override;
-
-            void processBlock(
-                AudioBuffer<float>& buffer,
-                MidiBuffer& midiMessages) override;
-
-            // Inherited via AudioProcessor
-            virtual double getTailLengthSeconds() const override;
-            virtual bool acceptsMidi() const override;
-            virtual bool producesMidi() const override;
-            virtual AudioProcessorEditor * createEditor() override;
-            virtual bool hasEditor() const override;
-            virtual int getNumPrograms() override;
-            virtual int getCurrentProgram() override;
-            virtual void setCurrentProgram(int index) override;
-            virtual const String getProgramName(int index) override;
-            virtual void changeProgramName(int index, const String & newName) override;
-            virtual void getStateInformation(juce::MemoryBlock & destData) override;
-            virtual void setStateInformation(const void * data, int sizeInBytes) override;
-        };
-
     public:
 		// Construct a NowSoundInput.
 		NowSoundInput(
 			NowSoundGraph* audioGraph,
 			AudioInputId audioInputId,
-			// winrt::Windows::Media::Audio::AudioDeviceInputNode inputNode,
 			BufferAllocator<float>* audioAllocator,
 			int channel);
 
-		// Set the stereo panning (0 = left, 1 = right, 0.5 = center).
+        virtual const String getName() const override { return L"NowSoundInput"; }
+
+        // Handle any audio incoming for this input.
+        // This method is invoked by audio quantum processing, as an audio activity.
+        virtual void processBlock();
+        
+        // Set the stereo panning (0 = left, 1 = right, 0.5 = center).
 		// TODO: implement panning fully and expose to user!
 		void Pan(float pan);
 
@@ -123,9 +78,5 @@ namespace NowSound
 		// Note that this is not concurrency-safe with respect to other calls to this method.
 		// (It is of course concurrency-safe with respect to ongoing audio activity.)
 		void CreateRecordingTrack(TrackId id);
-
-		// Handle any audio incoming for this input.
-		// This method is invoked by audio quantum processing, as an audio activity.
-		void HandleIncomingAudio(const float* incomingBuffer, int bufferCount);
 	};
 }

@@ -50,5 +50,5 @@ public:
 	// Add a new value to this histogram.
 	void Add(float value);
 
-	void AddAll(float* data, int count, bool absoluteValue);
+	void AddAll(const float* data, int count, bool absoluteValue);
 };

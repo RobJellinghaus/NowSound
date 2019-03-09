@@ -14,7 +14,6 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
-#include "NowSoundInput.h"
 #include "NowSoundLibTypes.h"
 #include "Recorder.h"
 #include "rosetta_fft.h"
@@ -186,5 +185,8 @@ namespace NowSound
 
 		// Access to the FFT size.
 		int FftSize() const;
+
+        // Access to the audio graph for node instantiation.
+        juce::AudioProcessorGraph& JuceGraph();
     };
 }

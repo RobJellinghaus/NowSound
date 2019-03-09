@@ -328,7 +328,7 @@ namespace NowSound
         }
 
         // Append the given amount of data.
-        virtual void Append(Duration<TTime> duration, TValue* p)
+        virtual void Append(Duration<TTime> duration, const TValue* p)
         {
             Check(!this->IsShut());
 
