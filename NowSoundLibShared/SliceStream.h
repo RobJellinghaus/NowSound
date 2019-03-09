@@ -152,7 +152,7 @@ namespace NowSound
 
         // Append the given duration's worth of slices from the given pointer.
         // This must not be shut yet.
-        virtual void Append(Duration<TTime> duration, TValue* p) = 0;
+        virtual void Append(Duration<TTime> duration, const TValue* p) = 0;
 
         // Copy the given interval of this stream to the destination.
         virtual void CopyTo(const Interval<TTime>& sourceInterval, TValue* destination) const = 0;

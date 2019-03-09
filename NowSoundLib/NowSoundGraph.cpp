@@ -11,6 +11,7 @@
 #include "MagicConstants.h"
 #include "NowSoundLib.h"
 #include "NowSoundGraph.h"
+#include "NowSoundInput.h"
 #include "NowSoundTrack.h"
 #include "Option.h"
 
@@ -303,8 +304,6 @@ namespace NowSound
 			fftSize);
 	}
 
-	const std::vector<std::unique_ptr<NowSoundInput>>& NowSoundGraph::Inputs() const { return _audioInputs; }
-
 	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
 	int NowSoundGraph::FftSize() const { return _fftSize; }
@@ -312,13 +311,17 @@ namespace NowSound
 	void NowSoundGraph::CreateInputDeviceForChannel(int channel)
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
-		std::unique_ptr<NowSoundInput> input(new NowSoundInput(
-			this,
-			nextAudioInputId,
-			_audioAllocator.get(),
-			channel));
+		juce::AudioProcessorGraph::Node::Ptr newPtr = _audioProcessorGraph.addNode(
+            new NowSoundInputAudioProcessor(
+			    this,
+			    nextAudioInputId,
+			    _audioAllocator.get(),
+			    channel));
 
-		_audioInputs.emplace_back(std::move(input));
+        // TODONEXT: wire it up!!!
+        // TODONEXT: setPlayConfigDetails or whatever it is called!!!
+
+		_audioInputs.emplace_back(newPtr);
 	}
 
 	NowSoundTimeInfo NowSoundGraph::TimeInfo()
@@ -341,30 +344,37 @@ namespace NowSound
 		return timeInfo;
 	}
 
+    NowSoundInputAudioProcessor* NowSoundGraph::Input(AudioInputId audioInputId)
+    {
+        Check(_audioGraphState > NowSoundGraphState::GraphInError);
+
+        Check(audioInputId > AudioInputId::AudioInputUndefined);
+        // Input IDs are one-based
+        Check((audioInputId - 1) < _audioInputs.size());
+
+        juce::AudioProcessorGraph::Node::Ptr& input = _audioInputs[(int)audioInputId - 1];
+
+        // ensure non-null -- should be true by construction, but, you know, bugs
+        Check(input.get());
+
+        return static_cast<NowSoundInputAudioProcessor*>(input->getProcessor());
+    }
+
 	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
 	{
-		Check(_audioGraphState > NowSoundGraphState::GraphInError);
-
-		Check(audioInputId > AudioInputId::AudioInputUndefined);
-		// Input IDs are one-based
-		Check((audioInputId - 1) < _audioInputs.size());
-
-		std::unique_ptr<NowSoundInput>& input = _audioInputs[(int)audioInputId - 1];
-		return input->Info();
+		return Input(audioInputId)->Info();
 	}
 
-	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInput)
+	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInputId)
     {
         // TODO: verify not on audio graph thread
         Check(_audioGraphState == NowSoundGraphState::GraphRunning);
-		Check(audioInput >= 1);
-		// Check(audioInput < _audioInputs.size() + 1);
 
         // by construction this will be greater than TrackId::Undefined
         TrackId id = (TrackId)((int)_trackId + 1);
         _trackId = id;
 
-		_audioInputs[(int)(audioInput - 1)]->CreateRecordingTrack(id);
+		Input(audioInputId)->CreateRecordingTrack(id);
 
 		return id;
     }

@@ -23,6 +23,8 @@
 
 namespace NowSound
 {
+    class NowSoundInputAudioProcessor;
+
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
@@ -140,8 +142,9 @@ namespace NowSound
 		int _fftSize;
 
 		// The audio inputs we have; currently unchanging after graph creation.
+        // Note that the processors held by these Ptrs are NowSoundInputAudioProcessors.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
-		std::vector<std::unique_ptr<NowSoundInput>> _audioInputs;
+		std::vector<juce::AudioProcessorGraph::Node::Ptr> _audioInputs;
 
         // Mutex for the state of the graph.
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
@@ -177,9 +180,6 @@ namespace NowSound
 		// JUCETODO: support actual multiple input devices.
 		void CreateInputDeviceForChannel(int channel);
 
-		// Access the vector of inputs.
-		const std::vector<std::unique_ptr<NowSoundInput>>& Inputs() const;
-
 		// Access the vector of frequency bins, when generating frequency histograms.
 		const std::vector<RosettaFFT::FrequencyBinBounds>* BinBounds() const;
 
@@ -188,5 +188,8 @@ namespace NowSound
 
         // Access to the audio graph for node instantiation.
         juce::AudioProcessorGraph& JuceGraph();
+
+        // Get a reference on one of the NowSoundInputs.
+        NowSoundInputAudioProcessor* Input(AudioInputId audioInputId);
     };
 }

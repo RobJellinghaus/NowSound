@@ -21,7 +21,7 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	NowSoundInput::NowSoundInput(
+	NowSoundInputAudioProcessor::NowSoundInputAudioProcessor(
 		NowSoundGraph* nowSoundGraph,
 		AudioInputId inputId,
 		BufferAllocator<float>* audioAllocator,
@@ -36,7 +36,7 @@ namespace NowSound
 	{
 	}
 
-	NowSoundInputInfo NowSoundInput::Info()
+	NowSoundInputInfo NowSoundInputAudioProcessor::Info()
 	{
 		float volume = _volumeHistogram.Average();
 
@@ -46,7 +46,7 @@ namespace NowSound
 		return ret;
 	}
 
-	void NowSoundInput::CreateRecordingTrack(TrackId id)
+	void NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
 		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(_nowSoundGraph, id, _audioInputId, _incomingAudioStream, _pan));
 
@@ -61,8 +61,10 @@ namespace NowSound
 		NowSoundTrack::AddTrack(id, std::move(newTrack));
 	}
 
-	void NowSoundInput::HandleIncomingAudio(const float* buffer, int bufferCount)
+	void NowSoundInputAudioProcessor::ProcessBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
+        int bufferCount = audioBuffer.getNumSamples();
+
 		// Make sure our buffer is big enough; note that we don't multiply by channelCount because this is a mono buffer.
 		_monoBuffer.resize(bufferCount);
 

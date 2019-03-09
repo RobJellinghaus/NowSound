@@ -23,7 +23,7 @@ namespace NowSound
 	class NowSoundGraph;
 
 	// Container object that manages the current sound effects on a particular input, if any.
-	class NowSoundInput : public BaseAudioProcessor
+	class NowSoundInputAudioProcessor : public BaseAudioProcessor
 	{
 	private:
 		// The NowSoundAudioGraph that created this input.
@@ -55,17 +55,17 @@ namespace NowSound
 
     public:
 		// Construct a NowSoundInput.
-		NowSoundInput(
+		NowSoundInputAudioProcessor(
 			NowSoundGraph* audioGraph,
 			AudioInputId audioInputId,
 			BufferAllocator<float>* audioAllocator,
 			int channel);
 
-        virtual const String getName() const override { return L"NowSoundInput"; }
+        virtual const String getName() const override { return L"NowSoundInputAudioProcessor"; }
 
         // Handle any audio incoming for this input.
         // This method is invoked by audio quantum processing, as an audio activity.
-        virtual void processBlock();
+        virtual void processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer);
         
         // Set the stereo panning (0 = left, 1 = right, 0.5 = center).
 		// TODO: implement panning fully and expose to user!

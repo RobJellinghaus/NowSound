@@ -7,7 +7,7 @@
 namespace NowSound
 {
     // Simple audio processor with empty implementations for almost everything but processBlock and getName.
-    class BaseAudioProcessor : juce::AudioProcessor
+    class BaseAudioProcessor : public juce::AudioProcessor
     {
         // Inherited via AudioProcessor
         
