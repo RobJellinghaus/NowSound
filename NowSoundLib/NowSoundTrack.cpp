@@ -16,7 +16,6 @@
 #include "NowSoundGraph.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
-#include "Recorder.h"
 #include "Slice.h"
 #include "SliceStream.h"
 #include "NowSoundTime.h"
@@ -59,12 +58,11 @@ namespace NowSound
     NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
 		NowSoundGraph* graph,
         TrackId trackId,
-        AudioInputId inputId,
         const BufferedSliceStream<AudioSample, float>& sourceStream,
 		float initialPan)
-		: _graph{ graph },
+		: SpatialAudioProcessor(graph, initialPan),
+        _graph{ graph },
 		_trackId{ trackId },
-        _inputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
@@ -77,15 +75,7 @@ namespace NowSound
         _beatDuration{ 1 },
         // _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _lastSampleTime{ Clock::Instance().Now() },
-        _isMuted{ false },
-        _debugLog{},
-        _requiredSamplesHistogram { MagicConstants::AudioQuantumHistogramCapacity },
-		_sinceLastSampleTimingHistogram{ MagicConstants::AudioQuantumHistogramCapacity },
-		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() },
-		_pan{ initialPan },
-		_frequencyTracker{ _graph->FftSize() < 0
-			? ((NowSoundFrequencyTracker*)nullptr)
-			: new NowSoundFrequencyTracker(_graph->BinBounds(), _graph->FftSize()) }
+        _debugLog{}
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -183,29 +173,19 @@ namespace NowSound
 			localClockTime.Value(),
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
-			_volumeHistogram.Average(),
-			_pan,
+			VolumeHistogram().Average(),
+			Pan(),
+            /*
             _requiredSamplesHistogram.Min(),
             _requiredSamplesHistogram.Max(),
             _requiredSamplesHistogram.Average(),
             _sinceLastSampleTimingHistogram.Min(),
             _sinceLastSampleTimingHistogram.Max(),
-            _sinceLastSampleTimingHistogram.Average());
+            _sinceLastSampleTimingHistogram.Average()
+            */
+            0, 0, 0, 0, 0, 0);
     }
 
-    bool NowSoundTrackAudioProcessor::IsMuted() const { return _isMuted; }
-    void NowSoundTrackAudioProcessor::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
-
-	void NowSoundTrackAudioProcessor::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
-	{
-		if (_frequencyTracker == nullptr)
-		{
-			return;
-		}
-
-		_frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
-	}
-	
 	void NowSoundTrackAudioProcessor::FinishRecording()
     {
         // TODO: ThreadContract.RequireUnity();
@@ -230,19 +210,15 @@ namespace NowSound
 		*/
     }
 
-	const double Pi = std::atan(1) * 4;
-
-    void NowSoundTrackAudioProcessor::processBlock(
-        AudioBuffer<float>& buffer,
-        MidiBuffer& midiMessages)
+    void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
     {
         // This should always take two channels.  Only channel 0 is used on input.  Both channels are used
         // on output (only stereo supported for now).
-        Check(buffer.getNumChannels() == 2);
+        Check(audioBuffer.getNumChannels() == 2);
 
         // Depending on the current state of this track, we either record, or we finish recording
         // and switch modes to looping, or we're straight looping.
-        Duration<AudioSample> duration{ buffer.getNumSamples() };
+        Duration<AudioSample> duration{ audioBuffer.getNumSamples() };
 
         switch (_state)
         {
@@ -276,14 +252,7 @@ namespace NowSound
             // and actually record the full amount of available data.
             // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
             // input channel goes to which track.
-            _audioStream.Append(duration, buffer.getReadPointer(0));
-            // and volume track
-            _volumeHistogram.AddAll(buffer.getReadPointer(0), duration.Value(), true);
-            // and provide it to frequency histogram as well
-            if (_frequencyTracker != nullptr)
-            {
-                _frequencyTracker->Record(buffer.getReadPointer(0), duration.Value());
-            }
+            _audioStream.Append(duration, audioBuffer.getReadPointer(0));
             break;
         }
 
@@ -315,7 +284,7 @@ namespace NowSound
 
                 // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
                 // input channel goes to which track.
-                _audioStream.Append(duration, buffer.getReadPointer(0));
+                _audioStream.Append(duration, audioBuffer.getReadPointer(0));
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
@@ -323,7 +292,7 @@ namespace NowSound
             else
             {
                 // capture the full duration
-                _audioStream.Append(duration, buffer.getReadPointer(0));
+                _audioStream.Append(duration, audioBuffer.getReadPointer(0));
             }
 
             break;
@@ -331,50 +300,8 @@ namespace NowSound
 
         case NowSoundTrackState::TrackLooping:
         {
-            int samplesRemaining = buffer.getNumSamples();
-
-            // Coefficients for panning the mono data into the audio buffer.
-            // Use cosine panner for volume preservation.
-            double angularPosition = _pan * Pi / 2;
-            double leftCoefficient = std::cos(angularPosition);
-            double rightCoefficient = std::sin(angularPosition);
-
-            int channelCount = Clock::Instance().ChannelCount();
-            // only stereo supported
-            // TODO: support more channels, fuller spatialization
-            Check(channelCount == 2);
-
-            int bufferIndex = 0;
-            float* outputBufferChannel0 = buffer.getWritePointer(0);
-            float* outputBufferChannel1 = buffer.getWritePointer(1);
-
-            while (samplesRemaining > 0)
-            {
-                // get a slice up to samplesRemaining samples in length
-                Slice<AudioSample, float> slice(
-                    _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
-                Duration<AudioSample> sliceDuration = slice.SliceDuration();
-
-                // Record all this data in the frequency tracker.
-                _frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
-
-                // Pan each mono sample (and track its volume), if we're not muted.
-                if (!IsMuted())
-                {
-                    for (int i = 0; i < sliceDuration.Value(); i++)
-                    {
-                        float value = slice.Get(i, 0);
-                        _volumeHistogram.Add(std::abs(value));
-                        outputBufferChannel0[bufferIndex + i] = (float)(leftCoefficient * value);
-                        outputBufferChannel1[bufferIndex + i] = (float)(rightCoefficient * value);
-                    }
-                }
-
-                bufferIndex += slice.SliceDuration().Value();
-                samplesRemaining -= (int)slice.SliceDuration().Value();
-                _lastSampleTime = _lastSampleTime + slice.SliceDuration();
-                Check(_lastSampleTime.Value() >= 0);
-            }
+            SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
+            break;
         }
         }
     }

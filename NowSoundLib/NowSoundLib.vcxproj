@@ -87,6 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BaseAudioProcessor.h" />
+    <ClInclude Include="SpatialAudioProcessor.h" />
     <ClInclude Include="GetBuffer.h" />
     <ClInclude Include="JuceLibraryCode\AppConfig.h" />
     <ClInclude Include="JuceLibraryCode\JuceHeader.h" />
@@ -104,6 +105,7 @@
   <ItemGroup>
     <ClCompile Include="BaseAudioProcessor.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="SpatialAudioProcessor.cpp" />
     <ClCompile Include="JuceLibraryCode\include_juce_audio_basics.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>

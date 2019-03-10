@@ -15,7 +15,6 @@
 #include "Check.h"
 #include "Histogram.h"
 #include "NowSoundLibTypes.h"
-#include "Recorder.h"
 #include "rosetta_fft.h"
 #include "SliceStream.h"
 

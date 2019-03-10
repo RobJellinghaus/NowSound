@@ -1,3 +1,6 @@
+// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
+// Licensed under the MIT license
+
 #pragma once
 
 #include "stdafx.h"

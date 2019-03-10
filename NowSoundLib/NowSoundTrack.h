@@ -10,12 +10,11 @@
 
 #include "JuceHeader.h"
 
-#include "BaseAudioProcessor.h"
+#include "SpatialAudioProcessor.h"
 #include "Clock.h"
 #include "Histogram.h"
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundLibTypes.h"
-#include "Recorder.h"
 #include "NowSoundTime.h"
 
 // set to 1 to reuse a static AudioFrame; 0 will allocate a new AudioFrame in each audio quantum event handler
@@ -25,7 +24,7 @@ namespace NowSound
 {
 	// Represents a single looping track of recorded audio.
 	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
-    class NowSoundTrackAudioProcessor : public BaseAudioProcessor
+    class NowSoundTrackAudioProcessor : public SpatialAudioProcessor
     {
     public:
         // non-exported methods for "internal" use
@@ -40,22 +39,11 @@ namespace NowSound
         // The collection of all ttracks.
         static std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> s_tracks;
 
-#if STATIC_AUDIO_FRAME
-        // Audio frame, reused for copying audio.
-        // static winrt::Windows::Media::AudioFrame s_audioFrame;
-#endif
-
 		// The graph that created this.
 		const NowSoundGraph* _graph;
 
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
-
-        // The input the track is recording from, if recording.
-        const AudioInputId _inputId;
-
-		// The frequency tracker for this track.
-		const std::unique_ptr<NowSoundFrequencyTracker> _frequencyTracker;
 
         // The current state of the track.
         NowSoundTrackState _state;
@@ -74,24 +62,10 @@ namespace NowSound
         // in Looping state.
         Time<AudioSample> _lastSampleTime;
 
-        bool _isMuted;
-
         // for debug logging; need to understand micro-behavior of the frame input node
         std::queue<std::wstring> _debugLog;
 
         void DebugLog(const std::wstring& entry);
-
-        // histogram of required samples count
-        Histogram _requiredSamplesHistogram;
-
-        // histogram of time since last sample request
-        Histogram _sinceLastSampleTimingHistogram;
-
-		// histogram of volume
-		Histogram _volumeHistogram;
-
-		// current pan value; 0 = left, 0.5 = center, 1 = right
-		float _pan;
 
         // did this just stop recording? if so, message thread will remove its input connection on next poll
         bool _justStoppedRecording;
@@ -100,15 +74,12 @@ namespace NowSound
 		NowSoundTrackAudioProcessor(
 			NowSoundGraph* graph,
 			TrackId trackId,
-			AudioInputId inputId,
 			const BufferedSliceStream<AudioSample, float>& sourceStream,
 			float initialPan);
 
         virtual const String getName() const { return L"NowSoundTrackAudioProcessor"; }
 
-        virtual void processBlock(
-            AudioBuffer<float>& buffer,
-            MidiBuffer& midiMessages) override;
+        virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // Did this track stop recording since the last time this method was called?
         // The message thread polls this value to determine when to remove tracks' input connections after recording.
@@ -143,20 +114,6 @@ namespace NowSound
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.
         void FinishRecording();
-
-		// Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
-		void GetFrequencies(void* floatBuffer, int floatBufferCapacity);
-
-		// True if this is muted.
-        // 
-        // Note that something can be in FinishRecording state but still be muted, if the user is fast!
-        // Hence this is a separate flag, not represented as a NowSoundTrack_State.
-        bool IsMuted() const;
-        void SetIsMuted(bool isMuted);
-
-		// Get and set the pan value for this track.
-		float Pan();
-		void Pan(float pan);
 
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         void Delete();

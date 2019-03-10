@@ -26,75 +26,39 @@ namespace NowSound
 		AudioInputId inputId,
 		BufferAllocator<float>* audioAllocator,
 		int channel)
-		: _nowSoundGraph{ nowSoundGraph },
+		: SpatialAudioProcessor(nowSoundGraph, 0.5),
 		_audioInputId{ inputId },
 		_channel{ channel },
-		_pan{ 0.5 },
-		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
-		_incomingAudioStreamRecorder{ &_incomingAudioStream },
-		_volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() }
+		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false }		
 	{
 	}
 
 	NowSoundInputInfo NowSoundInputAudioProcessor::Info()
 	{
-		float volume = _volumeHistogram.Average();
+		float volume = VolumeHistogram().Average();
 
 		NowSoundInputInfo ret;
 		ret.Volume = volume;
-		ret.Pan = _pan;
+		ret.Pan = Pan();
 		return ret;
 	}
 
 	void NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
 		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = _nowSoundGraph->JuceGraph().addNode(
-            new NowSoundTrackAudioProcessor(_nowSoundGraph, id, _audioInputId, _incomingAudioStream, _pan));
+            new NowSoundTrackAudioProcessor(_nowSoundGraph, id, _incomingAudioStream, Pan()));
 
-		// New tracks are created as recording; lock the _recorders collection and add this new track.
-		// Move the new track over to the collection of tracks in NowSoundTrackAPI.
+		// Add the new track to the collection of tracks in NowSoundTrackAPI.
 		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);
+
+        // TODONEXT: add the actual connections to the new track here!
 	}
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
-        int bufferCount = audioBuffer.getNumSamples();
+        // TODO: actually record into the bounded input stream!  if we decide that lookback is actually needed again.
 
-		// Make sure our buffer is big enough; note that we don't multiply by channelCount because this is a mono buffer.
-		_monoBuffer.resize(bufferCount);
-
-		// Copy the data from the appropriate channel of the input device into the mono buffer.
-		for (int i = 0 ; i < bufferCount; i++)
-		{
-			float value = buffer[i];
-			_volumeHistogram.Add(std::abs(value));
-			_monoBuffer.data()[i] = value;
-		}
-
-		// iterate through all active Recorders
-		// note that Recorders must be added or removed only inside the audio graph
-		// (e.g. QuantumStarted or FrameInputAvailable)
-		std::vector<IRecorder<AudioSample, float>*> _completedRecorders{};
-		{
-			std::lock_guard<std::mutex> guard(_recorderMutex);
-
-			// Give the new audio to each Recorder, collecting the ones that are done.
-			for (IRecorder<AudioSample, float>* recorder : _recorders)
-			{
-				bool stillRecording = recorder->Record({ bufferCount }, _monoBuffer.data());
-
-				if (!stillRecording)
-				{
-					_completedRecorders.push_back(recorder);
-				}
-			}
-
-			// Now remove all the done ones.
-			for (IRecorder<AudioSample, float>* completedRecorder : _completedRecorders)
-			{
-				// not optimally efficient but we will only ever have one or two completed per incoming audio frame
-				_recorders.erase(std::find(_recorders.begin(), _recorders.end(), completedRecorder));
-			}
-		}
+        // now process the input audio spatially so we hear it panned in the output
+        SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
 	}
 }

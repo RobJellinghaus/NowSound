@@ -12,7 +12,6 @@
 #include "Clock.h"
 #include "Histogram.h"
 #include "NowSoundLibTypes.h"
-#include "Recorder.h"
 #include "rosetta_fft.h"
 #include "NowSoundTime.h"
 
