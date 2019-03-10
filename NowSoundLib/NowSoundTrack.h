@@ -23,20 +23,20 @@ namespace NowSound
 {
 	// Represents a single looping track of recorded audio.
 	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
-    class NowSoundTrack : public BaseAudioProcessor
+    class NowSoundTrackAudioProcessor : public BaseAudioProcessor
     {
     public:
         // non-exported methods for "internal" use
-        static void AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track);
+        static void AddTrack(TrackId id, std::unique_ptr<NowSoundTrackAudioProcessor>&& track);
 
         // Accessor for track by ID.
-        static NowSoundTrack* Track(TrackId id);
+        static NowSoundTrackAudioProcessor* Track(TrackId id);
 
         static void DeleteTrack(TrackId id);
 
     private:
         // The collection of all ttracks.
-        static std::map<TrackId, std::unique_ptr<NowSoundTrack>> s_tracks;
+        static std::map<TrackId, std::unique_ptr<NowSoundTrackAudioProcessor>> s_tracks;
 
         // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
         static int s_zeroByteOutgoingFrameCount;
@@ -95,14 +95,14 @@ namespace NowSound
 		float _pan;
 
     public:
-		NowSoundTrack(
+		NowSoundTrackAudioProcessor(
 			NowSoundGraph* graph,
 			TrackId trackId,
 			AudioInputId inputId,
 			const BufferedSliceStream<AudioSample, float>& sourceStream,
 			float initialPan);
 
-        virtual const String getName() const { return L"NowSoundTrack"; }
+        virtual const String getName() const { return L"NowSoundTrackAudioProcessor"; }
 
         virtual void processBlock(
             AudioBuffer<float>& buffer,

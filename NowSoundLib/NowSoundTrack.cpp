@@ -30,35 +30,35 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-    std::map<TrackId, std::unique_ptr<NowSoundTrack>> NowSoundTrack::s_tracks{};
+    std::map<TrackId, std::unique_ptr<NowSoundTrackAudioProcessor>> NowSoundTrackAudioProcessor::s_tracks{};
 
     // Windows::Media::AudioFrame NowSoundTrack::s_audioFrame{ nullptr };
 
-    void NowSoundTrack::DeleteTrack(TrackId trackId)
+    void NowSoundTrackAudioProcessor::DeleteTrack(TrackId trackId)
     {
         Check(trackId >= TrackId::TrackIdUndefined && trackId <= s_tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
-        s_tracks[trackId] = std::unique_ptr<NowSoundTrack>{};
+        s_tracks[trackId] = std::unique_ptr<NowSoundTrackAudioProcessor>{};
     }
 
-    void NowSoundTrack::AddTrack(TrackId id, std::unique_ptr<NowSoundTrack>&& track)
+    void NowSoundTrackAudioProcessor::AddTrack(TrackId id, std::unique_ptr<NowSoundTrackAudioProcessor>&& track)
     {
         s_tracks.emplace(id, std::move(track));
     }
 
-    NowSoundTrack* NowSoundTrack::Track(TrackId id)
+    NowSoundTrackAudioProcessor* NowSoundTrackAudioProcessor::Track(TrackId id)
     {
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id > TrackId::TrackIdUndefined);
-        NowSoundTrack* value = s_tracks.at(id).get();
+        NowSoundTrackAudioProcessor* value = s_tracks.at(id).get();
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
 
-    NowSoundTrack::NowSoundTrack(
+    NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
 		NowSoundGraph* graph,
         TrackId trackId,
         AudioInputId inputId,
@@ -113,7 +113,7 @@ namespace NowSound
 
     }
 
-    void NowSoundTrack::DebugLog(const std::wstring& entry)
+    void NowSoundTrackAudioProcessor::DebugLog(const std::wstring& entry)
     {
         _debugLog.push(entry);
         if (_debugLog.size() > MagicConstants::DebugLogCapacity)
@@ -122,11 +122,11 @@ namespace NowSound
         }
     }
     
-    NowSoundTrackState NowSoundTrack::State() const { return _state; }
+    NowSoundTrackState NowSoundTrackAudioProcessor::State() const { return _state; }
     
-    Duration<Beat> NowSoundTrack::BeatDuration() const { return _beatDuration; }
+    Duration<Beat> NowSoundTrackAudioProcessor::BeatDuration() const { return _beatDuration; }
     
-    ContinuousDuration<Beat> NowSoundTrack::BeatPositionUnityNow() const
+    ContinuousDuration<Beat> NowSoundTrackAudioProcessor::BeatPositionUnityNow() const
     {
         // TODO: determine whether we really need a time that only moves forward between Unity frames.
         // For now, let time be determined solely by audio graph, and let Unity observe time increasing 
@@ -139,12 +139,12 @@ namespace NowSound
         return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (beats.Value() - (int)beats.Value()));
     }
 
-    ContinuousDuration<AudioSample> NowSoundTrack::ExactDuration() const
+    ContinuousDuration<AudioSample> NowSoundTrackAudioProcessor::ExactDuration() const
     {
         return (int)BeatDuration().Value() * Clock::Instance().BeatDuration().Value();
     }
 
-    Time<AudioSample> NowSoundTrack::StartTime() const { return _audioStream.InitialTime(); }
+    Time<AudioSample> NowSoundTrackAudioProcessor::StartTime() const { return _audioStream.InitialTime(); }
 
     ContinuousDuration<Beat> TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration)
     {
@@ -158,7 +158,7 @@ namespace NowSound
             + (totalBeats.Value() - nonFractionalBeats.Value()));
     }
 
-    NowSoundTrackInfo NowSoundTrack::Info() 
+    NowSoundTrackInfo NowSoundTrackAudioProcessor::Info() 
     {
         Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
         Time<AudioSample> startTime = this->_audioStream.InitialTime();
@@ -182,10 +182,10 @@ namespace NowSound
             _sinceLastSampleTimingHistogram.Average());
     }
 
-    bool NowSoundTrack::IsMuted() const { return _isMuted; }
-    void NowSoundTrack::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
+    bool NowSoundTrackAudioProcessor::IsMuted() const { return _isMuted; }
+    void NowSoundTrackAudioProcessor::SetIsMuted(bool isMuted) { _isMuted = isMuted; }
 
-	void NowSoundTrack::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
+	void NowSoundTrackAudioProcessor::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
 	{
 		if (_frequencyTracker == nullptr)
 		{
@@ -195,7 +195,7 @@ namespace NowSound
 		_frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
 	}
 	
-	void NowSoundTrack::FinishRecording()
+	void NowSoundTrackAudioProcessor::FinishRecording()
     {
         // TODO: ThreadContract.RequireUnity();
 
@@ -204,7 +204,7 @@ namespace NowSound
         _state = NowSoundTrackState::TrackFinishRecording;
     }
 
-    void NowSoundTrack::Delete()
+    void NowSoundTrackAudioProcessor::Delete()
     {
         // TODO: ThreadContract.RequireUnity();
 
@@ -221,7 +221,7 @@ namespace NowSound
 
 	const double Pi = std::atan(1) * 4;
 
-    void NowSoundTrack::processBlock(
+    void NowSoundTrackAudioProcessor::processBlock(
         AudioBuffer<float>& buffer,
         MidiBuffer& midiMessages)
     {
@@ -428,5 +428,5 @@ namespace NowSound
 #endif
     }
 
-    int NowSoundTrack::s_zeroByteOutgoingFrameCount{};
+    int NowSoundTrackAudioProcessor::s_zeroByteOutgoingFrameCount{};
 }

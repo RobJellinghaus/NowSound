@@ -48,17 +48,12 @@ namespace NowSound
 
 	void NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
-		std::unique_ptr<NowSoundTrack> newTrack(new NowSoundTrack(_nowSoundGraph, id, _audioInputId, _incomingAudioStream, _pan));
+		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = _nowSoundGraph->JuceGraph().addNode(
+            new NowSoundTrackAudioProcessor(_nowSoundGraph, id, _audioInputId, _incomingAudioStream, _pan));
 
 		// New tracks are created as recording; lock the _recorders collection and add this new track.
-		// Note that the _recorders collection holds a raw pointer, e.g. a weak reference, to the track.
-		{
-			std::lock_guard<std::mutex> guard(_recorderMutex);
-			_recorders.push_back(newTrack.get());
-		}
-
 		// Move the new track over to the collection of tracks in NowSoundTrackAPI.
-		NowSoundTrack::AddTrack(id, std::move(newTrack));
+		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);
 	}
 
 	void NowSoundInputAudioProcessor::ProcessBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
