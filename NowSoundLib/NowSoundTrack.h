@@ -8,6 +8,8 @@
 
 #include "stdafx.h"
 
+#include "JuceHeader.h"
+
 #include "BaseAudioProcessor.h"
 #include "Clock.h"
 #include "Histogram.h"
@@ -27,7 +29,7 @@ namespace NowSound
     {
     public:
         // non-exported methods for "internal" use
-        static void AddTrack(TrackId id, std::unique_ptr<NowSoundTrackAudioProcessor>&& track);
+        static void AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track);
 
         // Accessor for track by ID.
         static NowSoundTrackAudioProcessor* Track(TrackId id);
@@ -36,10 +38,7 @@ namespace NowSound
 
     private:
         // The collection of all ttracks.
-        static std::map<TrackId, std::unique_ptr<NowSoundTrackAudioProcessor>> s_tracks;
-
-        // How many outgoing frames had zero bytes requested?  (can not understand why this would ever happen)
-        static int s_zeroByteOutgoingFrameCount;
+        static std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> s_tracks;
 
 #if STATIC_AUDIO_FRAME
         // Audio frame, reused for copying audio.
@@ -94,7 +93,10 @@ namespace NowSound
 		// current pan value; 0 = left, 0.5 = center, 1 = right
 		float _pan;
 
-    public:
+        // did this just stop recording? if so, message thread will remove its input connection on next poll
+        bool _justStoppedRecording;
+
+    public: // Non-exported methods for internal use
 		NowSoundTrackAudioProcessor(
 			NowSoundGraph* graph,
 			TrackId trackId,
@@ -107,6 +109,12 @@ namespace NowSound
         virtual void processBlock(
             AudioBuffer<float>& buffer,
             MidiBuffer& midiMessages) override;
+
+        // Did this track stop recording since the last time this method was called?
+        // The message thread polls this value to determine when to remove tracks' input connections after recording.
+        bool JustStoppedRecording();
+
+    public: // Exported methods via NowSoundTrackAPI
 
         // In what state is this track?
         NowSoundTrackState State() const;

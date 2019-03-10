@@ -56,7 +56,7 @@ namespace NowSound
 		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);
 	}
 
-	void NowSoundInputAudioProcessor::ProcessBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
+	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
         int bufferCount = audioBuffer.getNumSamples();
 

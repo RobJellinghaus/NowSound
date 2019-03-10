@@ -30,19 +30,17 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-    std::map<TrackId, std::unique_ptr<NowSoundTrackAudioProcessor>> NowSoundTrackAudioProcessor::s_tracks{};
-
-    // Windows::Media::AudioFrame NowSoundTrack::s_audioFrame{ nullptr };
+    std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> NowSoundTrackAudioProcessor::s_tracks{};
 
     void NowSoundTrackAudioProcessor::DeleteTrack(TrackId trackId)
     {
         Check(trackId >= TrackId::TrackIdUndefined && trackId <= s_tracks.size());
         Track(trackId)->Delete();
         // emplace a null pointer
-        s_tracks[trackId] = std::unique_ptr<NowSoundTrackAudioProcessor>{};
+        s_tracks[trackId] = nullptr;
     }
 
-    void NowSoundTrackAudioProcessor::AddTrack(TrackId id, std::unique_ptr<NowSoundTrackAudioProcessor>&& track)
+    void NowSoundTrackAudioProcessor::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
     {
         s_tracks.emplace(id, std::move(track));
     }
@@ -53,7 +51,7 @@ namespace NowSound
         // The only way this will be correct is if all modifications to _tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id > TrackId::TrackIdUndefined);
-        NowSoundTrackAudioProcessor* value = s_tracks.at(id).get();
+        NowSoundTrackAudioProcessor* value = static_cast<NowSoundTrackAudioProcessor*>(s_tracks.at(id)->getProcessor());
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
@@ -111,6 +109,19 @@ namespace NowSound
 
         // Add the appropriate connections.
 
+    }
+
+    bool NowSoundTrackAudioProcessor::JustStoppedRecording()
+    {
+        if (_justStoppedRecording)
+        {
+            _justStoppedRecording = false;
+            return true;
+        }
+        else
+        { 
+            return false;
+        }
     }
 
     void NowSoundTrackAudioProcessor::DebugLog(const std::wstring& entry)
@@ -225,9 +236,14 @@ namespace NowSound
         AudioBuffer<float>& buffer,
         MidiBuffer& midiMessages)
     {
+        // This should always take two channels.  Only channel 0 is used on input.  Both channels are used
+        // on output (only stereo supported for now).
+        Check(buffer.getNumChannels() == 2);
+
         // Depending on the current state of this track, we either record, or we finish recording
         // and switch modes to looping, or we're straight looping.
         Duration<AudioSample> duration{ buffer.getNumSamples() };
+
         switch (_state)
         {
         case NowSoundTrackState::TrackRecording:
@@ -257,7 +273,9 @@ namespace NowSound
                 Check(completeBeats < BeatDuration());
             }
 
-            // and actually record the full amount of available data
+            // and actually record the full amount of available data.
+            // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
+            // input channel goes to which track.
             _audioStream.Append(duration, buffer.getReadPointer(0));
             // and volume track
             _volumeHistogram.AddAll(buffer.getReadPointer(0), duration.Value(), true);
@@ -284,9 +302,20 @@ namespace NowSound
 
                 // we are done recording altogether
                 _state = NowSoundTrackState::TrackLooping;
-                continueRecording = false;
 
-                _audioStream.Append(duration, data);
+                // This is the only time this variable is ever set to true.
+                // The message thread polls tracks and checks this variable; any that have it set to true will
+                // get their input connection removed (by the message thread, naturally, as only it can change
+                // graph connections), and this will be set back to false, never to change again.  (Tracks can
+                // only be in recording state when initially created.)
+                // Hence there is no need for interlocking or other synchronization on this variable even though it
+                // is being used for inter-thread communication.
+                // TODONEXT: actually remove input connections by polling! (NYI atm)
+                _justStoppedRecording = true;
+
+                // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
+                // input channel goes to which track.
+                _audioStream.Append(duration, buffer.getReadPointer(0));
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
@@ -294,139 +323,59 @@ namespace NowSound
             else
             {
                 // capture the full duration
-                _audioStream.Append(duration, data);
+                _audioStream.Append(duration, buffer.getReadPointer(0));
             }
 
             break;
         }
-        }
-#if NOPE
-        Check(sender == _audioFrameInputNode);
 
-        Check(args.RequiredSamples() >= 0);
-        uint32_t requiredSamples = (uint32_t)args.RequiredSamples();
-
-        if (requiredSamples == 0)
+        case NowSoundTrackState::TrackLooping:
         {
-            s_zeroByteOutgoingFrameCount++;
-            return;
-        }
+            int samplesRemaining = buffer.getNumSamples();
 
-        // sender.DiscardQueuedFrames();
+            // Coefficients for panning the mono data into the audio buffer.
+            // Use cosine panner for volume preservation.
+            double angularPosition = _pan * Pi / 2;
+            double leftCoefficient = std::cos(angularPosition);
+            double rightCoefficient = std::sin(angularPosition);
 
-        DateTime dateTimeNow = DateTime::clock::now();
-        TimeSpan sinceLast = dateTimeNow - _lastQuantumTime;
-        _lastQuantumTime = dateTimeNow;
+            int channelCount = Clock::Instance().ChannelCount();
+            // only stereo supported
+            // TODO: support more channels, fuller spatialization
+            Check(channelCount == 2);
 
-        if (_state != NowSoundTrackState::TrackLooping)
-        {
-            // copy nothing to anywhere
-            return;
-        }
+            int bufferIndex = 0;
+            float* outputBufferChannel0 = buffer.getWritePointer(0);
+            float* outputBufferChannel1 = buffer.getWritePointer(1);
 
-        float samplesSinceLastQuantum = ((float)sinceLast.count() * Clock::Instance().SampleRateHz() / Clock::TicksPerSecond);
-
-        _requiredSamplesHistogram.Add((float)requiredSamples);
-        _sinceLastSampleTimingHistogram.Add(samplesSinceLastQuantum);
-
-#if STATIC_AUDIO_FRAME
-        if (s_audioFrame == nullptr)
-        {
-            // The AudioFrame.Duration property is a TimeSpan, despite the fact that this seems an inherently
-            // inaccurate way to precisely express an audio sample count.  So we just have a short frame and
-            // we fill it completely and often.
-            s_audioFrame = Windows::Media::AudioFrame(
-                (uint32_t)(MagicConstants::AudioFrameDuration.Value()
-                    * sizeof(float)
-                    * Clock::Instance().ChannelCount()));
-        }
-        Windows::Media::AudioFrame audioFrame = s_audioFrame;
-#else
-        Windows::Media::AudioFrame audioFrame((uint32_t)(Clock::Instance().SampleRateHz()
-            * MagicConstants::AudioFrameLengthSeconds.Value()
-            * sizeof(float)
-            * Clock::Instance().ChannelCount()));
-#endif
-
-        {
-            // This nested scope sets the extent of the LockBuffer call below, which must close before the AddFrame call.
-            // Otherwise the AddFrame will throw E_ACCESSDENIED when it tries to take a read lock on the frame.
-            uint8_t* audioGraphInputDataInBytes{};
-            uint32_t capacityInBytes{};
-
-            // OMG KENNY KERR WINS AGAIN:
-            // https://gist.github.com/kennykerr/f1d941c2d26227abbf762481bcbd84d3
-            Windows::Media::AudioBuffer buffer(audioFrame.LockBuffer(Windows::Media::AudioBufferAccessMode::Write));
-            IMemoryBufferReference reference(buffer.CreateReference());
-            winrt::impl::com_ref<IMemoryBufferByteAccess> interop = reference.as<IMemoryBufferByteAccess>();
-            check_hresult(interop->GetBuffer(&audioGraphInputDataInBytes, &capacityInBytes));
-
-            int sampleSizeInBytes = Clock::Instance().ChannelCount() * sizeof(float);
-
-            /*
-            uint32_t requiredBytes = requiredSamples * sampleSizeInBytes;
-            uint32_t maxInputBytes = MagicConstants::MaxInputSamples * sampleSizeInBytes;
-#undef max // never never should have been a macro
-            uint32_t bytesRemaining = std::max(requiredBytes, maxInputBytes);
-            */
-            uint32_t bytesRemaining = capacityInBytes;
-            Check((bytesRemaining % sampleSizeInBytes) == 0);
-
-            int samplesRemaining = (int)bytesRemaining / sampleSizeInBytes;
-
-            // TODO: contact Microsoft about this: why is this API taking a timespan rather than an exact sample count?
-            // And how does one ensure the timespan conversion is exactly right?
-            // For now, avoid this property altogether and tune things with the size of the audio frame;
-            // note that *creating* an audio frame takes a sample count and not a timespan duration....
-            //audioFrame.Duration(TimeSpan(samplesRemaining * Clock::TicksPerSecond / Clock::Instance().SampleRateHz()));
-
-			// Coefficients for panning the mono data into the audio buffer.
-			// Use cosine panner for volume preservation.
-			double angularPosition = _pan * Pi / 2;
-			double leftCoefficient = std::cos(angularPosition);
-			double rightCoefficient = std::sin(angularPosition);
-
-			int channelCount = Clock::Instance().ChannelCount();
-			// only stereo supported
-			// TODO: support more channels, fuller spatialization
-			Check(channelCount == 2); 
-
-			while (samplesRemaining > 0)
+            while (samplesRemaining > 0)
             {
                 // get a slice up to samplesRemaining samples in length
                 Slice<AudioSample, float> slice(
                     _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, samplesRemaining)));
-				Duration<AudioSample> sliceDuration = slice.SliceDuration();
+                Duration<AudioSample> sliceDuration = slice.SliceDuration();
 
-				// longest is a mono stream.
-				// Now is when we must stereo-pan it.
-				float* audioGraphInputDataInFloats = (float*)audioGraphInputDataInBytes;
+                // Record all this data in the frequency tracker.
+                _frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
 
-				// Record all this data in the frequency tracker.
-				_frequencyTracker->Record(slice.OffsetPointer(), sliceDuration.Value());
+                // Pan each mono sample (and track its volume), if we're not muted.
+                if (!IsMuted())
+                {
+                    for (int i = 0; i < sliceDuration.Value(); i++)
+                    {
+                        float value = slice.Get(i, 0);
+                        _volumeHistogram.Add(std::abs(value));
+                        outputBufferChannel0[bufferIndex + i] = (float)(leftCoefficient * value);
+                        outputBufferChannel1[bufferIndex + i] = (float)(rightCoefficient * value);
+                    }
+                }
 
-				// Pan each mono sample (and track its volume), if we're not muted.
-				if (!IsMuted())
-				{
-					for (int i = 0; i < sliceDuration.Value(); i++)
-					{
-						float value = slice.Get(i, 0);
-						_volumeHistogram.Add(std::abs(value));
-						audioGraphInputDataInFloats[i * channelCount] = (float)(leftCoefficient * value);
-						audioGraphInputDataInFloats[i * channelCount + 1] = (float)(rightCoefficient);
-					}
-				}
-
-                audioGraphInputDataInBytes += slice.SliceDuration().Value() * channelCount * sizeof(float);
+                bufferIndex += slice.SliceDuration().Value();
+                samplesRemaining -= (int)slice.SliceDuration().Value();
                 _lastSampleTime = _lastSampleTime + slice.SliceDuration();
                 Check(_lastSampleTime.Value() >= 0);
-                samplesRemaining -= (int)slice.SliceDuration().Value();
             }
         }
-
-        sender.AddFrame(audioFrame);
-#endif
+        }
     }
-
-    int NowSoundTrackAudioProcessor::s_zeroByteOutgoingFrameCount{};
 }
