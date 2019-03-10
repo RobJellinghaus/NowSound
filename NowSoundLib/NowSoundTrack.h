@@ -39,9 +39,6 @@ namespace NowSound
         // The collection of all ttracks.
         static std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> s_tracks;
 
-		// The graph that created this.
-		const NowSoundGraph* _graph;
-
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
 

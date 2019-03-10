@@ -26,9 +26,6 @@ namespace NowSound
 	class NowSoundInputAudioProcessor : public SpatialAudioProcessor
 	{
 	private:
-		// The NowSoundAudioGraph that created this input.
-		NowSoundGraph* _nowSoundGraph;
-
 		// The audio input ID of this input.
 		const AudioInputId _audioInputId;
 

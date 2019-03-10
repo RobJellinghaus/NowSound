@@ -45,8 +45,8 @@ namespace NowSound
 
 	void NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
-		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = _nowSoundGraph->JuceGraph().addNode(
-            new NowSoundTrackAudioProcessor(_nowSoundGraph, id, _incomingAudioStream, Pan()));
+		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Graph()->JuceGraph().addNode(
+            new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan()));
 
 		// Add the new track to the collection of tracks in NowSoundTrackAPI.
 		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);

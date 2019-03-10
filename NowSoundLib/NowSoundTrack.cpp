@@ -61,7 +61,6 @@ namespace NowSound
         const BufferedSliceStream<AudioSample, float>& sourceStream,
 		float initialPan)
 		: SpatialAudioProcessor(graph, initialPan),
-        _graph{ graph },
 		_trackId{ trackId },
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
