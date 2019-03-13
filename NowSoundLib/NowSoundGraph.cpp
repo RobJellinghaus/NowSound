@@ -228,7 +228,11 @@ namespace NowSound
             for (int i = 0; i < info.ChannelCount; i++)
             {
                 CreateInputDeviceForChannel(i);
-                _audioProcessorGraph.addConnection({ { _audioInputNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } });
+
+                
+
+                // DIRECT ROUTING (commented out now because we route the inputs separately, theoretically at least):
+                // _audioProcessorGraph.addConnection({ { _audioInputNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } });
             }
         }
 
@@ -318,8 +322,7 @@ namespace NowSound
 			    _audioAllocator.get(),
 			    channel));
 
-        // TODONEXT: wire it up!!!
-        // TODONEXT: setPlayConfigDetails or whatever it is called!!!
+        AddNodeToJuceGraph(newPtr, channel);
 
 		_audioInputs.emplace_back(newPtr);
 	}
@@ -374,7 +377,10 @@ namespace NowSound
         TrackId id = (TrackId)((int)_trackId + 1);
         _trackId = id;
 
-		Input(audioInputId)->CreateRecordingTrack(id);
+        juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Input(audioInputId)->CreateRecordingTrack(id);
+
+        // convert from audio input numbering (1-based) to channel id (0-based)
+        AddNodeToJuceGraph(newTrackPtr, audioInputId - 1);
 
 		return id;
     }
@@ -425,5 +431,16 @@ namespace NowSound
     {
 		// drop the singleton
 		s_instance = nullptr;
+    }
+
+    void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
+    {
+        // Input connection (one)
+        JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } });
+
+        // Output connections
+        // TODO: enumerate based on actual graph count... for the moment, stereo only
+        JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputNodePtr->nodeID, 0 } });
+        JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputNodePtr->nodeID, 1 } });
     }
 }

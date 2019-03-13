@@ -43,7 +43,7 @@ namespace NowSound
 		return ret;
 	}
 
-	void NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
+    juce::AudioProcessorGraph::Node::Ptr NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
 		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Graph()->JuceGraph().addNode(
             new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan()));
@@ -51,7 +51,7 @@ namespace NowSound
 		// Add the new track to the collection of tracks in NowSoundTrackAPI.
 		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);
 
-        // TODONEXT: add the actual connections to the new track here!
+        return newTrackPtr;
 	}
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)

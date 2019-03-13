@@ -172,11 +172,7 @@ namespace NowSound
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* AudioAllocator() const;
 
-		// Create an input device (or a pair of them, if monoPair is true).
-		// void CreateInputDeviceAsync(int deviceIndex);
-
 		// Create an input device for the specified channel.
-		// JUCETODO: support actual multiple input devices.
 		void CreateInputDeviceForChannel(int channel);
 
 		// Access the vector of frequency bins, when generating frequency histograms.
@@ -190,5 +186,12 @@ namespace NowSound
 
         // Get a reference on one of the NowSoundInputs.
         NowSoundInputAudioProcessor* Input(AudioInputId audioInputId);
+
+        // Add the connections of a SpatialAudioProcessor node.
+        // This entails connecting the given inputChannel to newSpatialNode's channel 0,
+        // and connecting all newSpatialNode's output channels to the graph's output channels.
+        // (Note that this does not modify this NowSoundGraph's collection of Inputs or of Tracks; 
+        // this just makes the JUCE graph connections.)
+        void AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newSpatialNode, int inputChannel);
     };
 }

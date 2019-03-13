@@ -72,7 +72,6 @@ namespace NowSound
             /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
-        // _audioFrameInputNode{ NowSoundGraph::Instance()->GetAudioGraph().CreateFrameInputNode() },
         _lastSampleTime{ Clock::Instance().Now() },
         _debugLog{}
 	{
@@ -95,9 +94,6 @@ namespace NowSound
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
 		*/
-
-        // Add the appropriate connections.
-
     }
 
     bool NowSoundTrackAudioProcessor::JustStoppedRecording()
