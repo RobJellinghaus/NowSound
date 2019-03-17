@@ -56,6 +56,15 @@ namespace NowSound
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
+        // HACK!!!  If this is the zeroth input, then update the audio graph time.
+        // We don't really have a great graph-level place to receive notifications from the JUCE graph,
+        // so this is really a reasonable spot if you squint hard enough.  (At least it is always
+        // connected and always receiving data.)
+        if (_audioInputId == AudioInput1)
+        {
+            Clock::Instance().AdvanceFromAudioGraph(audioBuffer.getNumSamples());
+        }
+
         // TODO: actually record into the bounded input stream!  if we decide that lookback is actually needed again.
 
         // now process the input audio spatially so we hear it panned in the output

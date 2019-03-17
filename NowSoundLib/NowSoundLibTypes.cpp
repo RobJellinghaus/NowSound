@@ -53,6 +53,7 @@ namespace NowSound
 	}
 
     NowSoundTrackInfo CreateNowSoundTrackInfo(
+        bool isTrackLooping,
         int64_t startTimeInSamples,
         float startTimeInBeats,
         int64_t durationInSamples,
@@ -71,6 +72,7 @@ namespace NowSound
         float averageTimeSinceLastQuantum)
     {
         NowSoundTrackInfo info;
+        info.IsTrackLooping = isTrackLooping ? 1 : 0;
         info.StartTimeInSamples = startTimeInSamples;
         info.StartTimeInBeats = startTimeInBeats;
         info.DurationInSamples = durationInSamples;

@@ -96,7 +96,7 @@ namespace NowSound
         void ChangeState(NowSoundGraphState newState);
 
         // Set minimum buffer size in the device manager.
-        void setBufferSizeToMinimum();
+        void setBufferSize();
 
     private: // instance variables
 

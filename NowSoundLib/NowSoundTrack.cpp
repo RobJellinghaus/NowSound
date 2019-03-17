@@ -160,6 +160,7 @@ namespace NowSound
         Time<AudioSample> startTime = this->_audioStream.InitialTime();
 		Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
         return CreateNowSoundTrackInfo(
+            _state == NowSoundTrackState::TrackLooping,
             startTime.Value(),
             Clock::Instance().TimeToBeats(startTime).Value(),
             this->_audioStream.DiscreteDuration().Value(),
@@ -292,37 +293,22 @@ namespace NowSound
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
-
-                // zero up to the start of the loop
-                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
-                {
-                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * captureDuration.Value());
-                }
-
-                // Now reset variables to fall through into the Looping case.
-                // bufferDuration should be the *remaining* duration, e.g. bufferDuration - captureDuration
-                bufferDuration = bufferDuration - captureDuration;
-                // completedDuration should be equal to capturedDuration because we are already done with
-                // that portion
-                completedDuration = captureDuration;
-
-                // AND DELIBERATELY FALL THROUGH WITHOUT BREAKING.
-                // The next (Looping) case of the switch will handle copying already-recorded data to the outputs.
             }
             else
             {
                 // capture the full duration
                 _audioStream.Append(bufferDuration, audioBuffer.getReadPointer(0));
-
-                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
-                {
-                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
-                }
-
-                // and break
-                break;
             }
 
+            // zero the output audio altogether.
+            // we will start looping on the next block.
+            for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+            {
+                zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+            }
+
+            // and break
+            break;
         }
 
         case NowSoundTrackState::TrackLooping:
@@ -342,7 +328,9 @@ namespace NowSound
                 _lastSampleTime = _lastSampleTime + sliceDuration;
             }
 
-            // now process the whole block to the output
+            // Now process the whole block to the output.
+            // Note that this is the right thing to do even if we are looping over only a partial block;
+            // the portion of the block when we were still recording will be zeroed out properly.
             SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
 
             break;

@@ -76,13 +76,17 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this._tracksPanel = new System.Windows.Forms.FlowLayoutPanel();
             this._newTrackButton = new System.Windows.Forms.Button();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.infoLabel = new System.Windows.Forms.Label();
             this._tracksPanel.SuspendLayout();
             this.SuspendLayout();
             // 
             // _tracksPanel
             // 
+            this._tracksPanel.Controls.Add(this.infoLabel);
             this._tracksPanel.Controls.Add(this._newTrackButton);
             this._tracksPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this._tracksPanel.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
@@ -93,13 +97,27 @@ namespace NowSoundWinFormsApp
             // 
             // _newTrackButton
             // 
-            this._newTrackButton.Location = new System.Drawing.Point(3, 3);
+            this._newTrackButton.Location = new System.Drawing.Point(3, 16);
             this._newTrackButton.Name = "_newTrackButton";
             this._newTrackButton.Size = new System.Drawing.Size(135, 23);
             this._newTrackButton.TabIndex = 1;
             this._newTrackButton.Text = "Record New Track";
             this._newTrackButton.UseVisualStyleBackColor = true;
             this._newTrackButton.Click += new System.EventHandler(this._newTrackButton_Click);
+            // 
+            // timer1
+            // 
+            this.timer1.Interval = 20;
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+            // 
+            // infoLabel
+            // 
+            this.infoLabel.AutoSize = true;
+            this.infoLabel.Location = new System.Drawing.Point(3, 0);
+            this.infoLabel.Name = "infoLabel";
+            this.infoLabel.Size = new System.Drawing.Size(35, 13);
+            this.infoLabel.TabIndex = 2;
+            this.infoLabel.Text = "label1";
             // 
             // Form1
             // 
@@ -110,6 +128,7 @@ namespace NowSoundWinFormsApp
             this.Name = "Form1";
             this.Text = "Form1";
             this._tracksPanel.ResumeLayout(false);
+            this._tracksPanel.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -118,6 +137,8 @@ namespace NowSoundWinFormsApp
 
         private System.Windows.Forms.FlowLayoutPanel _tracksPanel;
         private System.Windows.Forms.Button _newTrackButton;
+        private System.Windows.Forms.Timer timer1;
+        private System.Windows.Forms.Label infoLabel;
     }
 }
 

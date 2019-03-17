@@ -83,6 +83,12 @@ namespace NowSoundWinFormsApp
 
             _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}";
 
+            if (trackInfo.IsTrackLooping)
+            {
+                _controlButton.Text = "Looping";
+                _controlButton.Enabled = false;
+            }
+
             /*
             << L" | Volume: " << trackInfo.Volume
             << L" | Last sample time: " << trackInfo.LastSampleTime

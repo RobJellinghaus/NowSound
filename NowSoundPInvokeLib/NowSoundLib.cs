@@ -91,6 +91,7 @@ namespace NowSoundLib
     // TODO: maybe someday: look at custom marshalers to avoid the explicit (no-op) copy.
     internal struct NowSoundTrackInfo
     {
+        internal Int32 IsTrackLooping;
         internal Int64 StartTimeInSamples;
         internal float StartTimeInBeats;
         internal Int64 DurationInSamples;
@@ -112,6 +113,8 @@ namespace NowSoundLib
     // Information about a track's time in NowSound terms.
     public struct TrackInfo
     {
+        // Is the track currently looping? If not, it's still recording.
+        public readonly bool IsTrackLooping;
         // The start time of the track in audio samples from the beginning of the session.
         public readonly Time<AudioSample> StartTime;
         // The start time of the track in (fractional) beats. (TODO?: add ContinuousTime<TTime>)
@@ -147,6 +150,7 @@ namespace NowSoundLib
 
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
+            IsTrackLooping = pinvokeTrackInfo.IsTrackLooping > 0;
             StartTime = pinvokeTrackInfo.StartTimeInSamples;
             StartTimeInBeats = pinvokeTrackInfo.StartTimeInBeats;
             Duration = pinvokeTrackInfo.DurationInSamples;

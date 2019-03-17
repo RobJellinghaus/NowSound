@@ -93,9 +93,9 @@ namespace NowSound
         return _audioProcessorGraph;
     }
 
-    void NowSoundGraph::setBufferSizeToMinimum()
+    void NowSoundGraph::setBufferSize()
     {
-        // Set buffer size to minimum available on current device
+        // Set buffer size to appropriate value available on current device
         auto* device = _audioDeviceManager.getCurrentAudioDevice();
 
         auto bufferRate = device->getCurrentSampleRate();
@@ -105,14 +105,16 @@ namespace NowSound
         if (setMinBufferSize)
         {
             auto bufferSizes = device->getAvailableBufferSizes();
-            int minBufferSize = bufferSizes[0];
+            // OK, not smallest... next smallest... let's see if it helps static problems with >3 loops
+            // ... it seems to! On Focusrite Scarlett 2i2, sizes are [16, 32, 48, 64, ...]
+            int targetBufferSize = bufferSizes[3];
 
             AudioDeviceManager::AudioDeviceSetup setup;
             _audioDeviceManager.getAudioDeviceSetup(setup);
 
-            if (setup.bufferSize > minBufferSize)
+            if (setup.bufferSize != targetBufferSize)
             {
-                setup.bufferSize = minBufferSize;
+                setup.bufferSize = targetBufferSize;
                 String result = _audioDeviceManager.setAudioDeviceSetup(setup, false);
                 if (result.length() > 0)
                 {
@@ -120,10 +122,10 @@ namespace NowSound
                 }
             }
 
-            if (minBufferSize != device->getCurrentBufferSizeSamples())
+            if (targetBufferSize != device->getCurrentBufferSizeSamples())
             {
                 // die horribly
-                throw std::exception("Can't set buffer size to minimum");
+                throw std::exception("Can't set buffer size to target");
             }
         }
     }
@@ -177,7 +179,7 @@ namespace NowSound
             // we expect ASIO
             Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"ASIO");
 
-            setBufferSizeToMinimum();
+            setBufferSize();
 
             info = Info();
 

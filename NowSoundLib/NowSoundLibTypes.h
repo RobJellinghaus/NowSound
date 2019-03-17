@@ -67,6 +67,9 @@ namespace NowSound
         // Information about a track's time in NowSound terms.
         typedef struct NowSoundTrackInfo
         {
+            // Is this track looping? If not, it is still recording. We use a wasteful int32_t to avoid
+            // packing issues.
+            int32_t IsTrackLooping;
             // The start time of the track, in samples from the beginning of this session.
             int64_t StartTimeInSamples;
             // The start time of the track, in beats.
@@ -191,6 +194,7 @@ namespace NowSound
 			float pan);
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
+            bool isTrackLooping,
             int64_t startTimeInSamples,
             float startTimeInBeats,
             int64_t durationInSamples,
