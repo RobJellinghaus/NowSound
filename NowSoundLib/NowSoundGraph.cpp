@@ -229,8 +229,6 @@ namespace NowSound
             {
                 CreateInputDeviceForChannel(i);
 
-                
-
                 // DIRECT ROUTING (commented out now because we route the inputs separately, theoretically at least):
                 // _audioProcessorGraph.addConnection({ { _audioInputNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } });
             }
@@ -435,12 +433,16 @@ namespace NowSound
 
     void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
     {
+        // set play config details BEFORE making connections to the graph
+        // otherwise addConnection doesn't think the new node has any connections
+        newNode->getProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+
         // Input connection (one)
-        JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } });
+        Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } }));
 
         // Output connections
         // TODO: enumerate based on actual graph count... for the moment, stereo only
-        JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputNodePtr->nodeID, 0 } });
-        JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputNodePtr->nodeID, 1 } });
+        Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputNodePtr->nodeID, 0 } }));
+        Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputNodePtr->nodeID, 1 } }));
     }
 }

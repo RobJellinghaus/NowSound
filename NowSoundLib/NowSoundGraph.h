@@ -192,6 +192,7 @@ namespace NowSound
         // and connecting all newSpatialNode's output channels to the graph's output channels.
         // (Note that this does not modify this NowSoundGraph's collection of Inputs or of Tracks; 
         // this just makes the JUCE graph connections.)
+        // For now this always sets up one input connection and two output connections.
         void AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newSpatialNode, int inputChannel);
     };
 }
