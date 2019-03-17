@@ -10,6 +10,7 @@
 using namespace NowSound;
 
 SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, float initialPan) :
+    _graph{ graph },
     _isMuted{ false },
     _volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() },
     _pan{ initialPan },

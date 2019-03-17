@@ -213,14 +213,16 @@ namespace NowSound
 
         // Depending on the current state of this track, we either record, or we finish recording
         // and switch modes to looping, or we're straight looping.
-        Duration<AudioSample> duration{ audioBuffer.getNumSamples() };
+        Duration<AudioSample> bufferDuration{ audioBuffer.getNumSamples() };
+        // The duration that's been copied to the input channel so far (used when looping).
+        Duration<AudioSample> completedDuration{ 0 };
 
         switch (_state)
         {
         case NowSoundTrackState::TrackRecording:
         {
             // How many complete beats after we record this data?
-            Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + duration).Value());
+            Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + bufferDuration).Value());
             Duration<Beat> completeBeats = (Duration<Beat>)((int)Clock::Instance().TimeToBeats(durationAsTime).Value());
 
             // If it's more than our _beatDuration, bump our _beatDuration
@@ -247,7 +249,13 @@ namespace NowSound
             // and actually record the full amount of available data.
             // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
             // input channel goes to which track.
-            _audioStream.Append(duration, audioBuffer.getReadPointer(0));
+            _audioStream.Append(bufferDuration, audioBuffer.getReadPointer(0));
+
+            // and step on all output channels
+            for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+            {
+                zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+            }
             break;
         }
 
@@ -257,12 +265,13 @@ namespace NowSound
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
 
             // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-            Check(_audioStream.DiscreteDuration() <= roundedUpDuration);
+            Duration<AudioSample> originalDiscreteDuration = _audioStream.DiscreteDuration();
+            Check(originalDiscreteDuration <= roundedUpDuration);
 
-            if (_audioStream.DiscreteDuration() + duration >= roundedUpDuration)
+            if (originalDiscreteDuration + bufferDuration >= roundedUpDuration)
             {
                 // reduce duration so we only capture the exact right number of samples
-                duration = roundedUpDuration - _audioStream.DiscreteDuration();
+                Duration<AudioSample> captureDuration = roundedUpDuration - originalDiscreteDuration;
 
                 // we are done recording altogether
                 _state = NowSoundTrackState::TrackLooping;
@@ -279,23 +288,63 @@ namespace NowSound
 
                 // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
                 // input channel goes to which track.
-                _audioStream.Append(duration, audioBuffer.getReadPointer(0));
+                _audioStream.Append(captureDuration, audioBuffer.getReadPointer(0));
 
                 // now that we have done our final append, shut the stream at the current duration
                 _audioStream.Shut(ExactDuration());
+
+                // zero up to the start of the loop
+                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+                {
+                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * captureDuration.Value());
+                }
+
+                // Now reset variables to fall through into the Looping case.
+                // bufferDuration should be the *remaining* duration, e.g. bufferDuration - captureDuration
+                bufferDuration = bufferDuration - captureDuration;
+                // completedDuration should be equal to capturedDuration because we are already done with
+                // that portion
+                completedDuration = captureDuration;
+
+                // AND DELIBERATELY FALL THROUGH WITHOUT BREAKING.
+                // The next (Looping) case of the switch will handle copying already-recorded data to the outputs.
             }
             else
             {
                 // capture the full duration
-                _audioStream.Append(duration, audioBuffer.getReadPointer(0));
+                _audioStream.Append(bufferDuration, audioBuffer.getReadPointer(0));
+
+                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+                {
+                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+                }
+
+                // and break
+                break;
             }
 
-            break;
         }
 
         case NowSoundTrackState::TrackLooping:
         {
+            while (bufferDuration > 0)
+            {
+                // copy the correct track audio into the audio buffer's channel 0
+                Slice<AudioSample, float> slice(
+                    _audioStream.GetSliceContaining(Interval<AudioSample>(_lastSampleTime, bufferDuration)));
+                // Slice duration may be less than remaining duration if the internal stream buffer was short
+                Duration<AudioSample> sliceDuration = slice.SliceDuration();
+
+                slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
+
+                bufferDuration = bufferDuration - sliceDuration;
+                completedDuration = completedDuration + sliceDuration;
+                _lastSampleTime = _lastSampleTime + sliceDuration;
+            }
+
+            // now process the whole block to the output
             SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
+
             break;
         }
         }
