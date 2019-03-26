@@ -47,7 +47,7 @@ namespace NowSoundLib
     // This marshalable struct maps to the C++ P/Invokable type.
     internal struct NowSoundTimeInfo
     {
-        public Int32 AudioInputCount;
+        //public Int32 AudioInputCount;
         public Int64 TimeInSamples;
         public float ExactBeat;
         public float BeatsPerMinute;
@@ -66,7 +66,7 @@ namespace NowSoundLib
     public struct TimeInfo
     {
         // The number of AudioInputs defined in the graph.
-        public readonly int AudioInputCount;
+        //public readonly int AudioInputCount;
         // The number of samples elapsed since the audio graph started.
         public readonly Time<AudioSample> TimeInSamples;
         // The exact current beat (including fractional part; truncate to get integral beat count).
@@ -78,7 +78,7 @@ namespace NowSoundLib
 
         internal TimeInfo(NowSoundTimeInfo pinvokeTimeInfo)
         {
-            AudioInputCount = pinvokeTimeInfo.AudioInputCount;
+            //AudioInputCount = pinvokeTimeInfo.AudioInputCount;
             TimeInSamples = pinvokeTimeInfo.TimeInSamples;
             ExactBeat = pinvokeTimeInfo.ExactBeat;
             BeatsPerMinute = pinvokeTimeInfo.BeatsPerMinute;
