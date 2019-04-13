@@ -52,6 +52,18 @@ namespace NowSound
 		return info;
 	}
 
+    NowSoundSignalInfo CreateNowSoundSignalInfo(
+        float min,
+        float max,
+        float avg)
+    {
+        NowSoundSignalInfo info;
+        info.Min = min;
+        info.Max = max;
+        info.Avg = avg;
+        return info;
+    }
+
     NowSoundTrackInfo CreateNowSoundTrackInfo(
         bool isTrackLooping,
         int64_t startTimeInSamples,
@@ -63,13 +75,7 @@ namespace NowSound
 		float localClockBeat,
 		int64_t lastSampleTime,
 		float recentVolume,
-		float pan,
-		float minimumRequiredSamples,
-        float maximumRequiredSamples,
-        float averageRequiredSamples,
-        float minimumTimeSinceLastQuantum,
-        float maximumTimeSinceLastQuantum,
-        float averageTimeSinceLastQuantum)
+		float pan)
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
@@ -83,12 +89,6 @@ namespace NowSound
 		info.LastSampleTime = lastSampleTime;
 		info.Volume = recentVolume;
 		info.Pan = pan;
-		info.MinimumRequiredSamples = minimumRequiredSamples;
-        info.MaximumRequiredSamples = maximumRequiredSamples;
-        info.AverageRequiredSamples = averageRequiredSamples;
-        info.MinimumTimeSinceLastQuantum = minimumTimeSinceLastQuantum;
-        info.MaximumTimeSinceLastQuantum = maximumTimeSinceLastQuantum;
-        info.AverageTimeSinceLastQuantum = averageTimeSinceLastQuantum;
         return info;
     }
 }

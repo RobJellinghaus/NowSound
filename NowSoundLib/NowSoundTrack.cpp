@@ -170,16 +170,7 @@ namespace NowSound
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
 			VolumeHistogram().Average(),
-			Pan(),
-            /*
-            _requiredSamplesHistogram.Min(),
-            _requiredSamplesHistogram.Max(),
-            _requiredSamplesHistogram.Average(),
-            _sinceLastSampleTimingHistogram.Min(),
-            _sinceLastSampleTimingHistogram.Max(),
-            _sinceLastSampleTimingHistogram.Average()
-            */
-            0, 0, 0, 0, 0, 0);
+			Pan());
     }
 
 	void NowSoundTrackAudioProcessor::FinishRecording()

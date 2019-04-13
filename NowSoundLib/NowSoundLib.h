@@ -52,6 +52,9 @@ namespace NowSound
 		// Graph must be at least Created.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
+        // Get the current info for the graph's final mixed output.
+        __declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
+
 		// Get the ID of the given device.
 		// Graph must be at least Initialized.
 		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);

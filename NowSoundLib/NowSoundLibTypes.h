@@ -64,6 +64,15 @@ namespace NowSound
 			float Pan;
 		} NowSoundInputInfo;
 
+        // Information about the min/max/average value of a signal (in raw float terms --
+        // no RMS or decibel interpolation is performed).
+        typedef struct NowSoundSignalInfo
+        {
+            float Min;
+            float Max;
+            float Avg;
+        } NowSoundSignalInfo;
+
         // Information about a track's time in NowSound terms.
         typedef struct NowSoundTrackInfo
         {
@@ -90,18 +99,6 @@ namespace NowSound
 			float Volume;
 			// The panning value of this track.
 			float Pan;
-			// The minimum count of required samples over the last N seconds.
-            float MinimumRequiredSamples;
-            // The maximum count of required samples over the last N seconds.
-            float MaximumRequiredSamples;
-            // The average count of required samples over the last N seconds.
-            float AverageRequiredSamples;
-            // The minimum time since last quantum over the last N seconds.
-            float MinimumTimeSinceLastQuantum;
-            // The maximum time since last quantum over the last N seconds.
-            float MaximumTimeSinceLastQuantum;
-            // The average time since last quantum over the last N seconds.
-            float AverageTimeSinceLastQuantum;
         } NowSoundTrackTimeInfo;
 
         // The states of a NowSound graph.
@@ -193,6 +190,11 @@ namespace NowSound
 			float volume,
 			float pan);
 
+        NowSoundSignalInfo CreateNowSoundSignalInfo(
+            float min,
+            float max,
+            float avg);
+
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             bool isTrackLooping,
             int64_t startTimeInSamples,
@@ -204,12 +206,6 @@ namespace NowSound
 			float localClockBeat,
 			int64_t lastSampleTime,
 			float recentVolume,
-			float pan,
-            float minimumRequiredSamples,
-			float maximumRequiredSamples,
-			float averageRequiredSamples,
-            float minimumTimeSinceLastQuantum,
-			float maximumTimeSinceLastQuantum,
-			float averageTimeSinceLastQuantum);
+			float pan);
     }
 }

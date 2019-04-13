@@ -24,6 +24,11 @@ namespace NowSound
     public:
         SpatialAudioProcessor(NowSoundGraph* graph, float initialPan);
 
+        virtual const String getName() const override { return L"SpatialAudioProcessor"; }
+
+        // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
+        virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
+
         // True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
@@ -34,8 +39,5 @@ namespace NowSound
         // Get and set the pan value for this track.
         float Pan() const;
         void Pan(float pan);
-        
-        // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
-        virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
     };
 }

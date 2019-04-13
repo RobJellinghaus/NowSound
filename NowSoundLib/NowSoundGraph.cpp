@@ -208,6 +208,7 @@ namespace NowSound
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
             juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+            MeasurementAudioProcessor* outputMixAudioProcessor = new MeasurementAudioProcessor(this);
 
             // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
             _audioProcessorGraph.setPlayConfigDetails(
@@ -267,6 +268,13 @@ namespace NowSound
 
 		return graphInfo;
 	}
+
+    NowSoundSignalInfo NowSoundGraph::OutputSignalInfo()
+    {
+        Check(State() == NowSoundGraphState::GraphRunning);
+        std::lock_guard<std::mutex>{ _outputSignalMutex };
+        return _outputSignalInfo;
+    }
 
 #ifdef INPUT_DEVICE_SELECTION
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
@@ -444,7 +452,7 @@ namespace NowSound
 
         // Output connections
         // TODO: enumerate based on actual graph count... for the moment, stereo only
-        Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputNodePtr->nodeID, 0 } }));
-        Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputNodePtr->nodeID, 1 } }));
+        Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
+        Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
     }
 }

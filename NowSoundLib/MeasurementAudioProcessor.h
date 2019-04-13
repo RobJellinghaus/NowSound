@@ -28,14 +28,16 @@ namespace NowSound
     public:
         MeasurementAudioProcessor(NowSoundGraph* graph);
 
-        // Get the volume histogram for reading.
-        const Histogram& VolumeHistogram() const;
+        virtual const String getName() const override { return L"MeasurementAudioProcessor"; }
 
         // Process the given buffer; use the number of output channels as the channel count.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // The graph this processor is part of.
         NowSoundGraph* Graph() const { return _graph; }
+
+        // Get the volume histogram for reading.
+        const Histogram& VolumeHistogram() const;
 
         // Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
         void GetFrequencies(void* floatBuffer, int floatBufferCapacity);

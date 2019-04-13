@@ -45,6 +45,10 @@ namespace NowSound
 		// Graph must be at least Initialized.
 		NowSoundGraphInfo Info();
 
+        // Information about the final mixed output signal.
+        // Graph must be at least Initialized.
+        NowSoundSignalInfo OutputSignalInfo();
+
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
 		// JUCETODO: void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
 
@@ -116,8 +120,19 @@ namespace NowSound
         // Ptr to the input node.
         juce::AudioProcessorGraph::Node::Ptr _audioInputNodePtr;
 
-        // Ptr to the output node.
+        // Ptr to the final mix node.
+        juce::AudioProcessorGraph::Node::Ptr _audioOutputMixNodePtr;
+
+        // Ptr to the actual output node.
         juce::AudioProcessorGraph::Node::Ptr _audioOutputNodePtr;
+
+        // Information about the output signal.
+        // Atomically updated using the associated mutex.
+        NowSoundSignalInfo _outputSignalInfo;
+
+        // Mutex guarding _outputSignalInfo, which may be polled from the UI thread while being
+        // updated on the audio thread.
+        std::mutex _outputSignalMutex;
 
         // Is this graph changing state? (Prevent re-entrant state changing methods.)
         bool _changingState;

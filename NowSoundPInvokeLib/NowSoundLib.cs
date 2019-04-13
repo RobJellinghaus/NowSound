@@ -62,6 +62,15 @@ namespace NowSoundLib
         public float Pan;
     }
 
+    // Information about a signal, in terms of the raw float signal values (no RMS or
+    // decibel conversion is performed).
+    public struct NowSoundSignalInfo
+    {
+        public float Min;
+        public float Max;
+        public float Avg;
+    }
+
     // Information about the current graph time in NowSound terms.
     public struct TimeInfo
     {
