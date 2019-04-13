@@ -205,7 +205,6 @@ namespace NowSound
 			int64_t localClockTime,
 			float localClockBeat,
 			int64_t lastSampleTime,
-			float recentVolume,
 			float pan);
     }
 }

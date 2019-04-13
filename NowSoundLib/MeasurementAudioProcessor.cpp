@@ -3,6 +3,9 @@
 
 #include "stdafx.h"
 
+using namespace concurrency; 
+using namespace std;
+
 #include "Clock.h"
 #include "MagicConstants.h"
 #include "MeasurementAudioProcessor.h"
@@ -12,14 +15,22 @@ using namespace NowSound;
 MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph)
     : BaseAudioProcessor(),
     _graph{ graph },
+    _mutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
-    _volumeHistogram{ (int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value() },
+    _volumeHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
     _frequencyTracker{ graph->FftSize() < 0
     ? ((NowSoundFrequencyTracker*)nullptr)
     : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) }
 {}
 
-const Histogram& MeasurementAudioProcessor::VolumeHistogram() const { return _volumeHistogram; }
+NowSoundSignalInfo MeasurementAudioProcessor::SignalInfo()
+{
+    std::lock_guard<std::mutex> guard(_mutex);
+    float min = _volumeHistogram->Min();
+    float max = _volumeHistogram->Max();
+    float avg = _volumeHistogram->Average();
+    return CreateNowSoundSignalInfo(min, max, avg);
+}
 
 void MeasurementAudioProcessor::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
 {
@@ -28,6 +39,7 @@ void MeasurementAudioProcessor::GetFrequencies(void* floatBuffer, int floatBuffe
         return;
     }
 
+    std::lock_guard<std::mutex> guard(_mutex);
     _frequencyTracker->GetLatestHistogram((float*)floatBuffer, floatBufferCapacity);
 }
 
@@ -44,10 +56,12 @@ void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, Mi
     // const float* outputBufferChannel1 = audioBuffer.getReadPointer(1);
 
     // Pan each mono sample (and track its volume), if we're not muted.
+    std::lock_guard<std::mutex> guard(_mutex);
+
     for (int i = 0; i < numSamples; i++)
     {
         float value = outputBufferChannel0[i];
-        _volumeHistogram.Add(std::abs(value));
+        _volumeHistogram->Add(std::abs(value));
     }
 
     // and provide it to frequency histogram as well

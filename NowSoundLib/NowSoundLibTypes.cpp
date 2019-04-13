@@ -74,7 +74,6 @@ namespace NowSound
 		int64_t localClockTime,
 		float localClockBeat,
 		int64_t lastSampleTime,
-		float recentVolume,
 		float pan)
     {
         NowSoundTrackInfo info;
@@ -87,7 +86,6 @@ namespace NowSound
 		info.LocalClockTime = localClockTime;
 		info.LocalClockBeat = localClockBeat;
 		info.LastSampleTime = lastSampleTime;
-		info.Volume = recentVolume;
 		info.Pan = pan;
         return info;
     }

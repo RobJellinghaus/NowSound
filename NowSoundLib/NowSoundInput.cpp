@@ -35,7 +35,7 @@ namespace NowSound
 
 	NowSoundInputInfo NowSoundInputAudioProcessor::Info()
 	{
-		float volume = VolumeHistogram().Average();
+		float volume = SignalInfo().Avg;
 
 		NowSoundInputInfo ret;
 		ret.Volume = volume;

@@ -18,8 +18,11 @@ namespace NowSound
         // NowSoundGraph we're part of
         NowSoundGraph* _graph;
 
+        // Mutex to use when returning or updating signal info; to prevent racing between data access and update.
+        std::mutex _mutex;
+
         // histogram of volume
-        Histogram _volumeHistogram;
+        std::unique_ptr<Histogram> _volumeHistogram;
 
         // The frequency tracker for the audio traveling through this processor.
         // TODOFX: make this actually track the *post-effects* audio... probably via its own tracker at that stage?
@@ -31,15 +34,18 @@ namespace NowSound
         virtual const String getName() const override { return L"MeasurementAudioProcessor"; }
 
         // Process the given buffer; use the number of output channels as the channel count.
+        // This locks the info mutex.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // The graph this processor is part of.
         NowSoundGraph* Graph() const { return _graph; }
 
-        // Get the volume histogram for reading.
-        const Histogram& VolumeHistogram() const;
+        // Copy out the volume signal info for reading.
+        // This locks the info mutex.
+        NowSoundSignalInfo SignalInfo();
 
         // Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
+        // This locks the info mutex.
         void GetFrequencies(void* floatBuffer, int floatBufferCapacity);
     };
 }

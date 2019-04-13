@@ -169,7 +169,6 @@ namespace NowSound
 			localClockTime.Value(),
 			TrackBeats(localClockTime, this->_beatDuration).Value(),
 			(lastSampleTime - startTime).Value(),
-			VolumeHistogram().Average(),
 			Pan());
     }
 

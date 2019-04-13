@@ -109,14 +109,7 @@ namespace NowSoundLib
         internal Int64 LocalClockTime;
         internal float LocalClockBeat;
         internal Int64 LastSampleTime;
-        internal float Volume;
         internal float Pan;
-        internal float MinimumRequiredSamples;
-        internal float MaximumRequiredSamples;
-        internal float AverageRequiredSamples;
-        internal float MinimumTimeSinceLastQuantum;
-        internal float MaximumTimeSinceLastQuantum;
-        internal float AverageTimeSinceLastQuantum;
     };
 
     // Information about a track's time in NowSound terms.
@@ -140,22 +133,8 @@ namespace NowSoundLib
         public readonly ContinuousDuration<Beat> LocalClockBeat;
         // The time at which the track last delivered samples.
         public readonly Time<AudioSample> LastSampleTime;
-        // The current volume (averaged over the last N samples, N not yet configurable).
-        public readonly float Volume;
         // The current panning (0 = left, 1 = right).
         public readonly float Pan;
-        // The maximum required sample count over the last N seconds.
-        public readonly float MinimumRequiredSamples;
-        // The minimum required sample count over the last N seconds.
-        public readonly float MaximumRequiredSamples;
-        // The average required sample count over the last N seconds.
-        public readonly float AverageRequiredSamples;
-        // The minimum time since last quantum over the last N seconds.
-        public readonly ContinuousDuration<Second> MinimumTimeSinceLastQuantum;
-        // The maximum time since last quantum over the last N seconds.
-        public readonly ContinuousDuration<Second> MaximumTimeSinceLastQuantum;
-        // The average time since last quantum over the last N seconds.
-        public readonly ContinuousDuration<Second> AverageTimeSinceLastQuantum;
 
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
@@ -168,14 +147,7 @@ namespace NowSoundLib
             LocalClockTime = pinvokeTrackInfo.LocalClockTime;
             LocalClockBeat = pinvokeTrackInfo.LocalClockBeat;
             LastSampleTime = pinvokeTrackInfo.LastSampleTime;
-            Volume = pinvokeTrackInfo.Volume;
             Pan = pinvokeTrackInfo.Pan;
-            MinimumRequiredSamples = pinvokeTrackInfo.MinimumRequiredSamples;
-            MaximumRequiredSamples = pinvokeTrackInfo.MaximumRequiredSamples;
-            AverageRequiredSamples = pinvokeTrackInfo.AverageRequiredSamples;
-            MinimumTimeSinceLastQuantum = pinvokeTrackInfo.MinimumTimeSinceLastQuantum;
-            MaximumTimeSinceLastQuantum = pinvokeTrackInfo.MaximumTimeSinceLastQuantum;
-            AverageTimeSinceLastQuantum = pinvokeTrackInfo.AverageTimeSinceLastQuantum;
         }
     };
 

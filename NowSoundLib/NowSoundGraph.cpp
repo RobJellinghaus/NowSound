@@ -54,7 +54,8 @@ namespace NowSound
 		_changingState{ false },
 		_fftBinBounds{},
 		_fftSize{ -1 },
-		_stateMutex{}
+		_stateMutex{},
+        _outputSignalMutex{}
 	{ }
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
@@ -275,8 +276,11 @@ namespace NowSound
     NowSoundSignalInfo NowSoundGraph::OutputSignalInfo()
     {
         Check(State() == NowSoundGraphState::GraphRunning);
-        std::lock_guard<std::mutex>{ _outputSignalMutex };
-        return _outputSignalInfo;
+
+        MeasurementAudioProcessor* outputMixProcessor = dynamic_cast<MeasurementAudioProcessor*>(
+            _audioOutputMixNodePtr->getProcessor());
+
+        return outputMixProcessor->SignalInfo();
     }
 
 #ifdef INPUT_DEVICE_SELECTION

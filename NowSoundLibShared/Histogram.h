@@ -9,6 +9,7 @@
 
 // Simple histogram structure for tracking statistics over a bounded set of float values.
 // Average() is always available with O(1) performance.  Max() and Min() are calculated lazily on demand.
+// THIS TYPE IS NOT THREAD SAFE, BY DESIGN. Owners are responsible for synchronization.
 namespace NowSound
 {
     class Histogram
@@ -24,7 +25,6 @@ namespace NowSound
         float _total;
 
         // The always accurate average of all values.
-        // This is precomputed in order to be readable thread-safely (assuming float writes are atomic...).
         float _average;
 
         // If _max and _min are known to be accurate with respect to _valuesInInsertionOrder, then this is true.
@@ -32,9 +32,6 @@ namespace NowSound
 
         // This deque simply tracks the values in the order they entered the histogram.
         std::deque<float> _valuesInInsertionOrder;
-
-        // Mutex to prevent collision between Add() and EnsureMinMaxKnown().
-        std::mutex _mutex;
 
         // Recalculate min/max if necessary.
         void EnsureMinMaxKnown();
@@ -45,13 +42,19 @@ namespace NowSound
     public:
         Histogram(int capacity);
 
+        // Check the minimum value.
         float Min();
+
+        // Check the maximum value.
         float Max();
-        float Average() const;
+
+        // Check the average value.
+        float Average();
 
         // Add a new value to this histogram.
         void Add(float value);
 
+        // Add new values to this histogram.
         void AddAll(const float* data, int count, bool absoluteValue);
     };
 }

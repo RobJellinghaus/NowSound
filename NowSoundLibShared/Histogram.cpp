@@ -14,21 +14,18 @@ Histogram::Histogram(int capacity)
 	_max{ 0 },
 	_total{ 0 },
 	_minMaxKnown{ false },
-	_valuesInInsertionOrder{},
-	_mutex{}
+	_valuesInInsertionOrder{}
 {
 	Check(capacity > 0);
 }
 
 void Histogram::Add(float value)
 {
-	std::lock_guard<std::mutex> guard(_mutex);
 	AddImpl(value);
 }
 
 void Histogram::AddAll(const float* data, int count, bool absoluteValue)
 {
-	std::lock_guard<std::mutex> guard(_mutex);
 	for (int i = 0; i < count; i++)
 	{
 		AddImpl(absoluteValue ? (float)std::abs(data[i]) : data[i]);
@@ -76,8 +73,6 @@ void Histogram::EnsureMinMaxKnown()
 {
 	if (!_minMaxKnown && _valuesInInsertionOrder.size() > 0)
 	{
-		std::lock_guard<std::mutex> guard(_mutex);
-
 		_min = _valuesInInsertionOrder[0];
 		_max = _valuesInInsertionOrder[0];
 		for (int i = 1; i < _valuesInInsertionOrder.size(); i++)
@@ -101,7 +96,7 @@ float Histogram::Max()
 	return _max;
 }
 
-float Histogram::Average() const
+float Histogram::Average()
 {
 	return _average;
 }
