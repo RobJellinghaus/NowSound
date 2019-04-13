@@ -187,8 +187,8 @@ namespace NowSound
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* AudioAllocator() const;
 
-		// Create an input device for the specified channel.
-		void CreateInputDeviceForChannel(int channel);
+		// Create a NowSoundInputAudioProcessor for the specified channel.
+		void CreateNowSoundInputForChannel(int channel);
 
 		// Access the vector of frequency bins, when generating frequency histograms.
 		const std::vector<RosettaFFT::FrequencyBinBounds>* BinBounds() const;

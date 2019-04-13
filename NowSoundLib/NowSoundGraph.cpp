@@ -228,12 +228,15 @@ namespace NowSound
 
             _audioInputNodePtr = _audioProcessorGraph.addNode(inputAudioProcessor);
             _audioOutputNodePtr = _audioProcessorGraph.addNode(outputAudioProcessor);
+            _audioOutputMixNodePtr = _audioProcessorGraph.addNode(outputMixAudioProcessor);
+
             for (int i = 0; i < info.ChannelCount; i++)
             {
-                CreateInputDeviceForChannel(i);
+                // handle this input channel by routing it through a SpatialAudioProcessor
+                CreateNowSoundInputForChannel(i);
 
-                // DIRECT ROUTING (commented out now because we route the inputs separately, theoretically at least):
-                // _audioProcessorGraph.addConnection({ { _audioInputNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } });
+                // connect output mix to output
+                Check(JuceGraph().addConnection({ { _audioOutputMixNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } }));
             }
         }
 
@@ -320,7 +323,7 @@ namespace NowSound
 
 	int NowSoundGraph::FftSize() const { return _fftSize; }
 
-	void NowSoundGraph::CreateInputDeviceForChannel(int channel)
+	void NowSoundGraph::CreateNowSoundInputForChannel(int channel)
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
 		juce::AudioProcessorGraph::Node::Ptr newPtr = _audioProcessorGraph.addNode(
