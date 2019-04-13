@@ -302,6 +302,20 @@ namespace NowSoundLib
 #endif
         }
 
+        [DllImport("NowSoundLib")]
+        static extern NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
+
+        // Get information about the current (final mix) output signal.
+        // Graph must be Running.
+        public static NowSoundSignalInfo OutputSignalInfo()
+        {
+#if UNITY_WINRT
+            return NowSoundGraph_OutputSignalInfo();
+#else
+            return new NowSoundSignalInfo();
+#endif
+        }
+
         // TODO: add query methods for device ID & name taking StringBuilder
 
         // Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
@@ -462,6 +476,19 @@ namespace NowSoundLib
             return new TrackInfo(NowSoundTrack_Info(trackId));
 #else
             return new TrackInfo();
+#endif
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern NowSoundSignalInfo NowSoundTrack_SignalInfo(TrackId trackId);
+
+        // The current output signal information for this Track.
+        public static NowSoundSignalInfo SignalInfo(TrackId trackId)
+        {
+#if UNITY_WINRT
+            return NowSoundTrack_SignalInfo(trackId);
+#else
+            return new SignalInfo();
 #endif
         }
 

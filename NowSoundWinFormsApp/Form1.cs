@@ -32,7 +32,9 @@ namespace NowSoundWinFormsApp
         {
             NowSoundGraphInfo info = NowSoundGraphAPI.Info();
             TimeInfo timeInfo = NowSoundGraphAPI.TimeInfo();
-            infoLabel.Text = $"Sample rate {info.SampleRate}, buffer size {info.SamplesPerQuantum}, sample time {timeInfo.TimeInSamples}, exact beat {timeInfo.ExactBeat}";
+            NowSoundSignalInfo outputSignalInfo = NowSoundGraphAPI.OutputSignalInfo();
+            infoLabel.Text = $"Sample rate {info.SampleRate}, buffer size {info.SamplesPerQuantum}, sample time {timeInfo.TimeInSamples}, exact beat {timeInfo.ExactBeat}, "
+                + $"minsignal {outputSignalInfo.Min:F4}, maxsignal {outputSignalInfo.Max:F4}, avgsignal {outputSignalInfo.Avg:F4}";
 
             for (int i = 0; i < _trackRows.Count; i++)
             {

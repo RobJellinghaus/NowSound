@@ -88,4 +88,7 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(SolutionDir)NowSoundLib\x64\$(Configuration)\NowSoundLib.*" "$(TargetDir)" /Q /Y</PostBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -55,8 +55,8 @@ namespace NowSoundWinFormsApp
             _label = new Label
             {
                 Text = $"Track #{trackId}",
-                MinimumSize = new Size(400, 20),
-                MaximumSize = new Size(400, 20),
+                MinimumSize = new Size(600, 20),
+                MaximumSize = new Size(600, 20),
                 TextAlign = ContentAlignment.BottomLeft,
                 AutoSize = true
             };
@@ -80,20 +80,16 @@ namespace NowSoundWinFormsApp
         public void Update()
         {
             TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
+            NowSoundSignalInfo signalInfo = NowSoundTrackAPI.SignalInfo(_trackId);
 
-            _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}";
+            _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}, "
+                + $"minsignal {signalInfo.Min:F4}, maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}";
 
             if (trackInfo.IsTrackLooping)
             {
                 _controlButton.Text = "Looping";
                 _controlButton.Enabled = false;
             }
-
-            /*
-            << L" | Volume: " << trackInfo.Volume
-            << L" | Last sample time: " << trackInfo.LastSampleTime
-            << L" | Frequencies: " << _frequencyOutputString
-            */
         }
     }
 }

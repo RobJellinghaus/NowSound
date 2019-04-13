@@ -209,7 +209,11 @@ namespace NowSound
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
             juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
                 new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+
             MeasurementAudioProcessor* outputMixAudioProcessor = new MeasurementAudioProcessor(this);
+
+            // TODO: don't hardcode stereo
+            outputMixAudioProcessor->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
             // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
             _audioProcessorGraph.setPlayConfigDetails(

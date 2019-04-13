@@ -52,7 +52,7 @@ namespace NowSound
 		// Graph must be at least Created.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
-        // Get the current info for the graph's final mixed output.
+        // Get the current info for the graph's final mixed output (channel 0 only, currently).
         __declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
 		// Get the ID of the given device.
@@ -113,6 +113,9 @@ namespace NowSound
 
         // The current timing information for this Track.
         __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId);
+
+        // The current signal information for this Track (tracking the mono input channel).
+        __declspec(dllexport) NowSoundSignalInfo NowSoundTrack_SignalInfo(TrackId trackId);
 
         // The user wishes the track to finish recording now, or at least when its quantized duration is reached.
         // Contractually requires State == NowSoundTrack_State.Recording.
