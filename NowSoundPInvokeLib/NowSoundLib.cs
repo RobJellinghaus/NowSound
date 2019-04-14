@@ -1,8 +1,6 @@
 ﻿// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#define UNITY_WINRT // to restore behavior as seen by UWP Unity
-
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -40,14 +38,12 @@ namespace NowSoundLib
         public Int32 BitsPerSample;
         public Int32 LatencyInSamples;
         public Int32 SamplesPerQuantum;
-        public Int32 InputDeviceCount;
     }
 
     // Information about timing in a created or running graph.
     // This marshalable struct maps to the C++ P/Invokable type.
     internal struct NowSoundTimeInfo
     {
-        //public Int32 AudioInputCount;
         public Int64 TimeInSamples;
         public float ExactBeat;
         public float BeatsPerMinute;
@@ -100,7 +96,8 @@ namespace NowSoundLib
     // TODO: maybe someday: look at custom marshalers to avoid the explicit (no-op) copy.
     internal struct NowSoundTrackInfo
     {
-        internal Int32 IsTrackLooping;
+        // Only need one bit for this, but to avoid padding weirdness (observed in practice), we make this an int64.
+        internal Int64 IsTrackLooping;
         internal Int64 StartTimeInSamples;
         internal float StartTimeInBeats;
         internal Int64 DurationInSamples;
@@ -162,20 +159,8 @@ namespace NowSoundLib
         // Some error has occurred; GetLastError() will have details.
         GraphInError,
 
-        // A gap in incoming audio data was detected; this should ideally never happen.
-        // NOTYET: Discontinuity,
-
-        // InitializeAsync() has completed; devices can now be queried.
-        GraphInitialized,
-
-        // CreateAudioGraphAsync() has completed; other methods can now be called.
-        GraphCreated,
-
         // The audio graph has been started and is running.
         GraphRunning,
-
-        // The audio graph has been stopped.
-        // NOTYET: Stopped,
     };
 
     // The state of a particular IHolofunkAudioTrack.
@@ -238,11 +223,7 @@ namespace NowSoundLib
         // Get static graph info for validating correct P/Invoke binding.
         internal static NowSoundGraphInfo GetStaticGraphInfo()
         {
-#if UNITY_WINRT
             return NowSoundTrack_GetStaticGraphInfo();
-#else
-            return default(NowSoundGraphInfo);
-#endif
 
         }
 
@@ -252,12 +233,7 @@ namespace NowSoundLib
         // Get static time info for validating correct P/Invoke binding.
         internal static TimeInfo GetStaticTimeInfo()
         {
-#if UNITY_WINRT
             return new TimeInfo(NowSoundGraph_GetStaticTimeInfo());
-#else
-            return default(TimeInfo);
-#endif
-
         }
 
         [DllImport("NowSoundLib")]
@@ -267,11 +243,7 @@ namespace NowSoundLib
         // This is the only method that may be called in any state whatoever.
         public static NowSoundGraphState State()
         {
-#if UNITY_WINRT
             return NowSoundGraph_State();
-#else
-            return new NowSoundGraphState();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -283,9 +255,7 @@ namespace NowSoundLib
         // async initialization.
         public static void InitializeInstance()
         {
-#if UNITY_WINRT
             NowSoundGraph_InitializeInstance();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -295,11 +265,7 @@ namespace NowSoundLib
         // Graph must be Created or Running.
         public static NowSoundGraphInfo Info()
         {
-#if UNITY_WINRT
             return NowSoundGraph_Info();
-#else
-            return new NowSoundGraphInfo();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -309,11 +275,7 @@ namespace NowSoundLib
         // Graph must be Running.
         public static NowSoundSignalInfo OutputSignalInfo()
         {
-#if UNITY_WINRT
             return NowSoundGraph_OutputSignalInfo();
-#else
-            return new NowSoundSignalInfo();
-#endif
         }
 
         // TODO: add query methods for device ID & name taking StringBuilder
@@ -329,9 +291,7 @@ namespace NowSoundLib
         // but only the first will be returned.
         public static void InitializeDeviceInputs(int deviceIndex)
         {
-#if UNITY_WINRT
             NowSoundGraph_InitializeDeviceInputs(deviceIndex);
-#endif
         }
 
         // Initialize the FFT subsystem, which for now must be done before graph creation.
@@ -355,14 +315,12 @@ namespace NowSoundLib
             // How many samples as input to and output from the FFT?
             int fftSize)
         {
-#if UNITY_WINRT
             NowSoundGraph_InitializeFFT(
                 outputBinCount,
                 centralFrequency,
                 octaveDivisions,
                 centralBinIndex,
                 fftSize);
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -372,11 +330,7 @@ namespace NowSoundLib
         // Graph must be Running.
         public static TimeInfo TimeInfo()
         {
-#if UNITY_WINRT
             return new TimeInfo(NowSoundGraph_TimeInfo());
-#else
-            return new TimeInfo();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -386,9 +340,7 @@ namespace NowSoundLib
         // Graph must be Started.
         public static void PlayUserSelectedSoundFileAsync()
         {
-#if UNITY_WINRT
             NowSoundGraph_PlayUserSelectedSoundFileAsync();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -398,9 +350,7 @@ namespace NowSoundLib
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         public static void DestroyAudioGraphAsync()
         {
-#if UNITY_WINRT
             NowSoundGraph_DestroyAudioGraphAsync();
-#endif            
         }
 
         [DllImport("NowSoundLib")]
@@ -412,11 +362,7 @@ namespace NowSoundLib
         // TrackId values are treated as uninitialized.
         public static TrackId CreateRecordingTrackAsync(AudioInputId id)
         {
-#if UNITY_WINRT
             return NowSoundGraph_CreateRecordingTrackAsync(id);
-#else
-            return TrackId.Undefined;
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -427,9 +373,7 @@ namespace NowSoundLib
         // async initialization.
         public static void ShutdownInstance()
         {
-#if UNITY_WINRT
             NowSoundGraph_ShutdownInstance();
-#endif
         }
 
     }
@@ -444,12 +388,7 @@ namespace NowSoundLib
         // In what state is this track?
         public static TrackInfo GetStaticTrackInfo()
         {
-#if UNITY_WINRT
             return new TrackInfo(NowSoundTrack_GetStaticTrackInfo());
-#else
-            return default(TrackInfo);
-#endif
-
         }
 
         [DllImport("NowSoundLib")]
@@ -458,12 +397,7 @@ namespace NowSoundLib
         // In what state is this track?
         public static NowSoundTrackState State(TrackId trackId)
         {
-#if UNITY_WINRT
             return NowSoundTrack_State(trackId);
-#else
-            return default(NowSoundTrackState);
-#endif
-
         }
 
         [DllImport("NowSoundLib")]
@@ -472,11 +406,7 @@ namespace NowSoundLib
         // The current timing information for this Track.
         public static TrackInfo Info(TrackId trackId)
         {
-#if UNITY_WINRT
             return new TrackInfo(NowSoundTrack_Info(trackId));
-#else
-            return new TrackInfo();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -485,11 +415,7 @@ namespace NowSoundLib
         // The current output signal information for this Track.
         public static NowSoundSignalInfo SignalInfo(TrackId trackId)
         {
-#if UNITY_WINRT
             return NowSoundTrack_SignalInfo(trackId);
-#else
-            return new SignalInfo();
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -499,9 +425,7 @@ namespace NowSoundLib
         // Contractually requires State == NowSoundTrack_State.Recording.
         public static void FinishRecording(TrackId trackId)
         {
-#if UNITY_WINRT
             NowSoundTrack_FinishRecording(trackId);
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -514,11 +438,7 @@ namespace NowSoundLib
         // Returns true if there was enough data to update the buffer, or false if there was not.
         public static bool GetFrequencies(TrackId trackId, float[] floatBuffer, int floatBufferCapacity)
         {
-#if UNITY_WINRT
             return NowSoundTrack_GetFrequencies(trackId, floatBuffer, floatBufferCapacity);
-#else
-            return false;
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -530,12 +450,7 @@ namespace NowSoundLib
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         public static bool IsMuted(TrackId trackId)
         {
-#if UNITY_WINRT
             return NowSoundTrack_IsMuted(trackId);
-#else
-            // programmer zen: are nonexistent tracks always muted, or never muted?
-            return false;
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -543,9 +458,7 @@ namespace NowSoundLib
 
         public static void SetIsMuted(TrackId trackId, bool isMuted)
         {
-#if UNITY_WINRT
             NowSoundTrack_SetIsMuted(trackId, isMuted);
-#endif
         }
 
         [DllImport("NowSoundLib")]
@@ -554,9 +467,7 @@ namespace NowSoundLib
         // Delete this Track; after this, all methods become invalid to call (contract failure).
         public static void Delete(TrackId trackId)
         {
-#if UNITY_WINRT
             NowSoundTrack_Delete(trackId);
-#endif
         }
     }
 }

@@ -42,4 +42,4 @@ const int MagicConstants::DebugLogCapacity{ 1000 };
 // (due to losing foreground execution status, for example)
 const int MagicConstants::AudioQuantumHistogramCapacity{ 200 };
 
-const ContinuousDuration<Second> MagicConstants::RecentVolumeDuration{ (float)0.1 };
+const ContinuousDuration<Second> MagicConstants::RecentVolumeDuration{ (float)0.5 };

@@ -78,7 +78,7 @@ namespace NowSound
         {
             // Is this track looping? If not, it is still recording. We use a wasteful int32_t to avoid
             // packing issues.
-            int32_t IsTrackLooping;
+            int64_t IsTrackLooping;
             // The start time of the track, in samples from the beginning of this session.
             int64_t StartTimeInSamples;
             // The start time of the track, in beats.
@@ -95,25 +95,20 @@ namespace NowSound
             float LocalClockBeat;
 			// The time at which the track last delivered samples (depends on current audio frame size).
 			int64_t LastSampleTime;
-			// The volume, averaged over the last N samples.
-			float Volume;
 			// The panning value of this track.
 			float Pan;
-        } NowSoundTrackTimeInfo;
+        } NowSoundTrackInfo;
 
         // The states of a NowSound graph.
         // Note that since this is extern "C", this is not an enum class, so these identifiers have to begin with Graph
         // to disambiguate them from the TrackState identifiers.
         enum NowSoundGraphState
         {
-            // Initial condition before InitializeAsync() is called.
+            // Initial condition before Initialize() is called.
             GraphUninitialized,
 
             // Some error has occurred; GetLastError() will have details.
             GraphInError,
-
-            // A gap in incoming audio data was detected; this should ideally never happen.
-            // NOTYET: Discontinuity,
 
             // The audio graph has been initialized and is running.
             GraphRunning,

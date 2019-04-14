@@ -12,9 +12,7 @@ namespace NowSound
 		int32_t channelCount,
 		int32_t bitsPerSample,
 		int32_t latencyInSamples,
-		int32_t samplesPerQuantum
-		// JUCETODO: , int32_t inputDeviceCount
-		)
+		int32_t samplesPerQuantum)
 	{
 		NowSoundGraphInfo info;
 		info.SampleRateHz = sampleRateHz;
@@ -22,7 +20,6 @@ namespace NowSound
 		info.BitsPerSample = bitsPerSample;
 		info.LatencyInSamples = latencyInSamples;
 		info.SamplesPerQuantum = samplesPerQuantum;
-		// JUCETODO: info.InputDeviceCount = inputDeviceCount;
 		return info;
 	}
 
@@ -34,7 +31,6 @@ namespace NowSound
 		float beatInMeasure)
 	{
 		NowSoundTimeInfo info;
-		// info.AudioInputCount = audioInputCount;
 		info.TimeInSamples = timeInSamples;
 		info.ExactBeat = exactBeat;
 		info.BeatsPerMinute = beatsPerMinute;
