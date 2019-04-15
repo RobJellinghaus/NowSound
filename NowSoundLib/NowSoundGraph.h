@@ -75,6 +75,15 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
+		// The current log info.
+		NowSoundLogInfo LogInfo();
+
+		// Get a log message.
+		void GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity);
+
+		// Drop all messages up to (and including) the given log message index.
+		void DropLogMessagesUpTo(int32_t logMessageIndex);
+
         // Play a user-selected sound file.
         // Graph must be Started.
         void PlayUserSelectedSoundFileAsync();
@@ -102,10 +111,26 @@ namespace NowSound
         // Set minimum buffer size in the device manager.
         void setBufferSize();
 
+		// Record this log message.
+		void Log(const std::wstring& str);
+
     private: // instance variables
 
         // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().
         static ::std::unique_ptr<NowSoundGraph> s_instance;
+
+		// Fixed capacity for log messages (between calls to DropLogMessagesUpTo()).
+		const int32_t s_logMessageCapacity = 100000;
+
+		// Log messages.
+		// Note that this vector is always allocated to a fixed capacity so we don't get vector resizes while appending.
+		std::vector<std::wstring> _logMessages;
+
+		// The index of the first log message; used when we drop log messages.
+		int32_t _logMessageIndex;
+
+		// The mutex used when updating log state variables.
+		std::mutex _logMutex;
 
 		// The AudioDeviceManager held by this Graph.
 		// This is conceptually a singleton (just as the NowSoundGraph is), but we scope it within this type.

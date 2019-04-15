@@ -20,6 +20,16 @@ namespace NowSound
     // together with callback IDs.
     extern "C"
     {
+		// Some NowSound use cases (e.g. running under Unity with the Visual Studio Tools For Unity debugger)
+		// don't allow us to see any diagnostic output from NowSoundLib at all.  We need an actual API for fetching
+		// diagnostic messages.  This struct represents the indices of the first and last log messages that currently
+		// exist.
+		typedef struct NowSoundLogInfo
+		{
+			int32_t FirstLogIndex;
+			int32_t LastLogIndex;
+		} NowSoundLogInfo;
+		
         // Static information about an Initialized audio graph.
 		typedef struct NowSoundGraphInfo
 		{

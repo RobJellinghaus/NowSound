@@ -44,6 +44,17 @@ namespace NowSound
         // This is the only method that may be called in any state whatoever.
         __declspec(dllexport) NowSoundGraphState NowSoundGraph_State();
 
+		// Get the indices of the first and last log messages.
+		__declspec(dllexport) NowSoundLogInfo NowSoundGraph_LogInfo();
+
+		// Get the message with a particular index; must be between (inclusive) the indices last returned from NowSoundGraph_LogInfo().
+		// Note that calls to this method must never be interleaved with calls to the NowSoundGraph_DropLogMessagesUpTo method; these
+		// methods are not thread-safe with respect to each other.
+		__declspec(dllexport) void NowSoundGraph_GetLogMessage(int32_t logMessageIndex, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// After fetching them all, drop all log messages up to (and including) the given index.
+		__declspec(dllexport) void NowSoundGraph_DropLogMessagesUpTo(int32_t logMessageIndex);
+
 		// Initialize the audio graph subsystem such that device information can be queried.
 		// Graph must be Uninitialized.  On completion, graph becomes Initialized.
 		__declspec(dllexport) void NowSoundGraph_InitializeInstance();

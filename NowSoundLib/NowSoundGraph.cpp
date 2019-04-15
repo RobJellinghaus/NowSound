@@ -55,7 +55,10 @@ namespace NowSound
 		_fftBinBounds{},
 		_fftSize{ -1 },
 		_stateMutex{},
-        _outputSignalMutex{}
+        _outputSignalMutex{},
+		_logMessageIndex{ 0 },
+		_logMessages{ s_logMessageCapacity },
+		_logMutex{}
 	{ }
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
@@ -87,6 +90,58 @@ namespace NowSound
 	{
 		// this is a machine word, atomically written; no need to lock
 		return _audioGraphState;
+	}
+
+	NowSoundLogInfo NowSoundGraph::LogInfo()
+	{
+		// We don't actually need to synchronize with _logMutex in this method.
+		// The only variable touched during log appending is the size of _logMessages, and it is inherently atomically updated. (WE THINK)
+		NowSoundLogInfo info;
+		info.FirstLogIndex = _logMessageIndex;
+		info.LastLogIndex = _logMessageIndex + _logMessages.size();
+		return info;
+	}
+
+	// Add a log message.
+	void NowSoundGraph::Log(const std::wstring& str)
+	{
+		std::lock_guard<std::mutex> guard(_logMutex);
+
+		// this check should just never fail.  If it does, you're logging wrong.
+		// The reason this check should never fail is that, if this can never cause a resize, then
+		// it's safe for GetLogMessage to not lock the _logMessages vector itself -- which will hugely
+		// reduce inter-thread contention.
+		Check(_logMessages.size() < s_logMessageCapacity);
+
+		_logMessages.emplace_back(str);
+	}
+
+	void NowSoundGraph::GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity)
+	{
+		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
+		// and_logMessageCount can safely be incremented atomically while racing here.
+		Check(_logMessageIndex <= logMessageIndex);
+		Check(logMessageIndex <= _logMessageIndex + _logMessages.size());
+
+		// We don't even need to synchronize when getting the log message, so long as we never call DropLogMessagesUpTo()
+		// concurrently with this.
+		const std::wstring& message = _logMessages.at(logMessageIndex - _logMessageIndex);
+		wcsncpy_s(buffer, (size_t)bufferCapacity, message.c_str(), message.size());
+	}
+
+	void NowSoundGraph::DropLogMessagesUpTo(int32_t logMessageIndex)
+	{
+		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
+		// and _logMessages.size() can safely be incremented atomically while racing here.
+		Check(_logMessageIndex <= logMessageIndex);
+		Check(logMessageIndex <= _logMessageIndex + _logMessages.size());
+
+		// Here we have no choice but to lock, which could wedge the audio thread.
+		// TBD how much of a problem this would be... wonder if we can instrument this...
+		std::lock_guard<std::mutex> guard(_logMutex);
+		int messageCountToDrop = logMessageIndex - _logMessageIndex + 1;
+		_logMessages.erase(_logMessages.begin(), _logMessages.begin() + messageCountToDrop);
+		_logMessageIndex += messageCountToDrop;
 	}
 
     juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
@@ -133,6 +188,9 @@ namespace NowSound
 
 	void NowSoundGraph::Initialize()
 	{
+		// Deliberate failure injection to test native failure under Unity debugger
+		Check(false);
+
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
 		// Before anything else, ensure that a MessageManager exists.

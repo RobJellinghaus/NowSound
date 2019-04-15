@@ -4,10 +4,17 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 // P/Invoke wrapper types and classes for NowSoundLib.
 namespace NowSoundLib
 {
+    public struct NowSoundLogInfo
+    {
+        public Int32 FirstLogMessageIndex;
+        public Int32 LastLogMessageIndex;
+    }
+
     // TODO: actually use this over P/Invoke via StringBuilder marshaling (avoiding all lifetime issues nicely)
     public struct DeviceInfo
     {
@@ -266,6 +273,36 @@ namespace NowSoundLib
         public static NowSoundGraphInfo Info()
         {
             return NowSoundGraph_Info();
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern NowSoundLogInfo NowSoundGraph_LogInfo();
+
+        // Get the info about the current log messages.
+        // Graph must be Running.
+        public static NowSoundLogInfo LogInfo()
+        {
+            return NowSoundGraph_LogInfo();
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_GetLogMessage(Int32 logMessageIndex, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
+
+        // Get the current track frequency histogram.
+        // Returns true if there was enough data to update the buffer, or false if there was not.
+        public static void GetLogMessage(int logMessageIndex, StringBuilder buffer)
+        {
+            NowSoundGraph_GetLogMessage(logMessageIndex, buffer, buffer.Capacity);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_DropAllLogMessagesUpTo(Int32 logMessageIndex);
+
+        // Get the current track frequency histogram.
+        // Returns true if there was enough data to update the buffer, or false if there was not.
+        public static void DropAllLogMessagesUpTo(int logMessageIndex)
+        {
+            NowSoundGraph_DropAllLogMessagesUpTo(logMessageIndex);
         }
 
         [DllImport("NowSoundLib")]
