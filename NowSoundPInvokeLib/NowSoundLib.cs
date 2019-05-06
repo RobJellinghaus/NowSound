@@ -296,13 +296,13 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_DropAllLogMessagesUpTo(Int32 logMessageIndex);
+        static extern void NowSoundGraph_DropLogMessagesUpTo(Int32 logMessageIndex);
 
         // Get the current track frequency histogram.
         // Returns true if there was enough data to update the buffer, or false if there was not.
-        public static void DropAllLogMessagesUpTo(int logMessageIndex)
+        public static void DropLogMessagesUpTo(int logMessageIndex)
         {
-            NowSoundGraph_DropAllLogMessagesUpTo(logMessageIndex);
+            NowSoundGraph_DropLogMessagesUpTo(logMessageIndex);
         }
 
         [DllImport("NowSoundLib")]

@@ -120,7 +120,7 @@ namespace NowSound
         static ::std::unique_ptr<NowSoundGraph> s_instance;
 
 		// Fixed capacity for log messages (between calls to DropLogMessagesUpTo()).
-		const int32_t s_logMessageCapacity = 100000;
+		const int32_t s_logMessageCapacity = 10000;
 
 		// Log messages.
 		// Note that this vector is always allocated to a fixed capacity so we don't get vector resizes while appending.

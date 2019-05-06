@@ -57,9 +57,12 @@ namespace NowSound
 		_stateMutex{},
         _outputSignalMutex{},
 		_logMessageIndex{ 0 },
-		_logMessages{ s_logMessageCapacity },
+		_logMessages{},
 		_logMutex{}
-	{ }
+	{
+		_logMessages.reserve(s_logMessageCapacity);
+		Check(_logMessages.size() == 0);
+	}
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
 
@@ -98,7 +101,7 @@ namespace NowSound
 		// The only variable touched during log appending is the size of _logMessages, and it is inherently atomically updated. (WE THINK)
 		NowSoundLogInfo info;
 		info.FirstLogIndex = _logMessageIndex;
-		info.LastLogIndex = _logMessageIndex + _logMessages.size();
+		info.LastLogIndex = _logMessageIndex + _logMessages.size() - 1;
 		return info;
 	}
 
@@ -121,7 +124,7 @@ namespace NowSound
 		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
 		// and_logMessageCount can safely be incremented atomically while racing here.
 		Check(_logMessageIndex <= logMessageIndex);
-		Check(logMessageIndex <= _logMessageIndex + _logMessages.size());
+		Check(logMessageIndex < _logMessageIndex + _logMessages.size());
 
 		// We don't even need to synchronize when getting the log message, so long as we never call DropLogMessagesUpTo()
 		// concurrently with this.
@@ -134,7 +137,7 @@ namespace NowSound
 		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
 		// and _logMessages.size() can safely be incremented atomically while racing here.
 		Check(_logMessageIndex <= logMessageIndex);
-		Check(logMessageIndex <= _logMessageIndex + _logMessages.size());
+		Check(logMessageIndex < _logMessageIndex + _logMessages.size());
 
 		// Here we have no choice but to lock, which could wedge the audio thread.
 		// TBD how much of a problem this would be... wonder if we can instrument this...
@@ -188,8 +191,7 @@ namespace NowSound
 
 	void NowSoundGraph::Initialize()
 	{
-		// Deliberate failure injection to test native failure under Unity debugger
-		Check(false);
+		Log(L"Initialize(): start");
 
 		PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
@@ -230,7 +232,9 @@ namespace NowSound
                 ChangeState(NowSoundGraphState::GraphInError);
                 return;
             }
-        }
+		
+			Log(L"Initialize(): end");
+		}
 
         // Set up the ASIO device, clock, and audio allocator.
         NowSoundGraphInfo info;

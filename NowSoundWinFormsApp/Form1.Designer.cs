@@ -4,6 +4,7 @@
 using NowSoundLib;
 using System;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +31,19 @@ namespace NowSoundWinFormsApp
             base.Dispose(disposing);
         }
 
+        public void WriteAllLogMessagesToDebugConsole()
+        {
+            NowSoundLogInfo logInfo = NowSoundGraphAPI.LogInfo();
+            StringBuilder builder = new StringBuilder(256);
+            for (int i = logInfo.FirstLogMessageIndex; i <= logInfo.LastLogMessageIndex; i++)
+            {
+                builder.Clear();
+                NowSoundGraphAPI.GetLogMessage(i, builder);
+                Debug.WriteLine(builder.ToString());
+            }
+            NowSoundGraphAPI.DropLogMessagesUpTo(logInfo.LastLogMessageIndex);
+        }
+
         protected override async void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
@@ -39,6 +53,9 @@ namespace NowSoundWinFormsApp
 
             // and let's P/Invoke up in here!
             NowSoundGraphAPI.InitializeInstance();
+
+            // and dump any output
+            WriteAllLogMessagesToDebugConsole();
 
             // No longer necessary really since JUCE initialization is synchronous.
             // JUCETODO: clean this up eventually.
