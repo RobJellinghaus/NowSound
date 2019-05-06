@@ -59,11 +59,6 @@ namespace NowSound
         // in Looping state.
         Time<AudioSample> _lastSampleTime;
 
-        // for debug logging; need to understand micro-behavior of the frame input node
-        std::queue<std::wstring> _debugLog;
-
-        void DebugLog(const std::wstring& entry);
-
         // did this just stop recording? if so, message thread will remove its input connection on next poll
         bool _justStoppedRecording;
 

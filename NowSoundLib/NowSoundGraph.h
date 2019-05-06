@@ -111,9 +111,6 @@ namespace NowSound
         // Set minimum buffer size in the device manager.
         void setBufferSize();
 
-		// Record this log message.
-		void Log(const std::wstring& str);
-
     private: // instance variables
 
         // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().
@@ -208,7 +205,12 @@ namespace NowSound
         // The default audio output node.  TODO: support device selection.
         // winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
 
-        // Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
+		// Record this log message.
+		// These messages can be queried via the external NowSoundGraphAPI, for scenarios when native debugging is
+		// inaccessible (such as VS2019 debugging Unity with the Mono runtime).
+		void Log(const std::wstring& str);
+		
+		// Audio allocator has static lifetime currently, but we give borrowed pointers rather than just statically
         // referencing it everywhere, because all this mutable static state continues to be concerning.
         BufferAllocator<float>* AudioAllocator() const;
 

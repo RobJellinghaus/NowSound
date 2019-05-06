@@ -72,8 +72,7 @@ namespace NowSound
             /*useContinuousLoopingMapper*/ false),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
-        _lastSampleTime{ Clock::Instance().Now() },
-        _debugLog{}
+        _lastSampleTime{ Clock::Instance().Now() }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -109,15 +108,6 @@ namespace NowSound
         }
     }
 
-    void NowSoundTrackAudioProcessor::DebugLog(const std::wstring& entry)
-    {
-        _debugLog.push(entry);
-        if (_debugLog.size() > MagicConstants::DebugLogCapacity)
-        {
-            _debugLog.pop();
-        }
-    }
-    
     NowSoundTrackState NowSoundTrackAudioProcessor::State() const { return _state; }
     
     Duration<Beat> NowSoundTrackAudioProcessor::BeatDuration() const { return _beatDuration; }
