@@ -236,5 +236,8 @@ namespace NowSound
         // this just makes the JUCE graph connections.)
         // For now this always sets up one input connection and two output connections.
         void AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newSpatialNode, int inputChannel);
+
+		// Actually shut down the audio processing.
+		void Shutdown();
     };
 }

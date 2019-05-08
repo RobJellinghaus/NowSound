@@ -510,9 +510,19 @@ namespace NowSound
 
     void NowSoundGraph::ShutdownInstance()
     {
-		// drop the singleton
+		// SHUT. DOWN. EVERYTHING
+		s_instance->Shutdown();
+
+		// and then destruct the singleton
 		s_instance = nullptr;
     }
+
+	void NowSoundGraph::Shutdown()
+	{
+		_audioDeviceManager.removeAllChangeListeners();
+		_audioDeviceManager.closeAudioDevice();
+		_audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
+	}
 
     void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
     {

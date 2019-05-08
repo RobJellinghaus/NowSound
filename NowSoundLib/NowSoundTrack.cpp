@@ -93,6 +93,10 @@ namespace NowSound
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
 		*/
+
+		std::wstringstream wstr{};
+		wstr << L"NowSoundTrack::NowSoundTrack(" << trackId << L")";
+		NowSoundGraph::Instance()->Log(wstr.str());
     }
 
     bool NowSoundTrackAudioProcessor::JustStoppedRecording()
