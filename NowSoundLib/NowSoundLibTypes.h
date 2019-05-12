@@ -26,8 +26,8 @@ namespace NowSound
 		// exist.
 		typedef struct NowSoundLogInfo
 		{
-			int32_t FirstLogIndex;
-			int32_t LastLogIndex;
+			// the number of log messages
+			int32_t LogMessageCount;
 		} NowSoundLogInfo;
 		
         // Static information about an Initialized audio graph.

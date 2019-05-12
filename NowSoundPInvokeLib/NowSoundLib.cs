@@ -11,8 +11,8 @@ namespace NowSoundLib
 {
     public struct NowSoundLogInfo
     {
-        public Int32 FirstLogMessageIndex;
-        public Int32 LastLogMessageIndex;
+        public Int32 FirstLogIndex;
+        public Int32 LogMessageCount;
     }
 
     // TODO: actually use this over P/Invoke via StringBuilder marshaling (avoiding all lifetime issues nicely)
@@ -296,13 +296,13 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_DropLogMessagesUpTo(Int32 logMessageIndex);
+        static extern void NowSoundGraph_DropLogMessages(Int32 logMessageIndex);
 
         // Get the current track frequency histogram.
         // Returns true if there was enough data to update the buffer, or false if there was not.
-        public static void DropLogMessagesUpTo(int logMessageIndex)
+        public static void DropLogMessages(int logMessageIndex)
         {
-            NowSoundGraph_DropLogMessagesUpTo(logMessageIndex);
+            NowSoundGraph_DropLogMessages(logMessageIndex);
         }
 
         [DllImport("NowSoundLib")]

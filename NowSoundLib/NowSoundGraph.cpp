@@ -56,7 +56,6 @@ namespace NowSound
 		_fftSize{ -1 },
 		_stateMutex{},
         _outputSignalMutex{},
-		_logMessageIndex{ 0 },
 		_logMessages{},
 		_logMutex{}
 	{
@@ -100,8 +99,7 @@ namespace NowSound
 		// We don't actually need to synchronize with _logMutex in this method.
 		// The only variable touched during log appending is the size of _logMessages, and it is inherently atomically updated. (WE THINK)
 		NowSoundLogInfo info;
-		info.FirstLogIndex = _logMessageIndex;
-		info.LastLogIndex = _logMessageIndex + _logMessages.size() - 1;
+		info.LogMessageCount = _logMessages.size();
 		return info;
 	}
 
@@ -121,30 +119,24 @@ namespace NowSound
 
 	void NowSoundGraph::GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity)
 	{
-		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
-		// and_logMessageCount can safely be incremented atomically while racing here.
-		Check(_logMessageIndex <= logMessageIndex);
-		Check(logMessageIndex < _logMessageIndex + _logMessages.size());
+		Check(logMessageIndex < _logMessages.size());
 
 		// We don't even need to synchronize when getting the log message, so long as we never call DropLogMessagesUpTo()
 		// concurrently with this.
-		const std::wstring& message = _logMessages.at(logMessageIndex - _logMessageIndex);
+		const std::wstring& message = _logMessages.at(logMessageIndex);
 		wcsncpy_s(buffer, (size_t)bufferCapacity, message.c_str(), message.size());
 	}
 
-	void NowSoundGraph::DropLogMessagesUpTo(int32_t logMessageIndex)
+	void NowSoundGraph::DropLogMessages(int32_t messageCountToDrop)
 	{
-		// These checks do not need to be under a lock, as _logMessageIndex never changes except under lock
-		// and _logMessages.size() can safely be incremented atomically while racing here.
-		Check(_logMessageIndex <= logMessageIndex);
-		Check(logMessageIndex < _logMessageIndex + _logMessages.size());
+		// These checks do not need to be under a lock, as _logMessages.size() can safely be incremented
+		// atomically while racing here.  Yes, this makes strong assumptions about how std::vector is implemented.
+		Check(_logMessages.size() <= messageCountToDrop);
 
 		// Here we have no choice but to lock, which could wedge the audio thread.
 		// TBD how much of a problem this would be... wonder if we can instrument this...
 		std::lock_guard<std::mutex> guard(_logMutex);
-		int messageCountToDrop = logMessageIndex - _logMessageIndex + 1;
 		_logMessages.erase(_logMessages.begin(), _logMessages.begin() + messageCountToDrop);
-		_logMessageIndex += messageCountToDrop;
 	}
 
     juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
@@ -248,8 +240,28 @@ namespace NowSound
 
             // insist on stereo float samples.  TODO: generalize channel count
             // For right now let's just make absolutely sure these values are all precisely as we intend every time.
-            Check(info.ChannelCount == 2);
-            Check(info.BitsPerSample == 32);
+			// TODO: eliminate this stupid duplication for the purpose of line number disambiguation
+			// (no thanks to VS Tools For Unity for not supporting native debugging :-P )
+			Check(!Clock::IsInitialized());
+			Check(!Clock::IsInitialized());
+			Check(!Clock::IsInitialized());
+			Check(!Clock::IsInitialized());
+			Check(!Clock::IsInitialized());
+			Check(!Clock::IsInitialized());
+
+			Check(info.ChannelCount == 2);
+			Check(info.ChannelCount == 2);
+			Check(info.ChannelCount == 2);
+			Check(info.ChannelCount == 2);
+			Check(info.ChannelCount == 2);
+			Check(info.ChannelCount == 2);
+
+			Check(info.BitsPerSample == 32);
+			Check(info.BitsPerSample == 32);
+			Check(info.BitsPerSample == 32);
+			Check(info.BitsPerSample == 32);
+			Check(info.BitsPerSample == 32);
+			Check(info.BitsPerSample == 32);
 
             Clock::Initialize(
                 info.SampleRateHz,
@@ -508,6 +520,8 @@ namespace NowSound
         PlayUserSelectedSoundFileAsyncImpl();
     }
 
+
+	// static externally reachable shutdown method
     void NowSoundGraph::ShutdownInstance()
     {
 		// SHUT. DOWN. EVERYTHING
@@ -515,8 +529,15 @@ namespace NowSound
 
 		// and then destruct the singleton
 		s_instance = nullptr;
+
+		// and destruct the clock
+		// TODO: make the clock a component of the graph
+		// (the clock has utility as a lower-level NowSoundLibShared-specific point of access to the sound data,
+		// but having two singletons already led to bugs and is generally a bad smell)
+		Clock::Shutdown();
     }
 
+	// instance shutdown method for instance internal state
 	void NowSoundGraph::Shutdown()
 	{
 		_audioDeviceManager.removeAllChangeListeners();

@@ -79,15 +79,15 @@ namespace NowSound
 	void NowSoundGraph_GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity)
 	{
 		// externally, this can only be called once Initialize is complete
-		Check(NowSoundGraph::Instance()->State() > NowSoundGraphState::GraphUninitialized);
+		Check(NowSoundGraph::Instance() != nullptr);
 		NowSoundGraph::Instance()->GetLogMessage(logMessageIndex, buffer, bufferCapacity);
 	}
 
-	void NowSoundGraph_DropLogMessagesUpTo(int32_t logMessageIndex)
+	void NowSoundGraph_DropLogMessages(int32_t messageCountToDrop)
 	{
 		// externally, this can only be called once Initialize is complete
-		Check(NowSoundGraph::Instance()->State() > NowSoundGraphState::GraphUninitialized);
-		NowSoundGraph::Instance()->DropLogMessagesUpTo(logMessageIndex);
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->DropLogMessages(messageCountToDrop);
 	}
 
 	NowSoundSignalInfo NowSoundGraph_OutputSignalInfo()

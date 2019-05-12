@@ -32,12 +32,17 @@ namespace NowSound
         // overlapped in time in which case they will race).
         static void Initialize(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure);
 
+		static bool IsInitialized() { return s_instance != nullptr; }
+
         // The singleton Clock used by the application.
         static Clock& Instance()
         {
             Check(s_instance != nullptr); // Clock must have been initialized
             return *(s_instance.get());
         }
+		
+		// Shutdown the instance and deallocate it.
+		static void Shutdown();
 
     private:
 		// The sample rate.

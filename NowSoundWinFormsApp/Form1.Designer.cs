@@ -34,14 +34,17 @@ namespace NowSoundWinFormsApp
         public void WriteAllLogMessagesToDebugConsole()
         {
             NowSoundLogInfo logInfo = NowSoundGraphAPI.LogInfo();
-            StringBuilder builder = new StringBuilder(256);
-            for (int i = logInfo.FirstLogMessageIndex; i <= logInfo.LastLogMessageIndex; i++)
+            if (logInfo.LogMessageCount > 0)
             {
-                builder.Clear();
-                NowSoundGraphAPI.GetLogMessage(i, builder);
-                Debug.WriteLine(builder.ToString());
+                StringBuilder builder = new StringBuilder(256);
+                for (int i = 0; i <= logInfo.LogMessageCount; i++)
+                {
+                    builder.Clear();
+                    NowSoundGraphAPI.GetLogMessage(i, builder);
+                    Debug.WriteLine(builder.ToString());
+                }
+                NowSoundGraphAPI.DropLogMessages(logInfo.LogMessageCount);
             }
-            NowSoundGraphAPI.DropLogMessagesUpTo(logInfo.LastLogMessageIndex);
         }
 
         protected override async void OnLoad(EventArgs e)

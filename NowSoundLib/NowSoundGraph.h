@@ -82,7 +82,7 @@ namespace NowSound
 		void GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity);
 
 		// Drop all messages up to (and including) the given log message index.
-		void DropLogMessagesUpTo(int32_t logMessageIndex);
+		void DropLogMessages(int32_t messageCountToDrop);
 
         // Play a user-selected sound file.
         // Graph must be Started.
@@ -122,9 +122,6 @@ namespace NowSound
 		// Log messages.
 		// Note that this vector is always allocated to a fixed capacity so we don't get vector resizes while appending.
 		std::vector<std::wstring> _logMessages;
-
-		// The index of the first log message; used when we drop log messages.
-		int32_t _logMessageIndex;
 
 		// The mutex used when updating log state variables.
 		std::mutex _logMutex;
