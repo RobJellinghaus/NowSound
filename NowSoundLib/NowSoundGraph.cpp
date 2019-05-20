@@ -388,6 +388,21 @@ namespace NowSound
 		int fftSize)
 	{
 		_fftBinBounds.resize(outputBinCount);
+
+		Check(_fftBinBounds.capacity() == outputBinCount);
+		Check(_fftBinBounds.capacity() == outputBinCount);
+		Check(_fftBinBounds.capacity() == outputBinCount);
+		Check(_fftBinBounds.capacity() == outputBinCount);
+		Check(_fftBinBounds.capacity() == outputBinCount);
+		Check(_fftBinBounds.capacity() == outputBinCount);
+
+		Check(_fftBinBounds.size() == outputBinCount);
+		Check(_fftBinBounds.size() == outputBinCount);
+		Check(_fftBinBounds.size() == outputBinCount);
+		Check(_fftBinBounds.size() == outputBinCount);
+		Check(_fftBinBounds.size() == outputBinCount);
+		Check(_fftBinBounds.size() == outputBinCount);
+
 		_fftSize = fftSize;
 
 		// Initialize the bounds of the bins into which we collate FFT data.

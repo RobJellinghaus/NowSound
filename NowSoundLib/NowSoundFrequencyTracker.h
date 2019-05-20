@@ -65,10 +65,10 @@ namespace NowSound
 		// Mutex for buffer changes.
 		std::mutex _bufferMutex;
 
-		// The bin bounds.
+		// The per-bin bounds; equal in length to the number of bins.
 		const std::vector<RosettaFFT::FrequencyBinBounds>* _binBounds;
 
-		// The FFT size.
+		// The total FFT size, measured as number of samples in the FFT window.
 		const int _fftSize;
 
 	private:

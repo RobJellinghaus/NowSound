@@ -64,6 +64,14 @@ namespace NowSoundWinFormsApp
             // JUCETODO: clean this up eventually.
             bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphRunning, timeoutMsec: 10);
 
+            // These constant values obtained by experiment relative to my personal baritone :-P
+            NowSoundGraphAPI.InitializeFFT(
+                MagicConstants.OutputBinCount,
+                MagicConstants.CentralFrequency,
+                MagicConstants.OctaveDivisions,
+                MagicConstants.CentralFrequencyBin,
+                MagicConstants.FftBinSize);
+
             Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");
         }
 

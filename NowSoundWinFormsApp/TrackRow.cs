@@ -34,9 +34,15 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private readonly TrackId _trackId;
 
+        /// <summary>
+        /// FFT buffer.
+        /// </summary>
+        private float[] _fftBuffer;
+
         public TrackRow(TrackId trackId, FlowLayoutPanel parent)
         {
             _trackId = trackId;
+            _fftBuffer = new float[MagicConstants.OutputBinCount];
 
             _controlButton = new Button
             {
@@ -82,8 +88,10 @@ namespace NowSoundWinFormsApp
             TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
             NowSoundSignalInfo signalInfo = NowSoundTrackAPI.SignalInfo(_trackId);
 
+            // NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer, _fftBuffer.Length);
+
             _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}, "
-                + $"minsignal {signalInfo.Min:F4}, maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}";
+                + $"maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}";
 
             if (trackInfo.IsTrackLooping)
             {
