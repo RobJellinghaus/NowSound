@@ -11,7 +11,6 @@ namespace NowSoundLib
 {
     public struct NowSoundLogInfo
     {
-        public Int32 FirstLogIndex;
         public Int32 LogMessageCount;
     }
 

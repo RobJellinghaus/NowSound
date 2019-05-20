@@ -33,6 +33,10 @@ namespace NowSound
         // Accessor for track by ID.
         static NowSoundTrackAudioProcessor* Track(TrackId id);
 
+		// Check to see if this track ID exists. TODO: DELETE THIS; JUST FOR USE WHEN RACE HUNTING.
+		// Should be synchronously the case that track IDs are never queried before they are actually defined!
+		static bool TrackIsDefined(TrackId id);
+
         static void DeleteTrack(TrackId id);
 
     private:

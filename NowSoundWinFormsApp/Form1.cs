@@ -3,6 +3,7 @@
 
 using NowSoundLib;
 using System.Collections.Generic;
+using System.Text;
 using System.Windows.Forms;
 
 namespace NowSoundWinFormsApp
@@ -19,6 +20,8 @@ namespace NowSoundWinFormsApp
         private static int _nextTrackId = 0;
 
         private List<TrackRow> _trackRows = new List<TrackRow>();
+
+        private StringBuilder _logBuilder = new StringBuilder(1024);
 
         private void _newTrackButton_Click(object sender, System.EventArgs e)
         {
@@ -40,6 +43,8 @@ namespace NowSoundWinFormsApp
             {
                 _trackRows[i].Update();
             }
+
+            WriteAllLogMessagesToDebugConsole();
         }
     }
 }

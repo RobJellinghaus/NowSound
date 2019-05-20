@@ -36,12 +36,11 @@ namespace NowSoundWinFormsApp
             NowSoundLogInfo logInfo = NowSoundGraphAPI.LogInfo();
             if (logInfo.LogMessageCount > 0)
             {
-                StringBuilder builder = new StringBuilder(256);
-                for (int i = 0; i <= logInfo.LogMessageCount; i++)
+                for (int i = 0; i < logInfo.LogMessageCount; i++)
                 {
-                    builder.Clear();
-                    NowSoundGraphAPI.GetLogMessage(i, builder);
-                    Debug.WriteLine(builder.ToString());
+                    _logBuilder.Clear();
+                    NowSoundGraphAPI.GetLogMessage(i, _logBuilder);
+                    Console.WriteLine($"NOWSOUNDLIB LOG: {_logBuilder}");
                 }
                 NowSoundGraphAPI.DropLogMessages(logInfo.LogMessageCount);
             }
@@ -56,9 +55,6 @@ namespace NowSoundWinFormsApp
 
             // and let's P/Invoke up in here!
             NowSoundGraphAPI.InitializeInstance();
-
-            // and dump any output
-            WriteAllLogMessagesToDebugConsole();
 
             // No longer necessary really since JUCE initialization is synchronous.
             // JUCETODO: clean this up eventually.

@@ -55,6 +55,14 @@ namespace NowSound
         return value;
     }
 
+	bool NowSoundTrackAudioProcessor::TrackIsDefined(TrackId id)
+	{
+		// Race conditions can lead to a track being checked before it actually exists.
+		// TODO: THIS SHOULD NOT BE THE CASE AND SHOULD BE FIXED.
+		// For now, nonetheless, let's try this workaround and verify if it happens.
+		return s_tracks.find(id) != s_tracks.end();
+	}
+
     NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
 		NowSoundGraph* graph,
         TrackId trackId,

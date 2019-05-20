@@ -98,7 +98,7 @@ namespace NowSound
 	{
 		// We don't actually need to synchronize with _logMutex in this method.
 		// The only variable touched during log appending is the size of _logMessages, and it is inherently atomically updated. (WE THINK)
-		NowSoundLogInfo info;
+		NowSoundLogInfo info{};
 		info.LogMessageCount = _logMessages.size();
 		return info;
 	}
@@ -114,7 +114,7 @@ namespace NowSound
 		// reduce inter-thread contention.
 		Check(_logMessages.size() < s_logMessageCapacity);
 
-		_logMessages.emplace_back(str);
+		_logMessages.push_back(str);
 	}
 
 	void NowSoundGraph::GetLogMessage(int32_t logMessageIndex, LPWSTR buffer, int32_t bufferCapacity)

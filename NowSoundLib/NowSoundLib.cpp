@@ -68,7 +68,8 @@ namespace NowSound
 		// externally, this can only be called once Initialize is complete
 		if (NowSoundGraph::Instance() != nullptr)
 		{
-			return NowSoundGraph::Instance()->LogInfo();
+			NowSoundLogInfo info = NowSoundGraph::Instance()->LogInfo();
+			return info;
 		}
 		else
 		{
@@ -227,7 +228,14 @@ namespace NowSound
 	__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundTrackAudioProcessor::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+		if (NowSoundTrackAudioProcessor::TrackIsDefined(trackId))
+		{
+			NowSoundTrackAudioProcessor::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+		}
+		else
+		{
+			NowSoundGraph::Instance()->Log(L"Track ID *WAS NOT DEFINED* in NowSoundTrack_GetFrequencies");
+		}
 	}
 
 	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
