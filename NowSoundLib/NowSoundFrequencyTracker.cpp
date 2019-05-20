@@ -45,7 +45,7 @@ namespace NowSound
 		Check(capacity == _binBounds->size());
 
 		// No thread synchronization here.  Slightly inconsistent data is fine.
-		// TODO: BROKEN: std::copy(_outputBuffer.get(), _outputBuffer.get() + _binBounds->size(), outputBuffer);
+		std::copy(_outputBuffer.get(), _outputBuffer.get() + capacity, outputBuffer);
 	}
 
 	void NowSoundFrequencyTracker::Record(const float* monoInputBuffer, int sampleCount)

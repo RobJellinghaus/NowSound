@@ -2,7 +2,9 @@
 // Licensed under the MIT license
 
 using NowSoundLib;
+using System.Diagnostics;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 
 namespace NowSoundWinFormsApp
@@ -39,10 +41,16 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private float[] _fftBuffer;
 
+        /// <summary>
+        /// Output buffer for the text-rendered FFT.
+        /// </summary>
+        private StringBuilder _builder;
+
         public TrackRow(TrackId trackId, FlowLayoutPanel parent)
         {
             _trackId = trackId;
             _fftBuffer = new float[MagicConstants.OutputBinCount];
+            _builder = new StringBuilder(new string('0', MagicConstants.OutputBinCount));
 
             _controlButton = new Button
             {
@@ -88,15 +96,51 @@ namespace NowSoundWinFormsApp
             TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
             NowSoundSignalInfo signalInfo = NowSoundTrackAPI.SignalInfo(_trackId);
 
-            // NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer, _fftBuffer.Length);
+            NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer, _fftBuffer.Length);
+            RenderFrequencyBuffer(_fftBuffer, _builder);
 
             _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}, "
-                + $"maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}";
+                + $"maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}, fft {_builder.ToString()}";
 
             if (trackInfo.IsTrackLooping)
             {
                 _controlButton.Text = "Looping";
                 _controlButton.Enabled = false;
+            }
+        }
+
+        static void RenderFrequencyBuffer(float[] fftBuffer, StringBuilder builder)
+        {
+            // _frequencyBuffer is presumed to have been updated
+            // first, get min/max of values
+            double max = 0;
+            for (int i = 0; i < MagicConstants.OutputBinCount; i++)
+            {
+                double value = fftBuffer[i];
+                // drop out super tiny values -- experimentally values less than 1 are uninteresting.
+                // This will make silence not have huge variance from tiny max values.
+                if (value < 1)
+                {
+                    continue;
+                }
+
+                max = value > max ? value : max;
+            }
+
+            // scale to the max, dude
+            if (max == 0)
+            {
+                builder.Clear();
+                builder.Insert(0, "0", MagicConstants.OutputBinCount);
+            }
+            else
+            {
+                for (int i = 0; i < MagicConstants.OutputBinCount; i++)
+                {
+                    double scaledValue = fftBuffer[i] / max;
+                    char digit = (char)((int)'0' + (int)(scaledValue * 9));
+                    builder[i] = digit;
+                }
             }
         }
     }
