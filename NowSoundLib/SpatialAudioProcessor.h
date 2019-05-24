@@ -21,6 +21,17 @@ namespace NowSound
         // is this currently muted?
         // if so, output audio is zeroed
         bool _isMuted;
+
+	protected:
+		// log throttling counter, to limit the amount of logging we emit (too much is useless)
+		int _logThrottlingCounter;
+
+		// log counter, to count the number of (throttled) log messages we emit (this helps with sequencing)
+		int _logCounter;
+
+		// the max counter at which _logThrottlingCounter rolls over
+		const int MaxCounter = 1000;
+
     public:
         SpatialAudioProcessor(NowSoundGraph* graph, float initialPan);
 

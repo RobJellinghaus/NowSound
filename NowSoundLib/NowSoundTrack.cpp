@@ -47,7 +47,7 @@ namespace NowSound
     NowSoundTrackAudioProcessor* NowSoundTrackAudioProcessor::Track(TrackId id)
     {
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
-        // The only way this will be correct is if all modifications to _tracks happen only as a result of
+        // The only way this will be correct is if all modifications to s_tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id > TrackId::TrackIdUndefined);
         NowSoundTrackAudioProcessor* value = static_cast<NowSoundTrackAudioProcessor*>(s_tracks.at(id)->getProcessor());
@@ -80,9 +80,7 @@ namespace NowSound
 			/*useContinuousLoopingMapper*/ false),
 		// one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
 		_beatDuration{ 1 },
-		_lastSampleTime{ Clock::Instance().Now() },
-		_logThrottlingCounter{},
-		_logCounter{}
+		_lastSampleTime{ Clock::Instance().Now() }
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -104,9 +102,11 @@ namespace NowSound
         }
 		*/
 
-		std::wstringstream wstr{};
-		wstr << L"NowSoundTrack::NowSoundTrack(" << trackId << L")";
-		NowSoundGraph::Instance()->Log(wstr.str());
+		{
+			std::wstringstream wstr{};
+			wstr << L"NowSoundTrack::NowSoundTrack(" << trackId << L")";
+			NowSoundGraph::Instance()->Log(wstr.str());
+		}
     }
 
     bool NowSoundTrackAudioProcessor::JustStoppedRecording()
@@ -208,10 +208,10 @@ namespace NowSound
 			// temporary debugging code: see if processBlock is ever being called under Holofunk
 			if (_logThrottlingCounter == 0) {
 				std::wstringstream wstr{};
-				wstr << L"NowSoundTrack::NowSoundTrack(" << _trackId << L"): in processBlock, counterCount " << ++_logCounter;
+				wstr << L"NowSoundTrack::processBlock: track " << _trackId << L", counterCount " << ++_logCounter << L", state " << _state;
 				NowSoundGraph::Instance()->Log(wstr.str());
 			}
-			_logThrottlingCounter = ++_logThrottlingCounter % maxCounter;
+			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
 		}
 		
 		// This should always take two channels.  Only channel 0 is used on input.  Both channels are used

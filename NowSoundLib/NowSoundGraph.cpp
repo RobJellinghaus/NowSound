@@ -243,27 +243,8 @@ namespace NowSound
 
             // insist on stereo float samples.  TODO: generalize channel count
             // For right now let's just make absolutely sure these values are all precisely as we intend every time.
-			// TODO: eliminate this stupid duplication for the purpose of line number disambiguation
-			// (no thanks to VS Tools For Unity for not supporting native debugging :-P )
 			Check(!Clock::IsInitialized());
-			Check(!Clock::IsInitialized());
-			Check(!Clock::IsInitialized());
-			Check(!Clock::IsInitialized());
-			Check(!Clock::IsInitialized());
-			Check(!Clock::IsInitialized());
-
 			Check(info.ChannelCount == 2);
-			Check(info.ChannelCount == 2);
-			Check(info.ChannelCount == 2);
-			Check(info.ChannelCount == 2);
-			Check(info.ChannelCount == 2);
-			Check(info.ChannelCount == 2);
-
-			Check(info.BitsPerSample == 32);
-			Check(info.BitsPerSample == 32);
-			Check(info.BitsPerSample == 32);
-			Check(info.BitsPerSample == 32);
-			Check(info.BitsPerSample == 32);
 			Check(info.BitsPerSample == 32);
 
             Clock::Initialize(
@@ -576,5 +557,12 @@ namespace NowSound
         // TODO: enumerate based on actual graph count... for the moment, stereo only
         Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
         Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
+
+		{
+			std::wstringstream wstr{};
+			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << newNode->nodeID.uid << L", " << inputChannel << ")";
+			NowSoundGraph::Instance()->Log(wstr.str());
+		}
+
     }
 }

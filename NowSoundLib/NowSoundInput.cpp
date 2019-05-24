@@ -56,7 +56,17 @@ namespace NowSound
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
-        // HACK!!!  If this is the zeroth input, then update the audio graph time.
+		{
+			// temporary debugging code: see if processBlock is ever being called under Holofunk
+			if (_logThrottlingCounter == 0) {
+				std::wstringstream wstr{};
+				wstr << L"NowSoundInput::processBlock: input " << _audioInputId << L", counterCount " << ++_logCounter;
+				NowSoundGraph::Instance()->Log(wstr.str());
+			}
+			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
+		}
+
+		// HACK!!!  If this is the zeroth input, then update the audio graph time.
         // We don't really have a great graph-level place to receive notifications from the JUCE graph,
         // so this is really a reasonable spot if you squint hard enough.  (At least it is always
         // connected and always receiving data.)

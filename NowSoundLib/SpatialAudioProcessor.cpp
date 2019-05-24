@@ -12,7 +12,9 @@ using namespace NowSound;
 SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, float initialPan) :
     MeasurementAudioProcessor(graph),
     _isMuted{ false },
-    _pan{ initialPan }
+    _pan{ initialPan },
+	_logThrottlingCounter{},
+	_logCounter{}
 {}
 
 bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }
