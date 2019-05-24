@@ -63,24 +63,26 @@ namespace NowSound
 		return s_tracks.find(id) != s_tracks.end();
 	}
 
-    NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
+	NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
 		NowSoundGraph* graph,
-        TrackId trackId,
-        const BufferedSliceStream<AudioSample, float>& sourceStream,
+		TrackId trackId,
+		const BufferedSliceStream<AudioSample, float>& sourceStream,
 		float initialPan)
 		: SpatialAudioProcessor(graph, initialPan),
 		_trackId{ trackId },
-        _state{ NowSoundTrackState::TrackRecording },
-        // latency compensation effectively means the track started before it was constructed ;-)
-        _audioStream(
-            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
-            1, // mono streams only for now (and maybe indefinitely)
-            NowSoundGraph::Instance()->AudioAllocator(),
-            /*maxBufferedDuration:*/ 0,
-            /*useContinuousLoopingMapper*/ false),
-        // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
-        _beatDuration{ 1 },
-        _lastSampleTime{ Clock::Instance().Now() }
+		_state{ NowSoundTrackState::TrackRecording },
+		// latency compensation effectively means the track started before it was constructed ;-)
+		_audioStream(
+			Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
+			1, // mono streams only for now (and maybe indefinitely)
+			NowSoundGraph::Instance()->AudioAllocator(),
+			/*maxBufferedDuration:*/ 0,
+			/*useContinuousLoopingMapper*/ false),
+		// one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
+		_beatDuration{ 1 },
+		_lastSampleTime{ Clock::Instance().Now() },
+		_logThrottlingCounter{},
+		_logCounter{}
 	{
         Check(_lastSampleTime.Value() >= 0);
 
@@ -198,9 +200,21 @@ namespace NowSound
 		*/
     }
 
+	const int maxCounter = 1000;
+
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
     {
-        // This should always take two channels.  Only channel 0 is used on input.  Both channels are used
+		{
+			// temporary debugging code: see if processBlock is ever being called under Holofunk
+			if (_logThrottlingCounter == 0) {
+				std::wstringstream wstr{};
+				wstr << L"NowSoundTrack::NowSoundTrack(" << _trackId << L"): in processBlock, counterCount " << ++_logCounter;
+				NowSoundGraph::Instance()->Log(wstr.str());
+			}
+			_logThrottlingCounter = ++_logThrottlingCounter % maxCounter;
+		}
+		
+		// This should always take two channels.  Only channel 0 is used on input.  Both channels are used
         // on output (only stereo supported for now).
         Check(audioBuffer.getNumChannels() == 2);
 

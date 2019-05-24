@@ -108,7 +108,7 @@ namespace NowSound
 	{
 		std::lock_guard<std::mutex> guard(_logMutex);
 
-		// this check should just never fail.  If it does, you're logging wrong.
+		// This check should just never fail.  If it does, you're logging wrong.
 		// The reason this check should never fail is that, if this can never cause a resize, then
 		// it's safe for GetLogMessage to not lock the _logMessages vector itself -- which will hugely
 		// reduce inter-thread contention.
@@ -121,7 +121,7 @@ namespace NowSound
 	{
 		Check(logMessageIndex < _logMessages.size());
 
-		// We don't even need to synchronize when getting the log message, so long as we never call DropLogMessagesUpTo()
+		// We don't need to synchronize when getting the log message, so long as we never call DropLogMessages()
 		// concurrently with this.
 		const std::wstring& message = _logMessages.at(logMessageIndex);
 		wcsncpy_s(buffer, (size_t)bufferCapacity, message.c_str(), message.size());
@@ -129,13 +129,16 @@ namespace NowSound
 
 	void NowSoundGraph::DropLogMessages(int32_t messageCountToDrop)
 	{
-		// These checks do not need to be under a lock, as _logMessages.size() can safely be incremented
-		// atomically while racing here.  Yes, this makes strong assumptions about how std::vector is implemented.
-		Check(_logMessages.size() <= messageCountToDrop);
+		// This check does not need to be under a lock, under the assumptions that:
+		// - this method is never called concurrently
+		// - the value of size() is backed by an atomically updated int field
+		// Under these assumptions, racing calls to Log (which are allowed) can only
+		// make the count grow.  So if the count to drop is small enough outside the lock,
+		// it will still be small enough inside the lock.
+		Check(messageCountToDrop <= _logMessages.size());
 
-		// Here we have no choice but to lock, which could wedge the audio thread.
-		// TBD how much of a problem this would be... wonder if we can instrument this...
 		std::lock_guard<std::mutex> guard(_logMutex);
+
 		_logMessages.erase(_logMessages.begin(), _logMessages.begin() + messageCountToDrop);
 	}
 

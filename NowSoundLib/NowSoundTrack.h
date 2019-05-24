@@ -66,6 +66,12 @@ namespace NowSound
         // did this just stop recording? if so, message thread will remove its input connection on next poll
         bool _justStoppedRecording;
 
+		// log throttling counter, to limit the amount of logging we emit (too much is useless)
+		int _logThrottlingCounter;
+
+		// log counter, to count the number of (throttled) log messages we emit (this helps with sequencing)
+		int _logCounter;
+
     public: // Non-exported methods for internal use
 		NowSoundTrackAudioProcessor(
 			NowSoundGraph* graph,

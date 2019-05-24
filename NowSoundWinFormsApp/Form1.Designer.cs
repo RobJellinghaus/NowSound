@@ -36,6 +36,7 @@ namespace NowSoundWinFormsApp
             NowSoundLogInfo logInfo = NowSoundGraphAPI.LogInfo();
             if (logInfo.LogMessageCount > 0)
             {
+                Console.WriteLine("Log message count: " + logInfo.LogMessageCount);
                 for (int i = 0; i < logInfo.LogMessageCount; i++)
                 {
                     _logBuilder.Clear();
