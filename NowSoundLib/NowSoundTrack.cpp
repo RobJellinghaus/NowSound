@@ -35,13 +35,14 @@ namespace NowSound
     {
         Check(trackId >= TrackId::TrackIdUndefined && trackId <= s_tracks.size());
         Track(trackId)->Delete();
-        // emplace a null pointer
+        // place a null pointer
         s_tracks[trackId] = nullptr;
     }
 
-    void NowSoundTrackAudioProcessor::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
-    {
-        s_tracks.emplace(id, std::move(track));
+	void NowSoundTrackAudioProcessor::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
+	{
+		// we want to insert the track by copy, since it's ref-counted
+		s_tracks.insert(std::pair<TrackId, juce::AudioProcessorGraph::Node::Ptr>{id, track});
     }
 
     NowSoundTrackAudioProcessor* NowSoundTrackAudioProcessor::Track(TrackId id)
@@ -210,6 +211,8 @@ namespace NowSound
 				std::wstringstream wstr{};
 				wstr << L"NowSoundTrack::processBlock: track " << _trackId << L", counterCount " << ++_logCounter << L", state " << _state;
 				NowSoundGraph::Instance()->Log(wstr.str());
+
+				Graph()->LogConnections();
 			}
 			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
 		}

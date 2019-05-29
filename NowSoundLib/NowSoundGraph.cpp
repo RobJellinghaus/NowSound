@@ -562,7 +562,27 @@ namespace NowSound
 			std::wstringstream wstr{};
 			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << newNode->nodeID.uid << L", " << inputChannel << ")";
 			NowSoundGraph::Instance()->Log(wstr.str());
-		}
 
+			for (auto conn : JuceGraph().getConnections())
+			{
+				std::wstringstream wstr2;
+				wstr2 << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
+					 << ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex;
+				NowSoundGraph::Instance()->Log(wstr2.str());
+			}
+		}
     }
+
+	void NowSoundGraph::LogConnections()
+	{
+		for (auto conn : JuceGraph().getConnections())
+		{
+			std::wstringstream wstr2;
+			wstr2 << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
+				<< L"/" << JuceGraph().getNodeForId(conn.source.nodeID)->getProcessor()->getName()
+				<< ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex
+				<< L"/" << JuceGraph().getNodeForId(conn.destination.nodeID)->getProcessor()->getName();
+			NowSoundGraph::Instance()->Log(wstr2.str());
+		}
+	}
 }

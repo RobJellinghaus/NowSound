@@ -17,8 +17,6 @@ namespace NowSoundWinFormsApp
             timer1.Start();
         }
 
-        private static int _nextTrackId = 0;
-
         private List<TrackRow> _trackRows = new List<TrackRow>();
 
         private StringBuilder _logBuilder = new StringBuilder(1024);
@@ -28,7 +26,7 @@ namespace NowSoundWinFormsApp
             // we haven't started recording yet; time to do so!
             TrackId trackId = NowSoundGraphAPI.CreateRecordingTrackAsync(AudioInputId.AudioInput1);
 
-            _trackRows.Add(new TrackRow((TrackId)(++_nextTrackId), _tracksPanel));
+            _trackRows.Add(new TrackRow(trackId, _tracksPanel));
         }
 
         private void timer1_Tick(object sender, System.EventArgs e)

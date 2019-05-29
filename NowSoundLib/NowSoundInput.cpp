@@ -62,6 +62,8 @@ namespace NowSound
 				std::wstringstream wstr{};
 				wstr << L"NowSoundInput::processBlock: input " << _audioInputId << L", counterCount " << ++_logCounter;
 				NowSoundGraph::Instance()->Log(wstr.str());
+
+				Graph()->LogConnections();
 			}
 			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
 		}

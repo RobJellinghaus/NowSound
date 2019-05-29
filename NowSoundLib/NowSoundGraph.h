@@ -236,5 +236,8 @@ namespace NowSound
 
 		// Actually shut down the audio processing.
 		void Shutdown();
+
+		// Log the current connections in the graph
+		void LogConnections();
     };
 }
