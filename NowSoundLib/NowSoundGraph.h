@@ -239,5 +239,8 @@ namespace NowSound
 
 		// Log the current connections in the graph
 		void LogConnections();
+
+		// Log a single node in all detail.
+		void LogNode(juce::AudioProcessorGraph::NodeID nodeId);
     };
 }

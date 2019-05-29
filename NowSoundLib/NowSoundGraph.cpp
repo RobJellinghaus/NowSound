@@ -562,27 +562,47 @@ namespace NowSound
 			std::wstringstream wstr{};
 			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << newNode->nodeID.uid << L", " << inputChannel << ")";
 			NowSoundGraph::Instance()->Log(wstr.str());
-
-			for (auto conn : JuceGraph().getConnections())
-			{
-				std::wstringstream wstr2;
-				wstr2 << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
-					 << ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex;
-				NowSoundGraph::Instance()->Log(wstr2.str());
-			}
 		}
     }
 
 	void NowSoundGraph::LogConnections()
 	{
+		int maxConnNodeId = 0;
 		for (auto conn : JuceGraph().getConnections())
 		{
-			std::wstringstream wstr2;
-			wstr2 << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
-				<< L"/" << JuceGraph().getNodeForId(conn.source.nodeID)->getProcessor()->getName()
-				<< ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex
-				<< L"/" << JuceGraph().getNodeForId(conn.destination.nodeID)->getProcessor()->getName();
-			NowSoundGraph::Instance()->Log(wstr2.str());
+			std::wstringstream wstr;
+			wstr << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
+				<< ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex;
+			Log(wstr.str());
+
+			if (conn.source.nodeID.uid > maxConnNodeId)
+			{
+				maxConnNodeId = conn.source.nodeID.uid;
+			}
+			if (conn.destination.nodeID.uid > maxConnNodeId)
+			{
+				maxConnNodeId = conn.destination.nodeID.uid;
+			}
 		}
+		for (int i = 1; i <= maxConnNodeId; i++)
+		{
+			LogNode((juce::AudioProcessorGraph::NodeID)i);
+		}
+	}
+
+	void NowSoundGraph::LogNode(juce::AudioProcessorGraph::NodeID nodeId)
+	{
+		const juce::AudioProcessorGraph::Node* nodePtr = JuceGraph().getNodeForId(nodeId);
+		std::wstringstream wstr;
+		wstr << L"Node #" << nodePtr->nodeID.uid << L": "
+			<< nodePtr->getProcessor()->getName()
+			<< L": bypassed " << nodePtr->isBypassed()
+			<< L", suspended " << nodePtr->getProcessor()->isSuspended()
+			<< L", latencySamples " << nodePtr->getProcessor()->getLatencySamples()
+			<< L", sampleRate " << nodePtr->getProcessor()->getSampleRate()
+			<< L", totalNumInputChannels " << nodePtr->getProcessor()->getTotalNumInputChannels()
+			<< L", totalNumOutputChannels " << nodePtr->getProcessor()->getTotalNumOutputChannels()
+			<< L", isUsingDoublePrecision " << nodePtr->getProcessor()->isUsingDoublePrecision();
+		Log(wstr.str());
 	}
 }
