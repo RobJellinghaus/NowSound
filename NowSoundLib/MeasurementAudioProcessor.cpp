@@ -18,7 +18,7 @@ BaseAudioProcessor::BaseAudioProcessor(const wstring& name) : _name{ name }
 bool BaseAudioProcessor::CheckLogThrottle()
 {
 	int counter = _logThrottlingCounter;
-	_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
+	_logThrottlingCounter = ++_logThrottlingCounter % LogThrottle;
 	return counter == 0;
 }
 

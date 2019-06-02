@@ -182,6 +182,8 @@ namespace NowSound
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
         std::mutex _stateMutex;
 
+		int _logThrottlingCounter;
+
     public: // Implementation methods used from elsewhere in the library
 
         // The static instance of the graph.  We may eventually have multiple.
@@ -241,5 +243,7 @@ namespace NowSound
 
 		// Log a single node in all detail.
 		void LogNode(juce::AudioProcessorGraph::NodeID nodeId);
+
+		bool CheckLogThrottle();
     };
 }

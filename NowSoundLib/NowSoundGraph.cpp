@@ -22,6 +22,16 @@ using namespace winrt;
 
 using namespace winrt::Windows::Foundation;
 
+bool juce::NowSound_CheckLogThrottle()
+{
+	return NowSound::NowSoundGraph::Instance()->CheckLogThrottle();
+}
+
+void juce::NowSound_Log(const std::wstring& message)
+{
+	NowSound::NowSoundGraph::Instance()->Log(message);
+}
+
 namespace NowSound
 {
 	TimeSpan timeSpanFromSeconds(int seconds)
@@ -61,6 +71,13 @@ namespace NowSound
 	{
 		_logMessages.reserve(s_logMessageCapacity);
 		Check(_logMessages.size() == 0);
+	}
+
+	bool NowSoundGraph::CheckLogThrottle()
+	{
+		int counter = _logThrottlingCounter;
+		_logThrottlingCounter = ++_logThrottlingCounter % BaseAudioProcessor::LogThrottle;
+		return counter == 0;
 	}
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }

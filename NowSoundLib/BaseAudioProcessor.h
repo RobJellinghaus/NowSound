@@ -44,8 +44,9 @@ namespace NowSound
 		// log counter, to count the number of (throttled) log messages we emit (this helps with sequencing)
 		int _logCounter;
 
+	public:
 		// the max counter at which _logThrottlingCounter rolls over
-		const int MaxCounter = 1000;
+		static const int LogThrottle = 1000;
 
 	protected:
 		// The name of this processor.
