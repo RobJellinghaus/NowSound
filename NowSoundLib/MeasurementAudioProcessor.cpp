@@ -12,15 +12,25 @@ using namespace std;
 
 using namespace NowSound;
 
-MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph)
-    : BaseAudioProcessor(),
+BaseAudioProcessor::BaseAudioProcessor(const wstring& name) : _name{ name }
+{}
+
+bool BaseAudioProcessor::CheckLogThrottle()
+{
+	int counter = _logThrottlingCounter;
+	_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
+	return counter == 0;
+}
+
+MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const wstring& name)
+    : BaseAudioProcessor(name),
     _graph{ graph },
     _mutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
     _volumeHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
-    _frequencyTracker{ graph->FftSize() < 0
-    ? ((NowSoundFrequencyTracker*)nullptr)
-    : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) }
+	_frequencyTracker{ graph->FftSize() < 0 
+	    ? ((NowSoundFrequencyTracker*)nullptr)
+	    : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) }
 {}
 
 NowSoundSignalInfo MeasurementAudioProcessor::SignalInfo()
@@ -47,7 +57,14 @@ const double Pi = std::atan(1) * 4;
 
 void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
 {
-    Check(audioBuffer.getNumChannels() == 2);
+	// temporary debugging code: see if processBlock is ever being called under Holofunk
+	if (CheckLogThrottle()) {
+		std::wstringstream wstr{};
+		wstr << getName() << L"::processBlock: count " << NextCounter();
+		NowSoundGraph::Instance()->Log(wstr.str());
+	}
+
+	Check(audioBuffer.getNumChannels() == 2);
 
     int numSamples = audioBuffer.getNumSamples();
 

@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 
+#include <string>
 #include "NowSoundGraph.h"
 
 namespace NowSound
@@ -35,5 +36,26 @@ namespace NowSound
         virtual void changeProgramName(int index, const String & newName) override;
         virtual void getStateInformation(juce::MemoryBlock & destData) override;
         virtual void setStateInformation(const void * data, int sizeInBytes) override;
-    };
+
+	private:
+		// log throttling counter, to limit the amount of logging we emit (too much is useless)
+		int _logThrottlingCounter;
+
+		// log counter, to count the number of (throttled) log messages we emit (this helps with sequencing)
+		int _logCounter;
+
+		// the max counter at which _logThrottlingCounter rolls over
+		const int MaxCounter = 1000;
+
+	protected:
+		// The name of this processor.
+		const std::wstring _name;
+
+		BaseAudioProcessor(const std::wstring& name);
+
+		// Return true if it is appropriate to emit a log message (happens every MaxCounter calls to this method).
+		bool CheckLogThrottle();
+
+		int NextCounter() { return ++_logCounter; }
+	};
 }

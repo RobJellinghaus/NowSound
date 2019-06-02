@@ -5,6 +5,7 @@
 #include <future>
 #include <vector>
 
+#include <string>
 #include "stdint.h"
 
 #include "BaseAudioProcessor.h"
@@ -45,8 +46,6 @@ namespace NowSound
 			AudioInputId audioInputId,
 			BufferAllocator<float>* audioAllocator,
 			int channel);
-
-        virtual const String getName() const override { return L"NowSoundInputAudioProcessor"; }
 
         // Process input audio by recording it into the (bounded) incomingAudioStream.
         virtual void processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer);

@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 
+#include <string>
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundGraph.h"
 #include "MeasurementAudioProcessor.h"
@@ -22,20 +23,8 @@ namespace NowSound
         // if so, output audio is zeroed
         bool _isMuted;
 
-	protected:
-		// log throttling counter, to limit the amount of logging we emit (too much is useless)
-		int _logThrottlingCounter;
-
-		// log counter, to count the number of (throttled) log messages we emit (this helps with sequencing)
-		int _logCounter;
-
-		// the max counter at which _logThrottlingCounter rolls over
-		const int MaxCounter = 1000;
-
     public:
-        SpatialAudioProcessor(NowSoundGraph* graph, float initialPan);
-
-        virtual const String getName() const override { return L"SpatialAudioProcessor"; }
+        SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialPan);
 
         // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
@@ -50,5 +39,13 @@ namespace NowSound
         // Get and set the pan value for this track.
         float Pan() const;
         void Pan(float pan);
+
+	protected: 
+		static std::wstring MakeName(const wchar_t* label, int id)
+		{
+			std::wstringstream wstr;
+			wstr << label << id;
+			return wstr.str();
+		}
     };
 }

@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 
-#include <string>
 #include <sstream>
 
 #include "stdint.h"
@@ -69,7 +68,7 @@ namespace NowSound
 		TrackId trackId,
 		const BufferedSliceStream<AudioSample, float>& sourceStream,
 		float initialPan)
-		: SpatialAudioProcessor(graph, initialPan),
+		: SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialPan),
 		_trackId{ trackId },
 		_state{ NowSoundTrackState::TrackRecording },
 		// latency compensation effectively means the track started before it was constructed ;-)
@@ -205,16 +204,11 @@ namespace NowSound
 
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
     {
-		{
-			// temporary debugging code: see if processBlock is ever being called under Holofunk
-			if (_logThrottlingCounter == 0) {
-				std::wstringstream wstr{};
-				wstr << L"NowSoundTrack::processBlock: track " << _trackId << L", counterCount " << ++_logCounter << L", state " << _state;
-				NowSoundGraph::Instance()->Log(wstr.str());
-
-				Graph()->LogConnections();
-			}
-			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
+		// temporary debugging code: see if processBlock is ever being called under Holofunk
+		if (CheckLogThrottle()) {
+			std::wstringstream wstr{};
+			wstr << getName() << L"::processBlock: count " << NextCounter() << L", state " << _state;
+			NowSoundGraph::Instance()->Log(wstr.str());
 		}
 		
 		// This should always take two channels.  Only channel 0 is used on input.  Both channels are used

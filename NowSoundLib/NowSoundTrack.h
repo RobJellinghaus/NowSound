@@ -73,8 +73,6 @@ namespace NowSound
 			const BufferedSliceStream<AudioSample, float>& sourceStream,
 			float initialPan);
 
-        virtual const String getName() const { return L"NowSoundTrackAudioProcessor"; }
-
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // Did this track stop recording since the last time this method was called?

@@ -4,7 +4,6 @@
 #pragma once
 
 #include <complex>
-#include <string>
 #include <vector>
 
 #include "stdafx.h"

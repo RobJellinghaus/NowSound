@@ -26,7 +26,7 @@ namespace NowSound
 		AudioInputId inputId,
 		BufferAllocator<float>* audioAllocator,
 		int channel)
-		: SpatialAudioProcessor(nowSoundGraph, 0.5),
+		: SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), 0.5),
 		_audioInputId{ inputId },
 		_channel{ channel },
 		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false }		
@@ -56,16 +56,16 @@ namespace NowSound
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
 	{
-		{
-			// temporary debugging code: see if processBlock is ever being called under Holofunk
-			if (_logThrottlingCounter == 0) {
-				std::wstringstream wstr{};
-				wstr << L"NowSoundInput::processBlock: input " << _audioInputId << L", counterCount " << ++_logCounter;
-				NowSoundGraph::Instance()->Log(wstr.str());
-
+		// temporary debugging code: see if processBlock is ever being called under Holofunk
+		if (CheckLogThrottle()) {
+			std::wstringstream wstr{};
+			wstr << getName() << L"::processBlock: count " << NextCounter();
+			NowSoundGraph::Instance()->Log(wstr.str());
+				
+			if (_audioInputId == AudioInput1)
+			{
 				Graph()->LogConnections();
 			}
-			_logThrottlingCounter = ++_logThrottlingCounter % MaxCounter;
 		}
 
 		// HACK!!!  If this is the zeroth input, then update the audio graph time.

@@ -8,13 +8,12 @@
 #include "SpatialAudioProcessor.h"
 
 using namespace NowSound;
+using namespace std;
 
-SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, float initialPan) :
-    MeasurementAudioProcessor(graph),
+SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialPan) :
+    MeasurementAudioProcessor(graph, name),
     _isMuted{ false },
-    _pan{ initialPan },
-	_logThrottlingCounter{},
-	_logCounter{}
+    _pan{ initialPan }
 {}
 
 bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }

@@ -29,9 +29,9 @@ namespace NowSound
         const std::unique_ptr<NowSoundFrequencyTracker> _frequencyTracker;
 
     public:
-        MeasurementAudioProcessor(NowSoundGraph* graph);
+        MeasurementAudioProcessor(NowSoundGraph* graph, const std::wstring& name);
 
-        virtual const String getName() const override { return L"MeasurementAudioProcessor"; }
+        virtual const String getName() const override { return String(_name.c_str()); }
 
         // Process the given buffer; use the number of output channels as the channel count.
         // This locks the info mutex.
