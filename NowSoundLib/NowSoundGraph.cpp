@@ -81,12 +81,18 @@ namespace NowSound
 		Track(trackId)->Delete();
 		// place a null pointer
 		_tracks[trackId] = nullptr;
+
+		// this is an async update
+		AsyncUpdate();
 	}
 
 	void NowSoundGraph::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
 	{
 		// we want to insert the track by copy, since it's ref-counted
 		_tracks.insert(std::pair<TrackId, juce::AudioProcessorGraph::Node::Ptr>{id, track});
+
+		// this is an async update
+		AsyncUpdate();
 	}
 
 	NowSoundTrackAudioProcessor* NowSoundGraph::Track(TrackId id)
