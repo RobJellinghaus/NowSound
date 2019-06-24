@@ -161,6 +161,12 @@ namespace NowSound
 		return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
 	}
 
+	void NowSoundGraph_MessageTick()
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->MessageTick();
+	}
+
 	void NowSoundGraph_ShutdownInstance()
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
@@ -186,51 +192,51 @@ namespace NowSound
 	__declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->State();
+		return NowSoundGraph::Instance()->Track(trackId)->State();
 	}
 
 	__declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->BeatDuration().Value();
+		return NowSoundGraph::Instance()->Track(trackId)->BeatDuration().Value();
 	}
 
 	__declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->BeatPositionUnityNow().Value();
+		return NowSoundGraph::Instance()->Track(trackId)->BeatPositionUnityNow().Value();
 	}
 
 	__declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->ExactDuration().Value();
+		return NowSoundGraph::Instance()->Track(trackId)->ExactDuration().Value();
 	}
 
 	__declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->Info();
+		return NowSoundGraph::Instance()->Track(trackId)->Info();
 	}
 
 	__declspec(dllexport) NowSoundSignalInfo NowSoundTrack_SignalInfo(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->SignalInfo();
+		return NowSoundGraph::Instance()->Track(trackId)->SignalInfo();
 	}
 
 	__declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundTrackAudioProcessor::Track(trackId)->FinishRecording();
+		NowSoundGraph::Instance()->Track(trackId)->FinishRecording();
 	}
 
 	__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		if (NowSoundTrackAudioProcessor::TrackIsDefined(trackId))
+		if (NowSoundGraph::Instance()->TrackIsDefined(trackId))
 		{
-			NowSoundTrackAudioProcessor::Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+			NowSoundGraph::Instance()->Track(trackId)->GetFrequencies(floatBuffer, floatBufferCapacity);
 		}
 		else
 		{
@@ -241,18 +247,18 @@ namespace NowSound
 	__declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundTrackAudioProcessor::Track(trackId)->IsMuted();
+		return NowSoundGraph::Instance()->Track(trackId)->IsMuted();
 	}
 
 	__declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundTrackAudioProcessor::Track(trackId)->IsMuted(isMuted);
+		NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
 	}
 
 	__declspec(dllexport) void NowSoundTrack_Delete(TrackId trackId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundTrackAudioProcessor::DeleteTrack(trackId);
+		NowSoundGraph::Instance()->DeleteTrack(trackId);
 	}
 }

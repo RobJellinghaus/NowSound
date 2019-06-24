@@ -22,6 +22,7 @@
 namespace NowSound
 {
     class NowSoundInputAudioProcessor;
+	class NowSoundTrackAudioProcessor;
 
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
@@ -91,6 +92,13 @@ namespace NowSound
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
+		// Call this regularly from the message thread.
+		// This is a gross hack to work around the fact that running JUCE as a native plugin (not a Unity plugin)
+		// under Unity breaks JUCE's built-in async message pumping, resulting in async graph structure changes not getting
+		// properly handled on the message thread.
+		// The JucePlugin_Build_Unity preprocessor flag affects this behavior, but I am not going to mess with that just yet.
+		void MessageTick();
+
 	private: // Constructor and internal implementations
 
         // construct a graph, but do not yet initialize it
@@ -109,6 +117,12 @@ namespace NowSound
 
         // Set minimum buffer size in the device manager.
         void setBufferSize();
+
+		// Record that an async update happened.
+		void AsyncUpdate();
+
+		// Did an async update happen since the last call to this method?
+		bool WasAsyncUpdate();
 
     private: // instance variables
 
@@ -184,7 +198,31 @@ namespace NowSound
 
 		int _logThrottlingCounter;
 
-    public: // Implementation methods used from elsewhere in the library
+		// The collection of all tracks.
+		std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> _tracks;
+
+		// True if there was an async update.
+		bool _asyncUpdate;
+
+		// Mutex for changing the state of _asyncUpdate.
+		// This is to avoid a potential race between testing _asyncUpdate to find it true,
+		// and then resetting it to false concurrently with an audio thread setting it to true again.
+		std::mutex _asyncUpdateMutex;
+
+	public:
+		// non-exported methods for "internal" use
+		void AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track);
+
+		// Accessor for track by ID.
+		NowSoundTrackAudioProcessor* Track(TrackId id);
+
+		// Check to see if this track ID exists. TODO: DELETE THIS; JUST FOR USE WHEN RACE HUNTING.
+		// Should be synchronously the case that track IDs are never queried before they are actually defined!
+		bool TrackIsDefined(TrackId id);
+
+		void DeleteTrack(TrackId id);
+
+	public: // Implementation methods used from elsewhere in the library
 
         // The static instance of the graph.  We may eventually have multiple.
         static NowSoundGraph* Instance();

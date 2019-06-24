@@ -380,13 +380,15 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_DestroyAudioGraphAsync();
+        static extern void NowSoundGraph_MessageTick();
 
-        // Tear down the whole graph.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        public static void DestroyAudioGraphAsync()
+        // Call regularly from the "message thread" or client equivalent (e.g. the same thread
+        // from which NowSoundGraph_Initialize was called).
+        // Hack to work around message pumping issues with async updates in our peculiar arrangement of 
+        // P-Invokable JUCE inside of Unity.
+        public static void MessageTick()
         {
-            NowSoundGraph_DestroyAudioGraphAsync();
+            NowSoundGraph_MessageTick();
         }
 
         [DllImport("NowSoundLib")]

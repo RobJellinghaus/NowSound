@@ -65,12 +65,47 @@ namespace NowSound
 		_fftBinBounds{},
 		_fftSize{ -1 },
 		_stateMutex{},
-        _outputSignalMutex{},
+		_outputSignalMutex{},
 		_logMessages{},
-		_logMutex{}
+		_logMutex{},
+		_asyncUpdate{},
+		_asyncUpdateMutex{}
 	{
 		_logMessages.reserve(s_logMessageCapacity);
 		Check(_logMessages.size() == 0);
+	}
+
+	void NowSoundGraph::DeleteTrack(TrackId trackId)
+	{
+		Check(trackId >= TrackId::TrackIdUndefined && trackId <= _tracks.size());
+		Track(trackId)->Delete();
+		// place a null pointer
+		_tracks[trackId] = nullptr;
+	}
+
+	void NowSoundGraph::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
+	{
+		// we want to insert the track by copy, since it's ref-counted
+		_tracks.insert(std::pair<TrackId, juce::AudioProcessorGraph::Node::Ptr>{id, track});
+	}
+
+	NowSoundTrackAudioProcessor* NowSoundGraph::Track(TrackId id)
+	{
+		// NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
+		// The only way this will be correct is if all modifications to s_tracks happen only as a result of
+		// non-concurrent, serialized external calls to NowSoundTrackAPI.
+		Check(id > TrackId::TrackIdUndefined);
+		NowSoundTrackAudioProcessor* value = static_cast<NowSoundTrackAudioProcessor*>(_tracks.at(id)->getProcessor());
+		Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
+		return value;
+	}
+
+	bool NowSoundGraph::TrackIsDefined(TrackId id)
+	{
+		// Race conditions can lead to a track being checked before it actually exists.
+		// TODO: THIS SHOULD NOT BE THE CASE AND SHOULD BE FIXED.
+		// For now, nonetheless, let's try this workaround and verify if it happens.
+		return _tracks.find(id) != _tracks.end();
 	}
 
 	bool NowSoundGraph::CheckLogThrottle()
@@ -159,47 +194,47 @@ namespace NowSound
 		_logMessages.erase(_logMessages.begin(), _logMessages.begin() + messageCountToDrop);
 	}
 
-    juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
-    {
-        return _audioProcessorGraph;
-    }
+	juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
+	{
+		return _audioProcessorGraph;
+	}
 
-    void NowSoundGraph::setBufferSize()
-    {
-        // Set buffer size to appropriate value available on current device
-        auto* device = _audioDeviceManager.getCurrentAudioDevice();
+	void NowSoundGraph::setBufferSize()
+	{
+		// Set buffer size to appropriate value available on current device
+		auto* device = _audioDeviceManager.getCurrentAudioDevice();
 
-        auto bufferRate = device->getCurrentSampleRate();
-        auto bufferSize = device->getCurrentBufferSizeSamples();
+		auto bufferRate = device->getCurrentSampleRate();
+		auto bufferSize = device->getCurrentBufferSizeSamples();
 
-        const bool setMinBufferSize = true;
-        if (setMinBufferSize)
-        {
-            auto bufferSizes = device->getAvailableBufferSizes();
-            // OK, not smallest... next smallest... let's see if it helps static problems with >3 loops
-            // ... it seems to! On Focusrite Scarlett 2i2, sizes are [16, 32, 48, 64, ...]
-            int targetBufferSize = bufferSizes[3];
+		const bool setMinBufferSize = true;
+		if (setMinBufferSize)
+		{
+			auto bufferSizes = device->getAvailableBufferSizes();
+			// OK, not smallest... next smallest... let's see if it helps static problems with >3 loops
+			// ... it seems to! On Focusrite Scarlett 2i2, sizes are [16, 32, 48, 64, ...]
+			int targetBufferSize = bufferSizes[3];
 
-            AudioDeviceManager::AudioDeviceSetup setup;
-            _audioDeviceManager.getAudioDeviceSetup(setup);
+			AudioDeviceManager::AudioDeviceSetup setup;
+			_audioDeviceManager.getAudioDeviceSetup(setup);
 
-            if (setup.bufferSize != targetBufferSize)
-            {
-                setup.bufferSize = targetBufferSize;
-                String result = _audioDeviceManager.setAudioDeviceSetup(setup, false);
-                if (result.length() > 0)
-                {
-                    throw std::exception(result.getCharPointer());
-                }
-            }
+			if (setup.bufferSize != targetBufferSize)
+			{
+				setup.bufferSize = targetBufferSize;
+				String result = _audioDeviceManager.setAudioDeviceSetup(setup, false);
+				if (result.length() > 0)
+				{
+					throw std::exception(result.getCharPointer());
+				}
+			}
 
-            if (targetBufferSize != device->getCurrentBufferSizeSamples())
-            {
-                // die horribly
-                throw std::exception("Can't set buffer size to target");
-            }
-        }
-    }
+			if (targetBufferSize != device->getCurrentBufferSizeSamples())
+			{
+				// die horribly
+				throw std::exception("Can't set buffer size to target");
+			}
+		}
+	}
 
 	void NowSoundGraph::Initialize()
 	{
@@ -217,110 +252,110 @@ namespace NowSound
 		// Not yet investigated....
 		MessageManager::getInstance();
 
-        // Initialize the ASIO device.
-        {
-            // Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
-            // Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
-            // 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
-            // similar heartache.
-            // ...it does not... but neither does it provide tolerable latency; shared mode minimum buffer
-            // size of 144 samples (on FocusRite Scarlett 2i2), and exclusive mode is terribly crackly with
-            // even a 480 sample buffer (and significantly worse at minimum 144).
-            //
-            // ASIO, on the other hand, is silky smooth and crackle-free at **16** sample buffer size.
-            // So, so much for native Windows audio, they gave up the low latency game years ago and
-            // forgot how to really play.
-            juce::String desiredDeviceType = L"ASIO";
+		// Initialize the ASIO device.
+		{
+			// Valid values for this on Surface Book are L"DirectSound" and L"Windows Audio".
+			// Both seem to permit 96 sample buffering (!) but DirectSound seems to come up with
+			// 16 bit audio sometimes... let's see if Windows Audio (AKA (AFAICT) WASAPI) causes
+			// similar heartache.
+			// ...it does not... but neither does it provide tolerable latency; shared mode minimum buffer
+			// size of 144 samples (on FocusRite Scarlett 2i2), and exclusive mode is terribly crackly with
+			// even a 480 sample buffer (and significantly worse at minimum 144).
+			//
+			// ASIO, on the other hand, is silky smooth and crackle-free at **16** sample buffer size.
+			// So, so much for native Windows audio, they gave up the low latency game years ago and
+			// forgot how to really play.
+			juce::String desiredDeviceType = L"ASIO";
 
-            const OwnedArray<AudioIODeviceType>& deviceTypes = _audioDeviceManager.getAvailableDeviceTypes();
+			const OwnedArray<AudioIODeviceType>& deviceTypes = _audioDeviceManager.getAvailableDeviceTypes();
 
-            // Set the audio device type.  Note that this actually winds up initializing one, which we don't want
-            // but oh well.
-            _audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ false);
+			// Set the audio device type.  Note that this actually winds up initializing one, which we don't want
+			// but oh well.
+			_audioDeviceManager.setCurrentAudioDeviceType(desiredDeviceType, /*treatAsChosenDevice*/ false);
 
-            String result = _audioDeviceManager.initialiseWithDefaultDevices(2, 2);
-            if (result.length() > 0)
-            {
-                ChangeState(NowSoundGraphState::GraphInError);
-                return;
-            }
-		
+			String result = _audioDeviceManager.initialiseWithDefaultDevices(2, 2);
+			if (result.length() > 0)
+			{
+				ChangeState(NowSoundGraphState::GraphInError);
+				return;
+			}
+
 			Log(L"Initialize(): end");
 		}
 
-        // Set up the ASIO device, clock, and audio allocator.
-        NowSoundGraphInfo info;
-        {            
-            // we expect ASIO
-            Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"ASIO");
+		// Set up the ASIO device, clock, and audio allocator.
+		NowSoundGraphInfo info;
+		{
+			// we expect ASIO
+			Check(_audioDeviceManager.getCurrentAudioDeviceType() == L"ASIO");
 
-            setBufferSize();
+			setBufferSize();
 
-            info = Info();
+			info = Info();
 
-            // insist on stereo float samples.  TODO: generalize channel count
-            // For right now let's just make absolutely sure these values are all precisely as we intend every time.
+			// insist on stereo float samples.  TODO: generalize channel count
+			// For right now let's just make absolutely sure these values are all precisely as we intend every time.
 			Check(!Clock::IsInitialized());
 			Check(info.ChannelCount == 2);
 			Check(info.BitsPerSample == 32);
 
-            Clock::Initialize(
-                info.SampleRateHz,
-                info.ChannelCount,
-                MagicConstants::InitialBeatsPerMinute,
-                MagicConstants::BeatsPerMeasure);
+			Clock::Initialize(
+				info.SampleRateHz,
+				info.ChannelCount,
+				MagicConstants::InitialBeatsPerMinute,
+				MagicConstants::BeatsPerMeasure);
 
-            _audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
-                (int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
-                MagicConstants::InitialAudioBufferCount));
-        }
+			_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
+				(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
+				MagicConstants::InitialAudioBufferCount));
+		}
 
-        // Set up the audio processor graph and its related components.
-        {
-            _audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
-            _audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
+		// Set up the audio processor graph and its related components.
+		{
+			_audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
+			_audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
 
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
-                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
-                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+			juce::AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
+				new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
+			juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
+				new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
 
-            MeasurementAudioProcessor* outputMixAudioProcessor = new MeasurementAudioProcessor(this, L"OutputMix");
+			MeasurementAudioProcessor* outputMixAudioProcessor = new MeasurementAudioProcessor(this, L"OutputMix");
 
-            // TODO: don't hardcode stereo
-            outputMixAudioProcessor->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+			// TODO: don't hardcode stereo
+			outputMixAudioProcessor->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
-            // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
-            _audioProcessorGraph.setPlayConfigDetails(
-                info.ChannelCount,
-                info.ChannelCount,
-                // call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
-                // TODO: consider making NowSoundInfo.SampleRate into a double
-                _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
-                info.SamplesPerQuantum);
+			// thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
+			_audioProcessorGraph.setPlayConfigDetails(
+				info.ChannelCount,
+				info.ChannelCount,
+				// call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
+				// TODO: consider making NowSoundInfo.SampleRate into a double
+				_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+				info.SamplesPerQuantum);
 
-            // TBD: is double better?  Single (e.g. float32) definitely best for starters though
-            _audioProcessorGraph.setProcessingPrecision(AudioProcessor::singlePrecision);
+			// TBD: is double better?  Single (e.g. float32) definitely best for starters though
+			_audioProcessorGraph.setProcessingPrecision(AudioProcessor::singlePrecision);
 
-            _audioProcessorGraph.prepareToPlay(
-                _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
-                info.SamplesPerQuantum);
+			_audioProcessorGraph.prepareToPlay(
+				_audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
+				info.SamplesPerQuantum);
 
-            _audioInputNodePtr = _audioProcessorGraph.addNode(inputAudioProcessor);
-            _audioOutputNodePtr = _audioProcessorGraph.addNode(outputAudioProcessor);
-            _audioOutputMixNodePtr = _audioProcessorGraph.addNode(outputMixAudioProcessor);
+			_audioInputNodePtr = _audioProcessorGraph.addNode(inputAudioProcessor);
+			_audioOutputNodePtr = _audioProcessorGraph.addNode(outputAudioProcessor);
+			_audioOutputMixNodePtr = _audioProcessorGraph.addNode(outputMixAudioProcessor);
 
-            for (int i = 0; i < info.ChannelCount; i++)
-            {
-                // handle this input channel by routing it through a SpatialAudioProcessor
-                CreateNowSoundInputForChannel(i);
+			for (int i = 0; i < info.ChannelCount; i++)
+			{
+				// handle this input channel by routing it through a SpatialAudioProcessor
+				CreateNowSoundInputForChannel(i);
 
-                // connect output mix to output
-                Check(JuceGraph().addConnection({ { _audioOutputMixNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } }));
-            }
-        }
+				// connect output mix to output
+				Check(JuceGraph().addConnection({ { _audioOutputMixNodePtr->nodeID, i }, { _audioOutputNodePtr->nodeID, i } }));
+			}
+		}
 
-        // and start everything!
+		// and start everything!
 		_audioDeviceManager.getCurrentAudioDevice()->start(&_audioProcessorPlayer);
 
 		ChangeState(NowSoundGraphState::GraphRunning);
@@ -352,15 +387,15 @@ namespace NowSound
 		return graphInfo;
 	}
 
-    NowSoundSignalInfo NowSoundGraph::OutputSignalInfo()
-    {
-        Check(State() == NowSoundGraphState::GraphRunning);
+	NowSoundSignalInfo NowSoundGraph::OutputSignalInfo()
+	{
+		Check(State() == NowSoundGraphState::GraphRunning);
 
-        MeasurementAudioProcessor* outputMixProcessor = dynamic_cast<MeasurementAudioProcessor*>(
-            _audioOutputMixNodePtr->getProcessor());
+		MeasurementAudioProcessor* outputMixProcessor = dynamic_cast<MeasurementAudioProcessor*>(
+			_audioOutputMixNodePtr->getProcessor());
 
-        return outputMixProcessor->SignalInfo();
-    }
+		return outputMixProcessor->SignalInfo();
+	}
 
 #ifdef INPUT_DEVICE_SELECTION
 	void NowSoundGraph::InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
@@ -425,13 +460,13 @@ namespace NowSound
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
 		juce::AudioProcessorGraph::Node::Ptr newPtr = _audioProcessorGraph.addNode(
-            new NowSoundInputAudioProcessor(
-			    this,
-			    nextAudioInputId,
-			    _audioAllocator.get(),
-			    channel));
+			new NowSoundInputAudioProcessor(
+				this,
+				nextAudioInputId,
+				_audioAllocator.get(),
+				channel));
 
-        AddNodeToJuceGraph(newPtr, channel);
+		AddNodeToJuceGraph(newPtr, channel);
 
 		_audioInputs.emplace_back(newPtr);
 	}
@@ -456,21 +491,21 @@ namespace NowSound
 		return timeInfo;
 	}
 
-    NowSoundInputAudioProcessor* NowSoundGraph::Input(AudioInputId audioInputId)
-    {
-        Check(_audioGraphState > NowSoundGraphState::GraphInError);
+	NowSoundInputAudioProcessor* NowSoundGraph::Input(AudioInputId audioInputId)
+	{
+		Check(_audioGraphState > NowSoundGraphState::GraphInError);
 
-        Check(audioInputId > AudioInputId::AudioInputUndefined);
-        // Input IDs are one-based
-        Check((audioInputId - 1) < _audioInputs.size());
+		Check(audioInputId > AudioInputId::AudioInputUndefined);
+		// Input IDs are one-based
+		Check((audioInputId - 1) < _audioInputs.size());
 
-        juce::AudioProcessorGraph::Node::Ptr& input = _audioInputs[(int)audioInputId - 1];
+		juce::AudioProcessorGraph::Node::Ptr& input = _audioInputs[(int)audioInputId - 1];
 
-        // ensure non-null -- should be true by construction, but, you know, bugs
-        Check(input.get());
+		// ensure non-null -- should be true by construction, but, you know, bugs
+		Check(input.get());
 
-        return static_cast<NowSoundInputAudioProcessor*>(input->getProcessor());
-    }
+		return static_cast<NowSoundInputAudioProcessor*>(input->getProcessor());
+	}
 
 	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
 	{
@@ -478,68 +513,68 @@ namespace NowSound
 	}
 
 	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInputId)
-    {
-        // TODO: verify not on audio graph thread
-        Check(_audioGraphState == NowSoundGraphState::GraphRunning);
+	{
+		// TODO: verify not on audio graph thread
+		Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
-        // by construction this will be greater than TrackId::Undefined
-        TrackId id = (TrackId)((int)_trackId + 1);
-        _trackId = id;
+		// by construction this will be greater than TrackId::Undefined
+		TrackId id = (TrackId)((int)_trackId + 1);
+		_trackId = id;
 
-        juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Input(audioInputId)->CreateRecordingTrack(id);
+		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Input(audioInputId)->CreateRecordingTrack(id);
 
-        // convert from audio input numbering (1-based) to channel id (0-based)
-        AddNodeToJuceGraph(newTrackPtr, audioInputId - 1);
+		// convert from audio input numbering (1-based) to channel id (0-based)
+		AddNodeToJuceGraph(newTrackPtr, audioInputId - 1);
 
 		return id;
-    }
+	}
 
-    void NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
-    {
+	void NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
+	{
 #if JUCETODO
-        // This must be called on the UI thread.
-        FileOpenPicker picker;
-        picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-        picker.FileTypeFilter().Append(L".wav");
-        StorageFile file = co_await picker.PickSingleFileAsync();
+		// This must be called on the UI thread.
+		FileOpenPicker picker;
+		picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
+		picker.FileTypeFilter().Append(L".wav");
+		StorageFile file = co_await picker.PickSingleFileAsync();
 
-        if (!file)
-        {
-            Check(false);
-            return;
-        }
+		if (!file)
+		{
+			Check(false);
+			return;
+		}
 
-        CreateAudioFileInputNodeResult fileInputResult = co_await _audioGraph.CreateFileInputNodeAsync(file);
-        if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-        {
-            // Cannot read input file
-            Check(false);
-            return;
-        }
+		CreateAudioFileInputNodeResult fileInputResult = co_await _audioGraph.CreateFileInputNodeAsync(file);
+		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
+		{
+			// Cannot read input file
+			Check(false);
+			return;
+		}
 
-        AudioFileInputNode fileInput = fileInputResult.FileInputNode();
+		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
 
-        if (fileInput.Duration() <= timeSpanFromSeconds(3))
-        {
-            // Imported file is too short
-            Check(false);
-            return;
-        }
+		if (fileInput.Duration() <= timeSpanFromSeconds(3))
+		{
+			// Imported file is too short
+			Check(false);
+			return;
+		}
 
-        fileInput.AddOutgoingConnection(_deviceOutputNode);
-        fileInput.Start();
+		fileInput.AddOutgoingConnection(_deviceOutputNode);
+		fileInput.Start();
 #endif
-    }
+	}
 
-    void NowSoundGraph::PlayUserSelectedSoundFileAsync()
-    {
-        PlayUserSelectedSoundFileAsyncImpl();
-    }
+	void NowSoundGraph::PlayUserSelectedSoundFileAsync()
+	{
+		PlayUserSelectedSoundFileAsyncImpl();
+	}
 
 
 	// static externally reachable shutdown method
-    void NowSoundGraph::ShutdownInstance()
-    {
+	void NowSoundGraph::ShutdownInstance()
+	{
 		// SHUT. DOWN. EVERYTHING
 		s_instance->Shutdown();
 
@@ -551,7 +586,7 @@ namespace NowSound
 		// (the clock has utility as a lower-level NowSoundLibShared-specific point of access to the sound data,
 		// but having two singletons already led to bugs and is generally a bad smell)
 		Clock::Shutdown();
-    }
+	}
 
 	// instance shutdown method for instance internal state
 	void NowSoundGraph::Shutdown()
@@ -561,26 +596,26 @@ namespace NowSound
 		_audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
 	}
 
-    void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
-    {
-        // set play config details BEFORE making connections to the graph
-        // otherwise addConnection doesn't think the new node has any connections
-        newNode->getProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+	void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
+	{
+		// set play config details BEFORE making connections to the graph
+		// otherwise addConnection doesn't think the new node has any connections
+		newNode->getProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
-        // Input connection (one)
-        Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } }));
+		// Input connection (one)
+		Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } }));
 
-        // Output connections
-        // TODO: enumerate based on actual graph count... for the moment, stereo only
-        Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
-        Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
+		// Output connections
+		// TODO: enumerate based on actual graph count... for the moment, stereo only
+		Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
+		Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
 
 		{
 			std::wstringstream wstr{};
 			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << newNode->nodeID.uid << L", " << inputChannel << ")";
 			NowSoundGraph::Instance()->Log(wstr.str());
 		}
-    }
+	}
 
 	void NowSoundGraph::LogConnections()
 	{
@@ -621,5 +656,34 @@ namespace NowSound
 			<< L", totalNumOutputChannels " << nodePtr->getProcessor()->getTotalNumOutputChannels()
 			<< L", isUsingDoublePrecision " << nodePtr->getProcessor()->isUsingDoublePrecision();
 		Log(wstr.str());
+	}
+
+	void NowSoundGraph::AsyncUpdate()
+	{
+		// This would seem to be unnecessary, but we need to ensure we do not lose a call to this method
+		// in the event that the message tick thread is calling WasAsyncUpdate() concurrently with this,
+		// resulting in the update here being lost (because WasAsyncUpdate() resets this flag).
+		std::lock_guard<std::mutex> guard(_asyncUpdateMutex);
+		_asyncUpdate = true;
+	}
+
+	bool NowSoundGraph::WasAsyncUpdate()
+	{
+		// This would seem to be unnecessary, but we need to ensure we do not lose a call to this method
+		// in the event that the message tick thread is calling WasAsyncUpdate() concurrently with this,
+		// resulting in the update here being lost (because WasAsyncUpdate() resets this flag).
+		std::lock_guard<std::mutex> guard(_asyncUpdateMutex);
+		bool result = _asyncUpdate;
+		_asyncUpdate = false;
+		return result;
+	}
+
+	void NowSoundGraph::MessageTick()
+	{
+		if (WasAsyncUpdate())
+		{
+			// call the JUCE graph's handleAsyncUpdate() method directly.
+			_audioProcessorGraph.handleAsyncUpdate();
+		}
 	}
 }

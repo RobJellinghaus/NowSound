@@ -49,7 +49,7 @@ namespace NowSound
             new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan()));
 
 		// Add the new track to the collection of tracks in NowSoundTrackAPI.
-		NowSoundTrackAudioProcessor::AddTrack(id, newTrackPtr);
+		Graph()->AddTrack(id, newTrackPtr);
 
         return newTrackPtr;
 	}

@@ -104,12 +104,16 @@ namespace NowSound
         // Graph must be Started.
         __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
-        // Tear down the whole graph.
+		// Create a new track and begin recording.
+		__declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
+
+		// Call this regularly from the "message thread".
+		// Terrible hack to work around message pump issues.
+		__declspec(dllexport) void NowSoundGraph_MessageTick();
+
+		// Tear down the whole graph.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         __declspec(dllexport) void NowSoundGraph_ShutdownInstance();
-
-        // Create a new track and begin recording.
-        __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
 
         // Interface used to invoke operations on a particular audio track.
         //

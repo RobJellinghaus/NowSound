@@ -28,41 +28,6 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-    std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> NowSoundTrackAudioProcessor::s_tracks{};
-
-    void NowSoundTrackAudioProcessor::DeleteTrack(TrackId trackId)
-    {
-        Check(trackId >= TrackId::TrackIdUndefined && trackId <= s_tracks.size());
-        Track(trackId)->Delete();
-        // place a null pointer
-        s_tracks[trackId] = nullptr;
-    }
-
-	void NowSoundTrackAudioProcessor::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
-	{
-		// we want to insert the track by copy, since it's ref-counted
-		s_tracks.insert(std::pair<TrackId, juce::AudioProcessorGraph::Node::Ptr>{id, track});
-    }
-
-    NowSoundTrackAudioProcessor* NowSoundTrackAudioProcessor::Track(TrackId id)
-    {
-        // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
-        // The only way this will be correct is if all modifications to s_tracks happen only as a result of
-        // non-concurrent, serialized external calls to NowSoundTrackAPI.
-        Check(id > TrackId::TrackIdUndefined);
-        NowSoundTrackAudioProcessor* value = static_cast<NowSoundTrackAudioProcessor*>(s_tracks.at(id)->getProcessor());
-        Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
-        return value;
-    }
-
-	bool NowSoundTrackAudioProcessor::TrackIsDefined(TrackId id)
-	{
-		// Race conditions can lead to a track being checked before it actually exists.
-		// TODO: THIS SHOULD NOT BE THE CASE AND SHOULD BE FIXED.
-		// For now, nonetheless, let's try this workaround and verify if it happens.
-		return s_tracks.find(id) != s_tracks.end();
-	}
-
 	NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
 		NowSoundGraph* graph,
 		TrackId trackId,

@@ -26,23 +26,7 @@ namespace NowSound
 	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
     class NowSoundTrackAudioProcessor : public SpatialAudioProcessor
     {
-    public:
-        // non-exported methods for "internal" use
-        static void AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track);
-
-        // Accessor for track by ID.
-        static NowSoundTrackAudioProcessor* Track(TrackId id);
-
-		// Check to see if this track ID exists. TODO: DELETE THIS; JUST FOR USE WHEN RACE HUNTING.
-		// Should be synchronously the case that track IDs are never queried before they are actually defined!
-		static bool TrackIsDefined(TrackId id);
-
-        static void DeleteTrack(TrackId id);
-
     private:
-        // The collection of all ttracks.
-        static std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> s_tracks;
-
         // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
         const TrackId _trackId;
 
