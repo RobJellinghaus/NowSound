@@ -240,8 +240,8 @@ namespace NowSound
                 // TODONEXT: actually remove input connections by polling! (NYI atm)
                 _justStoppedRecording = true;
 
-                // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
-                // input channel goes to which track.
+                // Getting data for channel 0 is always correct, because the JUCE per-channel connections handle
+				// the input-channel-to-track routing.
                 _audioStream.Append(captureDuration, audioBuffer.getReadPointer(0));
 
                 // now that we have done our final append, shut the stream at the current duration
