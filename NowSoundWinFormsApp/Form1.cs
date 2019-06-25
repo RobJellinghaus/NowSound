@@ -26,7 +26,19 @@ namespace NowSoundWinFormsApp
             // we haven't started recording yet; time to do so!
             TrackId trackId = NowSoundGraphAPI.CreateRecordingTrackAsync(AudioInputId.AudioInput1);
 
-            _trackRows.Add(new TrackRow(trackId, _tracksPanel));
+            _trackRows.Add(new TrackRow(trackId, _tracksPanel, this.RemoveTrack));
+        }
+
+        private void RemoveTrack(TrackId trackId)
+        {
+            for (int i = 0; i < _trackRows.Count; i++)
+            {
+                if (_trackRows[i].TrackId == trackId)
+                {
+                    _trackRows.RemoveAt(i);
+                    break;
+                }
+            }
         }
 
         private void timer1_Tick(object sender, System.EventArgs e)

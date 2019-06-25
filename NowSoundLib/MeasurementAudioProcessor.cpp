@@ -17,9 +17,13 @@ BaseAudioProcessor::BaseAudioProcessor(const wstring& name) : _name{ name }
 
 bool BaseAudioProcessor::CheckLogThrottle()
 {
+	// TODO: revive if necessary... for now, always false
+	/*
 	int counter = _logThrottlingCounter;
 	_logThrottlingCounter = ++_logThrottlingCounter % LogThrottle;
 	return counter == 0;
+	*/
+	return false;
 }
 
 MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const wstring& name)

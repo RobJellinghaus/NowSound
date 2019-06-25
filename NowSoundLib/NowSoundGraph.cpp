@@ -57,7 +57,7 @@ namespace NowSound
 		_audioDeviceManager{},
 		// _deviceOutputNode{ nullptr },
 		_audioAllocator{ nullptr },
-		_trackId{ TrackId::TrackIdUndefined },
+		_nextTrackId{ TrackId::TrackIdUndefined },
 		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
 		// JUCETODO: _inputDeviceIndicesToInitialize{},
 		_audioInputs{ },
@@ -73,17 +73,6 @@ namespace NowSound
 	{
 		_logMessages.reserve(s_logMessageCapacity);
 		Check(_logMessages.size() == 0);
-	}
-
-	void NowSoundGraph::DeleteTrack(TrackId trackId)
-	{
-		Check(trackId >= TrackId::TrackIdUndefined && trackId <= _tracks.size());
-		Track(trackId)->Delete();
-		// place a null pointer
-		_tracks[trackId] = nullptr;
-
-		// this is an async update
-		AsyncUpdate();
 	}
 
 	void NowSoundGraph::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
@@ -116,9 +105,13 @@ namespace NowSound
 
 	bool NowSoundGraph::CheckLogThrottle()
 	{
+		// TODO: revive this code if we need it
+		/*
 		int counter = _logThrottlingCounter;
 		_logThrottlingCounter = ++_logThrottlingCounter % BaseAudioProcessor::LogThrottle;
 		return counter == 0;
+		*/
+		return false; // never, never print anything (for now)
 	}
 
 	// AudioGraph NowSoundGraph::GetAudioGraph() const { return _audioGraph; }
@@ -524,8 +517,8 @@ namespace NowSound
 		Check(_audioGraphState == NowSoundGraphState::GraphRunning);
 
 		// by construction this will be greater than TrackId::Undefined
-		TrackId id = (TrackId)((int)_trackId + 1);
-		_trackId = id;
+		TrackId id = (TrackId)((int)_nextTrackId + 1);
+		_nextTrackId = id;
 
 		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Input(audioInputId)->CreateRecordingTrack(id);
 
@@ -533,6 +526,21 @@ namespace NowSound
 		AddNodeToJuceGraph(newTrackPtr, audioInputId - 1);
 
 		return id;
+	}
+
+	void NowSoundGraph::DeleteTrack(TrackId trackId)
+	{
+		Check(trackId >= TrackId::TrackIdUndefined && trackId <= _tracks.size());
+
+		// remove the Node
+		juce::AudioProcessorGraph::Node::Ptr& nodePtr = _tracks.at(trackId);
+		JuceGraph().removeNode(nodePtr.get());
+
+		// place a null pointer... this *should* cause the track to be deleted
+		_tracks[trackId] = nullptr;
+
+		// this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
+		AsyncUpdate();
 	}
 
 	void NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()

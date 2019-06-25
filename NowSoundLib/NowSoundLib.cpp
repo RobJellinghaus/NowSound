@@ -161,6 +161,12 @@ namespace NowSound
 		return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
 	}
 
+	__declspec(dllexport) void NowSoundGraph_DeleteTrack(TrackId trackId)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->DeleteTrack(trackId);
+	}
+
 	void NowSoundGraph_MessageTick()
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
@@ -254,11 +260,5 @@ namespace NowSound
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
-	}
-
-	__declspec(dllexport) void NowSoundTrack_Delete(TrackId trackId)
-	{
-		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundGraph::Instance()->DeleteTrack(trackId);
 	}
 }

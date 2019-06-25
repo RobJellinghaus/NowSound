@@ -176,7 +176,7 @@ namespace NowSound
         std::unique_ptr<BufferAllocator<float>> _audioAllocator;
 
         // The next TrackId to be allocated.
-        TrackId _trackId;
+        TrackId _nextTrackId;
 
 		// The next AudioInputId to be allocated.
 		AudioInputId _nextAudioInputId;

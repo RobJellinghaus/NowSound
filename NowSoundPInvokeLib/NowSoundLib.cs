@@ -403,6 +403,16 @@ namespace NowSoundLib
             return NowSoundGraph_CreateRecordingTrackAsync(id);
         }
 
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_DeleteTrack(TrackId trackId);
+
+        // Delete this Track; after this, all methods become invalid to call (contract failure).
+        public static void DeleteTrack(TrackId trackId)
+        {
+            NowSoundGraph_DeleteTrack(trackId);
+        }
+
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_ShutdownInstance();
 
@@ -497,15 +507,6 @@ namespace NowSoundLib
         public static void SetIsMuted(TrackId trackId, bool isMuted)
         {
             NowSoundTrack_SetIsMuted(trackId, isMuted);
-        }
-
-        [DllImport("NowSoundLib")]
-        static extern void NowSoundTrack_Delete(TrackId trackId);
-
-        // Delete this Track; after this, all methods become invalid to call (contract failure).
-        public static void Delete(TrackId trackId)
-        {
-            NowSoundTrack_Delete(trackId);
         }
     }
 }

@@ -1,13 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28902.138
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NowSoundApp", "NowSoundAppUWP\NowSoundApp.vcxproj", "{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{C53B5361-EE7C-4963-B676-CD6A2E35D37F} = {C53B5361-EE7C-4963-B676-CD6A2E35D37F}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UnitTestsDesktop", "UnitTestsDesktop\UnitTestsDesktop.vcxproj", "{5E8663C5-4AD0-4AF8-AB80-468FDA9A8551}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NowSoundLibShared", "NowSoundLibShared\NowSoundLibShared.vcxitems", "{074254A5-9E44-4721-82B3-7C1179461F0C}"
@@ -38,14 +33,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|ARM.ActiveCfg = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x64.ActiveCfg = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Debug|x86.ActiveCfg = Debug|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|Any CPU.ActiveCfg = Release|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|ARM.ActiveCfg = Release|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|x64.ActiveCfg = Release|x64
-		{D9787D73-6BE3-4A82-8569-28F77AAB2D3E}.Release|x86.ActiveCfg = Release|x64
 		{5E8663C5-4AD0-4AF8-AB80-468FDA9A8551}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{5E8663C5-4AD0-4AF8-AB80-468FDA9A8551}.Debug|ARM.ActiveCfg = Debug|x64
 		{5E8663C5-4AD0-4AF8-AB80-468FDA9A8551}.Debug|x64.ActiveCfg = Debug|x64

@@ -150,21 +150,6 @@ namespace NowSound
         _state = NowSoundTrackState::TrackFinishRecording;
     }
 
-    void NowSoundTrackAudioProcessor::Delete()
-    {
-        // TODO: ThreadContract.RequireUnity();
-
-        // _audioFrameInputNode.Stop();
-
-		/*
-        while (_audioFrameInputNode.OutgoingConnections().Size() > 0)
-        {
-            _audioFrameInputNode.RemoveOutgoingConnection(_audioFrameInputNode.OutgoingConnections().GetAt(0).Destination());
-        }
-        // TODO: does destruction properly clean this up? _audioFrameInputNode.Dispose();
-		*/
-    }
-
 	const int maxCounter = 1000;
 
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)

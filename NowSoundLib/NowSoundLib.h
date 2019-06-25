@@ -107,6 +107,9 @@ namespace NowSound
 		// Create a new track and begin recording.
 		__declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
 
+		// Delete this Track; after this, calling any methods with this TrackID will cause contract failure.
+		void __declspec(dllexport) NowSoundGraph_DeleteTrack(TrackId trackId);
+
 		// Call this regularly from the "message thread".
 		// Terrible hack to work around message pump issues.
 		__declspec(dllexport) void NowSoundGraph_MessageTick();
@@ -149,8 +152,5 @@ namespace NowSound
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId);
         __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
-
-        // Delete this Track; after this, all methods become invalid to call (contract failure).
-        void __declspec(dllexport) NowSoundTrack_Delete(TrackId trackId);
     };
 }

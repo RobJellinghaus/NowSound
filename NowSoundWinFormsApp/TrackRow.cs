@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 using NowSoundLib;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Text;
@@ -46,11 +47,19 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private StringBuilder _builder;
 
-        public TrackRow(TrackId trackId, FlowLayoutPanel parent)
+        /// <summary>
+        /// An action that can remove this TrackRow.
+        /// </summary>
+        private Action<TrackId> _removeAction;
+
+        internal TrackId TrackId => _trackId;
+
+        public TrackRow(TrackId trackId, FlowLayoutPanel parent, Action<TrackId> removeAction)
         {
             _trackId = trackId;
             _fftBuffer = new float[MagicConstants.OutputBinCount];
             _builder = new StringBuilder(new string('0', MagicConstants.OutputBinCount));
+            _removeAction = removeAction;
 
             _controlButton = new Button
             {
@@ -67,6 +76,7 @@ namespace NowSoundWinFormsApp
             };
 
             _label = new Label
+
             {
                 Text = $"Track #{trackId}",
                 MinimumSize = new Size(600, 20),
@@ -88,7 +98,17 @@ namespace NowSoundWinFormsApp
 
         private void ControlButton_Click(object sender, System.EventArgs e)
         {
-            NowSoundTrackAPI.FinishRecording(_trackId);
+            TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
+            if (!trackInfo.IsTrackLooping)
+            {
+                NowSoundTrackAPI.FinishRecording(_trackId);
+            }
+            else
+            {
+                _trackRowPanel.Parent.Controls.Remove(_trackRowPanel);
+                _removeAction(_trackId);
+                NowSoundGraphAPI.DeleteTrack(_trackId);
+            }
         }
 
         public void Update()
@@ -104,8 +124,11 @@ namespace NowSoundWinFormsApp
 
             if (trackInfo.IsTrackLooping)
             {
-                _controlButton.Text = "Looping";
-                _controlButton.Enabled = false;
+                _controlButton.Text = "Delete";
+            }
+            else
+            {
+                _controlButton.Text = "Finish";
             }
         }
 

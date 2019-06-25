@@ -92,8 +92,5 @@ namespace NowSound
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.
         void FinishRecording();
-
-        // Delete this Track; after this, all methods become invalid to call (contract failure).
-        void Delete();
     };
 }
