@@ -45,7 +45,7 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
     // Pan each mono sample (and track its volume), if we're not muted.
     for (int i = 0; i < numSamples; i++)
     {
-        float value = outputBufferChannel0[i];
+        float value = _isMuted ? 0 : outputBufferChannel0[i];
         outputBufferChannel0[i] = (float)(leftCoefficient * value);
         outputBufferChannel1[i] = (float)(rightCoefficient * value);
     }

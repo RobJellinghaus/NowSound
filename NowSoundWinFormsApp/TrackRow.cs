@@ -74,6 +74,7 @@ namespace NowSoundWinFormsApp
                 AutoSize = true,
                 Enabled = false
             };
+            _muteButton.Click += _muteButton_Click;
 
             _label = new Label
 
@@ -96,12 +97,20 @@ namespace NowSoundWinFormsApp
             parent.Controls.Add(_trackRowPanel);
         }
 
+        private void _muteButton_Click(object sender, EventArgs e)
+        {
+            bool isMuted = NowSoundTrackAPI.IsMuted(_trackId);
+            NowSoundTrackAPI.SetIsMuted(_trackId, !isMuted);
+            _muteButton.Text = isMuted ? "Mute" : "Unmute";
+        }
+
         private void ControlButton_Click(object sender, System.EventArgs e)
         {
             TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
             if (!trackInfo.IsTrackLooping)
             {
                 NowSoundTrackAPI.FinishRecording(_trackId);
+                _muteButton.Enabled = true;
             }
             else
             {
