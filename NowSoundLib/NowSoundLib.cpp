@@ -173,6 +173,51 @@ namespace NowSound
 		NowSoundGraph::Instance()->MessageTick();
 	}
 
+	// Plugin searching requires setting paths to search.
+	// TODO: make this use the idiom for passing in strings rather than StringBuilders.
+	void NowSoundGraph_AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->AddPluginSearchPath(wcharBuffer, bufferCapacity);
+	}
+
+	// After setting one or more search paths, actually search.
+	// TODO: make this asynchronous.
+	// Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
+	bool NowSoundGraph_SearchPluginsSynchronously()
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->SearchPluginsSynchronously();
+	}
+
+	// How many plugins?
+	int NowSoundGraph_PluginCount()
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->PluginCount();
+	}
+
+	// Get the name of the Nth plugin. Note that IDs are 1-based.
+	void NowSoundGraph_PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->PluginName(pluginId, wcharBuffer, bufferCapacity);
+	}
+
+	// Get the number of programs for the given plugin.
+	void NowSoundGraph_PluginProgramCount(PluginId pluginId)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->PluginProgramCount(pluginId);
+	}
+
+	// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+	void NowSoundGraph_PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->PluginProgramName(pluginId, programId, wcharBuffer, bufferCapacity);
+	}
+
 	void NowSoundGraph_ShutdownInstance()
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
@@ -260,5 +305,20 @@ namespace NowSound
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
+	}
+
+	// Add an instance of the given plugin on the given track.
+	TrackPluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->Track(trackId)->AddPlugin(pluginId, programId);
+	}
+
+	// Set the given track's instance of the given plugin to use the given program.
+	// Set the dry/wet balance on the given plugin.
+	void NowSoundTrack_SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->Track(trackId)->SetPluginDryWet(pluginInstanceId, dryWet_0_100);
 	}
 }

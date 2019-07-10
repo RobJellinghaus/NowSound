@@ -205,28 +205,60 @@ namespace NowSoundLib
         AudioInput7,
     };
 
-    // "Typedef" (C# style) for track IDs.
-    // Default value (0) is not used.
+    /// <summary>
+    /// "Typedef" (C# style) for track IDs.
+    /// Default value (0) is not used.
+    /// </summary>
     public enum TrackId
     {
         Undefined = 0
     }
 
-    // Operations on the audio graph as a whole.
-    // There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
-    // All async methods document the state the graph must be in when called, and the state the graph
-    // transitions to on completion.
-    //
-    // Note that this class has private static extern methods for P/Invoking to NowSoundLib,
-    // and public static methods which wrap the P/Invoke methods with more accurate C# types.
-    //
-    // TODO: make this support multiple (non-static) graphs.
+    /// <summary>
+    /// 1-based ID for sound effect plugin.
+    /// </summary>
+    public enum PluginId
+    {
+        Undefined = 0
+    }
+
+    /// <summary>
+    /// 1-based ID for sound effect plugin's program (not globally unique; specific to plugin).
+    /// </summary>
+    public enum ProgramId
+    {
+        Undefined = 0
+    }
+
+    /// <summary>
+    /// 1-based ID for a particular instance of a plugin instantiated on a track.
+    /// </summary>
+    public enum TrackPluginInstanceId
+    {
+        Undefined = 0
+    }
+
+    /// <summary>
+    /// Operations on the audio graph as a whole.
+    /// </summary>
+    /// <remarks>
+    /// There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
+    /// All async methods document the state the graph must be in when called, and the state the graph
+    /// transitions to on completion.
+    ///
+    /// Note that this class has private static extern methods for P/Invoking to NowSoundLib,
+    /// and public static methods which wrap the P/Invoke methods with more accurate C# types.
+    ///
+    /// TODO: make this support multiple (non-static) graphs.
+    /// </remarks>
     public class NowSoundGraphAPI
     {
         [DllImport("NowSoundLib")]
         static extern NowSoundGraphInfo NowSoundTrack_GetStaticGraphInfo();
 
-        // Get static graph info for validating correct P/Invoke binding.
+        /// <summary>
+        /// Get static graph info for validating correct P/Invoke binding.
+        /// </summary>
         internal static NowSoundGraphInfo GetStaticGraphInfo()
         {
             return NowSoundTrack_GetStaticGraphInfo();
@@ -236,7 +268,9 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo();
 
-        // Get static time info for validating correct P/Invoke binding.
+        /// <summary>
+        /// Get static time info for validating correct P/Invoke binding.
+        /// </summary>
         internal static TimeInfo GetStaticTimeInfo()
         {
             return new TimeInfo(NowSoundGraph_GetStaticTimeInfo());
@@ -245,8 +279,10 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundGraphState NowSoundGraph_State();
 
-        // Get the current state of the audio graph; intended to be efficiently pollable by the client.
-        // This is the only method that may be called in any state whatoever.
+        /// <summary>
+        /// Get the current state of the audio graph; intended to be efficiently pollable by the client.
+        /// This is the only method that may be called in any state whatoever.
+        /// </summary>
         public static NowSoundGraphState State()
         {
             return NowSoundGraph_State();
@@ -255,10 +291,12 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_InitializeInstance();
 
-        // Initialize the audio graph subsystem such that device information can be queried.
-        // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        // Must be called from message/UI thread. May have a momentary delay as JUCE doesn't support
-        // async initialization.
+        /// <summary>
+        /// Initialize the audio graph subsystem such that device information can be queried.
+        /// Graph must be Uninitialized.  On completion, graph becomes Initialized.
+        /// Must be called from message/UI thread. May have a momentary delay as JUCE doesn't support
+        /// async initialization.
+        /// </summary>
         public static void InitializeInstance()
         {
             NowSoundGraph_InitializeInstance();
@@ -267,8 +305,10 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundGraphInfo NowSoundGraph_Info();
 
-        // Get the graph info for the created graph.
-        // Graph must be Created or Running.
+        /// <summary>
+        /// Get the graph info for the created graph.
+        /// Graph must be Created or Running.
+        /// </summary>
         public static NowSoundGraphInfo Info()
         {
             return NowSoundGraph_Info();
@@ -277,8 +317,10 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundLogInfo NowSoundGraph_LogInfo();
 
-        // Get the info about the current log messages.
-        // Graph must be Running.
+        /// <summary>
+        /// Get the info about the current log messages.
+        /// Graph must be Running.
+        /// </summary>
         public static NowSoundLogInfo LogInfo()
         {
             return NowSoundGraph_LogInfo();
@@ -287,8 +329,10 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_GetLogMessage(Int32 logMessageIndex, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
 
-        // Get the current track frequency histogram.
-        // Returns true if there was enough data to update the buffer, or false if there was not.
+        /// <summary>
+        /// Get the current track frequency histogram.
+        /// Returns true if there was enough data to update the buffer, or false if there was not.
+        /// </summary>
         public static void GetLogMessage(int logMessageIndex, StringBuilder buffer)
         {
             NowSoundGraph_GetLogMessage(logMessageIndex, buffer, buffer.Capacity);
@@ -297,8 +341,11 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_DropLogMessages(Int32 logMessageIndex);
 
-        // Get the current track frequency histogram.
-        // Returns true if there was enough data to update the buffer, or false if there was not.
+        /// <summary>
+        /// Get the current track frequency histogram.
+        /// Returns true if there was enough data to update the buffer, or false if there was not.
+        /// </summary>
+        /// <param name="logMessageIndex"></param>
         public static void DropLogMessages(int logMessageIndex)
         {
             NowSoundGraph_DropLogMessages(logMessageIndex);
@@ -307,8 +354,11 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
-        // Get information about the current (final mix) output signal.
-        // Graph must be Running.
+        /// <summary>
+        /// Get information about the current (final mix) output signal.
+        /// Graph must be Running.
+        /// </summary>
+        /// <returns></returns>
         public static NowSoundSignalInfo OutputSignalInfo()
         {
             return NowSoundGraph_OutputSignalInfo();
@@ -316,15 +366,14 @@ namespace NowSoundLib
 
         // TODO: add query methods for device ID & name taking StringBuilder
 
-        // Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
-        // input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
-        // but only the first will be returned.
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
 
-        // Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
-        // input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
-        // but only the first will be returned.
+        /// <summary>
+        /// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
+        /// input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
+        /// but only the first will be returned.
+        /// </summary>
         public static void InitializeDeviceInputs(int deviceIndex)
         {
             NowSoundGraph_InitializeDeviceInputs(deviceIndex);
@@ -362,8 +411,11 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern NowSoundTimeInfo NowSoundGraph_TimeInfo();
 
-        // Get the current audio graph time.
-        // Graph must be Running.
+        /// <summary>
+        /// Get the current audio graph time.
+        /// Graph must be Running.
+        /// </summary>
+        /// <returns></returns>
         public static TimeInfo TimeInfo()
         {
             return new TimeInfo(NowSoundGraph_TimeInfo());
@@ -372,8 +424,10 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
-        // Play a user-selected sound file.
-        // Graph must be Started.
+        /// <summary>
+        /// Play a user-selected sound file.
+        /// Graph must be Started.
+        /// </summary>
         public static void PlayUserSelectedSoundFileAsync()
         {
             NowSoundGraph_PlayUserSelectedSoundFileAsync();
@@ -382,10 +436,12 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_MessageTick();
 
-        // Call regularly from the "message thread" or client equivalent (e.g. the same thread
-        // from which NowSoundGraph_Initialize was called).
-        // Hack to work around message pumping issues with async updates in our peculiar arrangement of 
-        // P-Invokable JUCE inside of Unity.
+        /// <summary>
+        /// Call regularly from the "message thread" or client equivalent (e.g. the same thread
+        /// from which NowSoundGraph_Initialize was called).
+        /// Hack to work around message pumping issues with async updates in our peculiar arrangement of 
+        /// P-Invokable JUCE inside of Unity.
+        /// </summary>
         public static void MessageTick()
         {
             NowSoundGraph_MessageTick();
@@ -394,10 +450,12 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId id);
 
-        // Create a new track and begin recording.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        // TrackId returned from native code is incremented for TrackId on this end, to ensure any default
-        // TrackId values are treated as uninitialized.
+        /// <summary>
+        /// Create a new track and begin recording.
+        /// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
+        /// TrackId returned from native code is incremented for TrackId on this end, to ensure any default
+        /// TrackId values are treated as uninitialized.
+        /// </summary>
         public static TrackId CreateRecordingTrackAsync(AudioInputId id)
         {
             return NowSoundGraph_CreateRecordingTrackAsync(id);
@@ -407,10 +465,81 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_DeleteTrack(TrackId trackId);
 
-        // Delete this Track; after this, all methods become invalid to call (contract failure).
+        /// <summary>
+        /// Delete this Track; after this, all methods become invalid to call (contract failure).
+        /// </summary>
         public static void DeleteTrack(TrackId trackId)
         {
             NowSoundGraph_DeleteTrack(trackId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
+
+        /// <summary>
+        /// Plugin searching requires setting paths to search.
+        /// TODO: make this use the idiom for passing in strings rather than StringBuilders.
+        /// </summary>
+        public static void AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        {
+            NowSoundGraph_AddPluginSearchPath(buffer, bufferCapacity);
+        }
+       
+        [DllImport("NowSoundLib")]
+        static extern bool NowSoundGraph_SearchPluginsSynchronously();
+
+        /// <summary>
+        /// After setting one or more search paths, actually search.
+        /// TODO: make this asynchronous.
+        /// Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
+        /// </summary>
+        public static bool SearchPluginsSynchronously()
+        {
+            return NowSoundGraph_SearchPluginsSynchronously();
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern int NowSoundGraph_PluginCount();
+
+        /// <summary>
+        /// How many plugins?
+        /// </summary>
+        public static int PluginCount()
+        {
+            return NowSoundGraph_PluginCount();
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_PluginName(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
+
+        /// <summary>
+        /// Get the name of the Nth plugin. Note that IDs are 1-based.
+        /// </summary>
+        public static void PluginName(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        {
+            NowSoundGraph_PluginName(pluginId, buffer, bufferCapacity);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_PluginProgramCount(PluginId pluginId);
+
+        /// <summary>
+        /// Get the number of programs for the given plugin.
+        /// </summary>
+        public static void PluginProgramCount(PluginId pluginId)
+        {
+            NowSoundGraph_PluginProgramCount(pluginId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_PluginProgramName(PluginId pluginId, ProgramId programId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
+
+        /// <summary>
+        /// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+        /// </summary>
+        public static void PluginProgramName(PluginId pluginId, ProgramId programId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        {
+            NowSoundGraph_PluginProgramName(pluginId, programId, buffer, bufferCapacity);
         }
 
         [DllImport("NowSoundLib")]
@@ -507,6 +636,24 @@ namespace NowSoundLib
         public static void SetIsMuted(TrackId trackId, bool isMuted)
         {
             NowSoundTrack_SetIsMuted(trackId, isMuted);
+        }
+
+        // Add an instance of the given plugin on the given track.
+        [DllImport("NowSoundLib")]
+        static extern TrackPluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+
+        public static TrackPluginInstanceId AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
+        {
+            return NowSoundTrack_AddPlugin(trackId, pluginId, programId);
+        }
+
+        // Set the dry/wet balance on the given plugin.
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundTrack_SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int dryWet_0_100);
+
+        public static void SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int dryWet_0_100)
+        {
+            NowSoundTrack_SetPluginDryWet(trackId, pluginInstanceId, dryWet_0_100);
         }
     }
 }

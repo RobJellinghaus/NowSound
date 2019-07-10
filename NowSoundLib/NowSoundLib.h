@@ -18,21 +18,19 @@ namespace NowSound
     // All external methods here are static and use C linkage, for P/Invokability.
     // AudioGraph object references are passed by integer ID; lifecycle is documented
     // per-API.
-    // Callbacks are implemented by passing statically invokable callback hooks
-    // together with callback IDs.
-    extern "C"
-    {
-        // Operations on the audio graph as a whole.
-        //
-        // There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
-        //
-        // All async methods document the state the graph must be in when called, and the state the graph
-        // transitions to on completion.
-        //
-        // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially.
-        //
-        // TODO: make this support multiple (non-static) graphs.
-        // TODO: consider ditching the wrapper class here and having top-level global functions so extern "C" would actually work properly.
+	extern "C"
+	{
+		// Operations on the audio graph as a whole.
+		//
+		// There is a single "static" audio graph defined here; multiple audio graphs are not (yet?) supported.
+		//
+		// All async methods document the state the graph must be in when called, and the state the graph
+		// transitions to on completion.
+		//
+		// Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially.
+		//
+		// TODO: make this support multiple (non-static) graphs.
+		// TODO: consider ditching the wrapper class here and having top-level global functions so extern "C" would actually work properly.
 
 		// Test method only: get a predefined NowSound_GraphInfo instance to test P/Invoke serialization.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo();
@@ -41,13 +39,13 @@ namespace NowSound
 		__declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo();
 
 		// Get the current state of the audio graph; intended to be efficiently pollable by the client.
-        // This is the only method that may be called in any state whatoever.
-        __declspec(dllexport) NowSoundGraphState NowSoundGraph_State();
+		// This is the only method that may be called in any state whatoever.
+		__declspec(dllexport) NowSoundGraphState NowSoundGraph_State();
 
 		// Get the number of log messages.
 		__declspec(dllexport) NowSoundLogInfo NowSoundGraph_LogInfo();
 
-		// Get the message with a particular index; must be between (inclusive) the indices last returned from NowSoundGraph_LogInfo().
+		// Get the message with a particular (zero-based) index; must be between (inclusive) the indices last returned from NowSoundGraph_LogInfo().
 		// Note that calls to this method must never be interleaved with calls to the NowSoundGraph_DropLogMessagesUpTo method; these
 		// methods are not thread-safe with respect to each other.
 		__declspec(dllexport) void NowSoundGraph_GetLogMessage(int32_t logMessageIndex, LPWSTR wcharBuffer, int32_t bufferCapacity);
@@ -63,8 +61,8 @@ namespace NowSound
 		// Graph must be at least Created.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
-        // Get the current info for the graph's final mixed output (channel 0 only, currently).
-        __declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
+		// Get the current info for the graph's final mixed output (channel 0 only, currently).
+		__declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
 		// Get the ID of the given device.
 		// Graph must be at least Initialized.
@@ -73,7 +71,7 @@ namespace NowSound
 		// Get the name of the given device.
 		// Graph must be at least Initialized.
 		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InputDeviceName(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
-		
+
 		// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
 		// input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
 		// but only the first will be returned.
@@ -100,9 +98,9 @@ namespace NowSound
 		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
 
-        // Play a user-selected sound file.
-        // Graph must be Started.
-        __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
+		// Play a user-selected sound file.
+		// Graph must be Started.
+		__declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
 		// Create a new track and begin recording.
 		__declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
@@ -114,10 +112,34 @@ namespace NowSound
 		// Terrible hack to work around message pump issues.
 		__declspec(dllexport) void NowSoundGraph_MessageTick();
 
-		// Tear down the whole graph.
-        // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
-        __declspec(dllexport) void NowSoundGraph_ShutdownInstance();
+		// Plugin searching requires setting paths to search.
+		// TODO: make this use the idiom for passing in strings rather than StringBuilders.
+		__declspec(dllexport) void NowSoundGraph_AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity);
 
+		// After setting one or more search paths, actually search.
+		// TODO: make this asynchronous.
+		// Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
+		__declspec(dllexport) bool NowSoundGraph_SearchPluginsSynchronously();
+
+		// How many plugins?
+		__declspec(dllexport) int NowSoundGraph_PluginCount();
+
+		// Get the name of the Nth plugin. Note that IDs are 1-based.
+		__declspec(dllexport) void NowSoundGraph_PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// Get the number of programs for the given plugin.
+		__declspec(dllexport) void NowSoundGraph_PluginProgramCount(PluginId pluginId);
+
+		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+		__declspec(dllexport) void NowSoundGraph_PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// Tear down the whole graph.
+		// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
+		__declspec(dllexport) void NowSoundGraph_ShutdownInstance();
+	}
+
+	extern "C"
+	{
         // Interface used to invoke operations on a particular audio track.
         //
         // Note that this API is not thread-safe; methods are not re-entrant and must be called sequentially,
@@ -152,5 +174,10 @@ namespace NowSound
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId);
         __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
-    };
+
+		// Add an instance of the given plugin on the given track.
+		__declspec(dllexport) TrackPluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+		// Set the dry/wet balance on the given plugin.
+		__declspec(dllexport) void NowSoundTrack_SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+	};
 }

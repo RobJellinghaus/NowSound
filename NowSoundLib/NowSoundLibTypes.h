@@ -157,7 +157,7 @@ namespace NowSound
 		// are 1-based (to ensure zero is not mentioned).
         enum AudioInputId
         {
-			AudioInputUndefined,
+			AudioInputUndefined = 0,
             AudioInput1,
             AudioInput2,
             AudioInput3,
@@ -169,11 +169,31 @@ namespace NowSound
 		};
 
         // The ID of a NowSound track; avoids issues with marshaling object references.
-        // Note that 0 is the default, undefined, invalid value.
-        enum TrackId
-        {
-            TrackIdUndefined
+		// Note that 0 is the default, undefined, invalid value, to catch interop errors more easily.
+		enum TrackId
+		{
+			TrackIdUndefined = 0
         };
+
+		// The ID of a sound effects plugin.
+		// Note that 0 is the default, undefined, invalid value, to catch interop errors more easily.
+		enum PluginId
+		{
+			PluginIdUndefined = 0
+		};
+
+		// The ID of a sound effects plugin's program.
+		// Note that 0 is the default, undefined, invalid value, to catch interop errors more easily.
+		enum ProgramId
+		{
+			ProgramIdUndefined = 0
+		};
+
+		// The ID of an instantiated plugin on a particular track (specific to that track, not globally unique).
+		enum TrackPluginInstanceId
+		{
+			TrackPluginInstanceIdUndefined = 0
+		};
 
 		NowSoundGraphInfo CreateNowSoundGraphInfo(
 			int32_t sampleRateHz,
