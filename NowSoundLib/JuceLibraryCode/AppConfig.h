@@ -165,6 +165,10 @@
 //==============================================================================
 // juce_core flags:
 
+#ifndef JUCE_STRING_UTF_TYPE
+#define JUCE_STRING_UTF_TYPE 16
+#endif
+
 #ifndef    JUCE_FORCE_DEBUG
  //#define JUCE_FORCE_DEBUG 0
 #endif

@@ -51,11 +51,9 @@ namespace NowSound
 		s_instance.get()->Initialize();
 	}
 
-	NowSoundGraph::NowSoundGraph()
-		: // _audioGraph{ nullptr },
+	NowSoundGraph::NowSoundGraph() :
 		_audioGraphState{ NowSoundGraphState::GraphUninitialized },
 		_audioDeviceManager{},
-		// _deviceOutputNode{ nullptr },
 		_audioAllocator{ nullptr },
 		_nextTrackId{ TrackId::TrackIdUndefined },
 		_nextAudioInputId{ AudioInputId::AudioInputUndefined },
@@ -69,7 +67,10 @@ namespace NowSound
 		_logMessages{},
 		_logMutex{},
 		_asyncUpdate{},
-		_asyncUpdateMutex{}
+		_asyncUpdateMutex{},
+		_audioPluginSearchPaths{},
+		_knownPluginList{},
+		_audioPluginFormatManager{}
 	{
 		_logMessages.reserve(s_logMessageCapacity);
 		Check(_logMessages.size() == 0);
@@ -223,7 +224,12 @@ namespace NowSound
 				String result = _audioDeviceManager.setAudioDeviceSetup(setup, false);
 				if (result.length() > 0)
 				{
-					throw std::exception(result.getCharPointer());
+					_exceptionMessage = std::string{"Audio device setup failed: "};
+					for (int i = 0; i < result.length(); i++)
+					{
+						_exceptionMessage.insert(_exceptionMessage.end(), (char)result[i]);
+					}
+					throw std::exception(_exceptionMessage.c_str());
 				}
 			}
 
@@ -585,6 +591,72 @@ namespace NowSound
 		PlayUserSelectedSoundFileAsyncImpl();
 	}
 
+	void NowSoundGraph::AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+		juce::String path(wcharBuffer);
+		_audioPluginSearchPaths.push_back(path);
+	}
+
+	bool NowSoundGraph::SearchPluginsSynchronously()
+	{
+		_audioPluginFormatManager.addDefaultFormats();
+
+		AudioPluginFormat* vstFormat = nullptr;
+		for (int i = 0; i < _audioPluginFormatManager.getNumFormats(); i++)
+		{
+			vstFormat = _audioPluginFormatManager.getFormat(i);
+			if (vstFormat->getName() == juce::String(L"VST"))
+			{
+				break;
+			}
+		}
+
+		Check(vstFormat != nullptr);
+
+		FileSearchPath fileSearchPath{};
+		for (const juce::String& path : _audioPluginSearchPaths)
+		{
+			fileSearchPath.add(path);
+		}
+
+		PluginDirectoryScanner scanner{
+			_knownPluginList,
+			*vstFormat,
+			fileSearchPath,
+			true,
+			File(),
+			false }; // turns out "allowAsync" parameter is a no-op for VST2 plugins
+
+		juce::String pluginBeingScanned{};
+		// loop over all files synchronously, this is a bad experience if the path is huge so don't ever do that
+		while (scanner.scanNextFile(/*dontRescanIfAlreadyInList*/true, pluginBeingScanned)) {};
+
+		// and that's it!
+	}
+
+	int NowSoundGraph::PluginCount()
+	{
+		return _knownPluginList.getNumTypes();
+	}
+
+	void NowSoundGraph::PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+		juce::PluginDescription* desc = _knownPluginList.getType(((int)pluginId) - 1);
+		const juce::String& name = desc->name;
+
+		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
+	}
+
+	void NowSoundGraph::PluginProgramCount(PluginId pluginId)
+	{
+
+	}
+
+	// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+	void NowSoundGraph::PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
+	{
+
+	}
 
 	// static externally reachable shutdown method
 	void NowSoundGraph::ShutdownInstance()

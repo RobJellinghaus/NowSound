@@ -92,5 +92,11 @@ namespace NowSound
         // The user wishes the track to finish recording now.
         // Contractually requires State == NowSoundTrack_State::Recording.
         void FinishRecording();
+
+		// Add an instance of the given plugin on the given track.
+		TrackPluginInstanceId AddPlugin(PluginId pluginId, ProgramId programId);
+		
+		// Set the dry/wet balance on the given plugin.
+		void SetPluginDryWet(TrackPluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
     };
 }

@@ -99,6 +99,27 @@ namespace NowSound
 		// The JucePlugin_Build_Unity preprocessor flag affects this behavior, but I am not going to mess with that just yet.
 		void MessageTick();
 
+		// Plugin searching requires setting paths to search.
+		// TODO: make this use the idiom for passing in strings rather than StringBuilders.
+		void AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// After setting one or more search paths, actually search.
+		// TODO: make this asynchronous.
+		// Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
+		bool SearchPluginsSynchronously();
+
+		// How many plugins?
+		int PluginCount();
+
+		// Get the name of the Nth plugin. Note that IDs are 1-based.
+		void PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// Get the number of programs for the given plugin.
+		void PluginProgramCount(PluginId pluginId);
+
+		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+		void PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
 	private: // Constructor and internal implementations
 
         // construct a graph, but do not yet initialize it
@@ -208,6 +229,18 @@ namespace NowSound
 		// This is to avoid a potential race between testing _asyncUpdate to find it true,
 		// and then resetting it to false concurrently with an audio thread setting it to true again.
 		std::mutex _asyncUpdateMutex;
+
+		// Vector of search paths for plugin searching.
+		std::vector<juce::String> _audioPluginSearchPaths;
+
+		// List of known plugins.
+		juce::KnownPluginList _knownPluginList;
+
+		// Manager of known plugin formats.
+		juce::AudioPluginFormatManager _audioPluginFormatManager;
+
+		// Place to keep an exception message if we need to throw one.
+		std::string _exceptionMessage;
 
 	public:
 		// non-exported methods for "internal" use

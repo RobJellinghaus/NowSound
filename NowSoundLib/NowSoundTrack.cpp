@@ -290,4 +290,14 @@ namespace NowSound
         }
         }
     }
+
+	TrackPluginInstanceId NowSoundTrackAudioProcessor::AddPlugin(PluginId pluginId, ProgramId programId)
+	{
+		return TrackPluginInstanceId::TrackPluginInstanceIdUndefined;
+	}
+
+	void NowSoundTrackAudioProcessor::SetPluginDryWet(TrackPluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	{
+
+	}
 }
