@@ -70,6 +70,23 @@ namespace NowSoundWinFormsApp
                 MagicConstants.FftBinSize);
 
             Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");
+
+            // Now let's scan!
+            StringBuilder builder = new StringBuilder(@"C:\Program Files\Steinberg\VSTPlugins");
+            NowSoundGraphAPI.AddPluginSearchPath(builder, builder.Length);
+
+            bool searched = NowSoundGraphAPI.SearchPluginsSynchronously();
+            Contract.Assert(searched);
+
+            int pluginCount = NowSoundGraphAPI.PluginCount();
+            StringBuilder buffer = new StringBuilder(100);
+
+            for (int index = 1; index <= pluginCount; index++)
+            {
+                NowSoundGraphAPI.PluginName((PluginId)index, buffer, buffer.Capacity);
+                string pluginName = buffer.ToString();
+                Debug.WriteLine($"Plugin #{index}: '{pluginName}'");
+            }
         }
 
         private async Task<bool> AwaitAudioGraphState(NowSoundGraphState desiredState, int timeoutMsec)

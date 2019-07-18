@@ -632,6 +632,7 @@ namespace NowSound
 		while (scanner.scanNextFile(/*dontRescanIfAlreadyInList*/true, pluginBeingScanned)) {};
 
 		// and that's it!
+		return true;
 	}
 
 	int NowSoundGraph::PluginCount()

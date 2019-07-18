@@ -232,4 +232,18 @@ namespace NowSound
 			int64_t lastSampleTime,
 			float pan);
     }
+
+	// Common implementation types *not* visible across the P/Invoke boundary.
+
+	// The state of an instantiated plugin; eventually will include parameter settings.
+	struct NowSoundPluginInstanceState
+	{
+		const PluginId pluginId;
+		const ProgramId programId;
+		const int dryWet_0_100;
+
+		NowSoundPluginInstanceState(PluginId pluginIdArg, ProgramId programIdArg, int dryWet_0_100_arg)
+			: pluginId{ pluginIdArg }, programId{ programIdArg }, dryWet_0_100{ dryWet_0_100_arg }
+		{}
+	};
 }
