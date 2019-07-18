@@ -521,14 +521,14 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_PluginProgramCount(PluginId pluginId);
+        static extern int NowSoundGraph_PluginProgramCount(PluginId pluginId);
 
         /// <summary>
         /// Get the number of programs for the given plugin.
         /// </summary>
-        public static void PluginProgramCount(PluginId pluginId)
+        public static int PluginProgramCount(PluginId pluginId)
         {
-            NowSoundGraph_PluginProgramCount(pluginId);
+            return NowSoundGraph_PluginProgramCount(pluginId);
         }
 
         [DllImport("NowSoundLib")]

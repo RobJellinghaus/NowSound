@@ -81,11 +81,19 @@ namespace NowSoundWinFormsApp
             int pluginCount = NowSoundGraphAPI.PluginCount();
             StringBuilder buffer = new StringBuilder(100);
 
-            for (int index = 1; index <= pluginCount; index++)
+            for (int pluginIndex = 1; pluginIndex <= pluginCount; pluginIndex++)
             {
-                NowSoundGraphAPI.PluginName((PluginId)index, buffer, buffer.Capacity);
+                NowSoundGraphAPI.PluginName((PluginId)pluginIndex, buffer, buffer.Capacity);
                 string pluginName = buffer.ToString();
-                Debug.WriteLine($"Plugin #{index}: '{pluginName}'");
+                Debug.WriteLine($"Plugin #{pluginIndex}: '{pluginName}'");
+
+                int programCount = NowSoundGraphAPI.PluginProgramCount((PluginId)pluginIndex);
+                for (int programIndex = 1; programIndex <= programCount; programIndex++)
+                {
+                    NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer, buffer.Capacity);
+                    string programName = buffer.ToString();
+                    Debug.WriteLine($"    Program #{programIndex}: '{programName}'");
+                }
             }
         }
 

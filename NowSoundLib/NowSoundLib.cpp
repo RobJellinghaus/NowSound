@@ -205,7 +205,7 @@ namespace NowSound
 	}
 
 	// Get the number of programs for the given plugin.
-	void NowSoundGraph_PluginProgramCount(PluginId pluginId)
+	int NowSoundGraph_PluginProgramCount(PluginId pluginId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->PluginProgramCount(pluginId);

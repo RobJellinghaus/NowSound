@@ -648,15 +648,33 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
 	}
 
-	void NowSoundGraph::PluginProgramCount(PluginId pluginId)
+	int32_t NowSoundGraph::PluginProgramCount(PluginId pluginId)
 	{
+		juce::PluginDescription* description = _knownPluginList.getType(((int)pluginId) - 1);
+		juce::String errorMessage;
+		AudioPluginInstance* plugin = _audioPluginFormatManager.createPluginInstance(
+			*description, Info().SampleRateHz, Info().SamplesPerQuantum, errorMessage);
 
+		int programCount = plugin->getNumPrograms();
+		plugin->releaseResources();
+		delete plugin;
+
+		return programCount;
 	}
 
 	// Get the name of the specified plugin's program.  Note that IDs are 1-based.
+	// This is going to be terrible if there are a lot of programs but let's just see if it works :-P
 	void NowSoundGraph::PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
 	{
+		juce::PluginDescription* description = _knownPluginList.getType(((int)pluginId) - 1);
+		juce::String errorMessage;
+		AudioPluginInstance* plugin = _audioPluginFormatManager.createPluginInstance(
+			*description, Info().SampleRateHz, Info().SamplesPerQuantum, errorMessage);
 
+		juce::String programName = plugin->getProgramName(((int)programId) - 1);
+		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, programName.getCharPointer(), programName.length());
+		plugin->releaseResources();
+		delete plugin;
 	}
 
 	// static externally reachable shutdown method

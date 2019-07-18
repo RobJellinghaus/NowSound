@@ -115,7 +115,7 @@ namespace NowSound
 		void PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
 		// Get the number of programs for the given plugin.
-		void PluginProgramCount(PluginId pluginId);
+		int PluginProgramCount(PluginId pluginId);
 
 		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
 		void PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
@@ -241,6 +241,8 @@ namespace NowSound
 
 		// Place to keep an exception message if we need to throw one.
 		std::string _exceptionMessage;
+
+		// Plugin instances used for program and name querying.
 
 	public:
 		// non-exported methods for "internal" use
