@@ -24,6 +24,20 @@ namespace NowSound
     class NowSoundInputAudioProcessor;
 	class NowSoundTrackAudioProcessor;
 
+	class PluginProgram
+	{
+	private:
+		MemoryBlock _state;
+		String _name;
+
+	public:
+		const MemoryBlock& State() { return _state; }
+		const String& Name() { return _name; }
+		
+		PluginProgram(const MemoryBlock& memoryBlock, const String& name) : _state{ memoryBlock }, _name{ name }
+		{}
+	};
+
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
@@ -113,6 +127,9 @@ namespace NowSound
 
 		// Get the name of the Nth plugin. Note that IDs are 1-based.
 		void PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// Load all programs in this directory and associate with the given PluginId.
+		bool LoadPluginPrograms(PluginId pluginId, LPWSTR pathnameBuffer);
 
 		// Get the number of programs for the given plugin.
 		int PluginProgramCount(PluginId pluginId);
@@ -242,7 +259,9 @@ namespace NowSound
 		// Place to keep an exception message if we need to throw one.
 		std::string _exceptionMessage;
 
-		// Plugin instances used for program and name querying.
+		// Vector, indexed by plugin ID (minus 1), of vectors of PluginPrograms.
+		// Only plugins that have had LoadPluginPrograms called for them will be in this list.
+		std::vector<std::vector<PluginProgram>> _loadedPluginPrograms;
 
 	public:
 		// non-exported methods for "internal" use

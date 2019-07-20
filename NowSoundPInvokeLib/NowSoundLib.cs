@@ -521,6 +521,17 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pathnameBuffer);
+
+        /// <summary>
+        /// Get the name of the Nth plugin. Note that IDs are 1-based.
+        /// </summary>
+        public static bool LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pathnameBuffer)
+        {
+            return NowSoundGraph_LoadPluginPrograms(pluginId, pathnameBuffer);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern int NowSoundGraph_PluginProgramCount(PluginId pluginId);
 
         /// <summary>

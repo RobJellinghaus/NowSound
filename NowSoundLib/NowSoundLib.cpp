@@ -183,28 +183,30 @@ namespace NowSound
 
 	// After setting one or more search paths, actually search.
 	// TODO: make this asynchronous.
-	// Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
 	bool NowSoundGraph_SearchPluginsSynchronously()
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->SearchPluginsSynchronously();
 	}
 
-	// How many plugins?
 	int NowSoundGraph_PluginCount()
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->PluginCount();
 	}
 
-	// Get the name of the Nth plugin. Note that IDs are 1-based.
 	void NowSoundGraph_PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->PluginName(pluginId, wcharBuffer, bufferCapacity);
 	}
 
-	// Get the number of programs for the given plugin.
+	bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, LPWSTR pathnameBuffer)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		return NowSoundGraph::Instance()->LoadPluginPrograms(pluginId, pathnameBuffer);
+	}
+
 	int NowSoundGraph_PluginProgramCount(PluginId pluginId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);

@@ -631,6 +631,12 @@ namespace NowSound
 		// loop over all files synchronously, this is a bad experience if the path is huge so don't ever do that
 		while (scanner.scanNextFile(/*dontRescanIfAlreadyInList*/true, pluginBeingScanned)) {};
 
+		// now initialize _loadedPluginPrograms with an empty vector per plugin
+		for (int i = 0; i < _knownPluginList.getNumTypes(); i++)
+		{
+			_loadedPluginPrograms.push_back(std::vector<PluginProgram>{});
+		}
+
 		// and that's it!
 		return true;
 	}
@@ -648,33 +654,65 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
 	}
 
+	struct FileNameComparer
+	{
+		int compareElements(File file1, File file2)
+		{
+			return file1.getFileName().compare(file2.getFileName());
+		}
+	};
+
+	bool NowSoundGraph::LoadPluginPrograms(PluginId pluginId, LPWSTR pathnameBuffer)
+	{
+		// Verify that pathnameBuffer exists
+		String pathname{ pathnameBuffer };
+		File path{ pathname };
+		if (!path.isDirectory())
+		{
+			return false;
+		}
+
+		std::vector<PluginProgram> programs{};
+
+		// Iterate over all ".state" files in path
+		auto childFiles = path.findChildFiles(juce::File::TypesOfFileToFind::findFiles, /*searchRecursively*/ false, "*.state");
+		FileNameComparer comparer{};
+		childFiles.sort(comparer, /*retainOrderOfEquivalentItems*/ false);
+		for (File file : childFiles)
+		{
+			String programName = file.getFileNameWithoutExtension();
+			juce::FileInputStream finStream(file);
+			int32_t size = finStream.readInt();
+			MemoryBlock state;
+			state.ensureSize(size);
+			finStream.read(state.getData(), size);
+			programs.push_back(PluginProgram{ state, programName });
+		}
+
+		_loadedPluginPrograms.emplace(_loadedPluginPrograms.begin() + ((int)pluginId - 1), std::move(programs));
+
+		return true;
+	}
+
 	int32_t NowSoundGraph::PluginProgramCount(PluginId pluginId)
 	{
+		/*
 		juce::PluginDescription* description = _knownPluginList.getType(((int)pluginId) - 1);
 		juce::String errorMessage;
 		AudioPluginInstance* plugin = _audioPluginFormatManager.createPluginInstance(
 			*description, Info().SampleRateHz, Info().SamplesPerQuantum, errorMessage);
+		*/
 
-		int programCount = plugin->getNumPrograms();
-		plugin->releaseResources();
-		delete plugin;
-
-		return programCount;
+		return _loadedPluginPrograms[(int)pluginId - 1].size();
 	}
 
 	// Get the name of the specified plugin's program.  Note that IDs are 1-based.
 	// This is going to be terrible if there are a lot of programs but let's just see if it works :-P
 	void NowSoundGraph::PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
 	{
-		juce::PluginDescription* description = _knownPluginList.getType(((int)pluginId) - 1);
-		juce::String errorMessage;
-		AudioPluginInstance* plugin = _audioPluginFormatManager.createPluginInstance(
-			*description, Info().SampleRateHz, Info().SamplesPerQuantum, errorMessage);
+		const String& name = _loadedPluginPrograms[(int)pluginId - 1][(int)programId - 1].Name();
 
-		juce::String programName = plugin->getProgramName(((int)programId) - 1);
-		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, programName.getCharPointer(), programName.length());
-		plugin->releaseResources();
-		delete plugin;
+		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
 	}
 
 	// static externally reachable shutdown method

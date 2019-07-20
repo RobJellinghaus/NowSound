@@ -127,7 +127,10 @@ namespace NowSound
 		// Get the name of the Nth plugin. Note that IDs are 1-based.
 		__declspec(dllexport) void NowSoundGraph_PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
-		// Get the number of programs for the given plugin.
+		// Load programs for the given plugin from the given directory.
+		__declspec(dllexport) bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, LPWSTR pathnameBuffer);
+
+		// Get the number of programs for the given plugin.  (Call this after loading.)
 		__declspec(dllexport) int NowSoundGraph_PluginProgramCount(PluginId pluginId);
 
 		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
