@@ -113,6 +113,8 @@ namespace NowSound
 		// The JucePlugin_Build_Unity preprocessor flag affects this behavior, but I am not going to mess with that just yet.
 		void MessageTick();
 
+	public: // Plugin support
+
 		// Plugin searching requires setting paths to search.
 		// TODO: make this use the idiom for passing in strings rather than StringBuilders.
 		void AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity);
@@ -136,6 +138,15 @@ namespace NowSound
 
 		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
 		void PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
+
+		// Add effects on the given input.
+		PluginInstanceId AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
+		
+		// Set the wet/dry level of the given plugin instance.
+		void SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+
+		// Delete the given plugin instance.
+		void DeleteInputPlugin(AudioInputId inputId, PluginInstanceId pluginInstanceId);
 
 	private: // Constructor and internal implementations
 

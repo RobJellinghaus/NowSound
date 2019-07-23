@@ -189,10 +189,10 @@ namespace NowSound
 			ProgramIdUndefined = 0
 		};
 
-		// The ID of an instantiated plugin on a particular track (specific to that track, not globally unique).
-		enum TrackPluginInstanceId
+		// The ID of an instantiated plugin.
+		enum PluginInstanceId
 		{
-			TrackPluginInstanceIdUndefined = 0
+			PluginInstanceIdUndefined = 0
 		};
 
 		NowSoundGraphInfo CreateNowSoundGraphInfo(
@@ -236,13 +236,13 @@ namespace NowSound
 	// Common implementation types *not* visible across the P/Invoke boundary.
 
 	// The state of an instantiated plugin; eventually will include parameter settings.
-	struct NowSoundPluginInstanceState
+	struct PluginInstanceState
 	{
 		const PluginId pluginId;
 		const ProgramId programId;
 		const int dryWet_0_100;
 
-		NowSoundPluginInstanceState(PluginId pluginIdArg, ProgramId programIdArg, int dryWet_0_100_arg)
+		PluginInstanceState(PluginId pluginIdArg, ProgramId programIdArg, int dryWet_0_100_arg)
 			: pluginId{ pluginIdArg }, programId{ programIdArg }, dryWet_0_100{ dryWet_0_100_arg }
 		{}
 	};

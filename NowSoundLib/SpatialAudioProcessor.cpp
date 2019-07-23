@@ -50,3 +50,13 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
         outputBufferChannel1[i] = (float)(rightCoefficient * value);
     }
 }
+
+PluginInstanceId SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
+{
+
+}
+
+void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceId pluginInstanceId)
+{
+
+}

@@ -14,6 +14,7 @@ namespace NowSound
 {
     // Expects one input channel and N output channels; applies appropriate spatialization (at the moment,
     // stereo panning only) and writes to all N output channels.
+	// Also supports a chain of PluginProgramInstances.
     class SpatialAudioProcessor : public MeasurementAudioProcessor
     {
         // current pan value; 0 = left, 0.5 = center, 1 = right
@@ -22,6 +23,9 @@ namespace NowSound
         // is this currently muted?
         // if so, output audio is zeroed
         bool _isMuted;
+
+		// vector of PluginProgramInstances
+		std::vector<PluginInstanceState>  _pluginInstances;
 
     public:
         SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialPan);
@@ -39,6 +43,15 @@ namespace NowSound
         // Get and set the pan value for this track.
         float Pan() const;
         void Pan(float pan);
+
+		// Install a new instance of a plugin with the specified program and wetdry level.
+		// Currently all new plugins go on the end of the chain.
+		PluginInstanceId AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100);
+
+		// Delete a plugin instance. Will cause all subsequent instances to be renumbered.
+		// (e.g. plugin instance IDs are really just indexes into the current sequence, not
+		// persistent values.)
+		void DeletePluginInstance(PluginInstanceId pluginInstanceId);
 
 	protected: 
 		static std::wstring MakeName(const wchar_t* label, int id)

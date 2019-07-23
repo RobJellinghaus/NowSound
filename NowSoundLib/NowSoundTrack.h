@@ -94,9 +94,12 @@ namespace NowSound
         void FinishRecording();
 
 		// Add an instance of the given plugin on the given track.
-		TrackPluginInstanceId AddPlugin(PluginId pluginId, ProgramId programId);
+		PluginInstanceId AddPlugin(PluginId pluginId, ProgramId programId);
 		
 		// Set the dry/wet balance on the given plugin.
-		void SetPluginDryWet(TrackPluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+		void SetPluginDryWet(PluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+
+		// Delete the given plugin.
+		void DeletePlugin(PluginInstanceId pluginInstanceId);
     };
 }

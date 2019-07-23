@@ -706,8 +706,6 @@ namespace NowSound
 		return _loadedPluginPrograms[(int)pluginId - 1].size();
 	}
 
-	// Get the name of the specified plugin's program.  Note that IDs are 1-based.
-	// This is going to be terrible if there are a lot of programs but let's just see if it works :-P
 	void NowSoundGraph::PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
 	{
 		const String& name = _loadedPluginPrograms[(int)pluginId - 1][(int)programId - 1].Name();
@@ -715,7 +713,21 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
 	}
 
-	// static externally reachable shutdown method
+	PluginInstanceId NowSoundGraph::AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
+	{
+
+	}
+
+	void NowSoundGraph::SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	{
+
+	}
+
+	void NowSoundGraph::DeleteInputPlugin(AudioInputId inputId, PluginInstanceId pluginInstanceId)
+	{
+
+	}
+
 	void NowSoundGraph::ShutdownInstance()
 	{
 		// SHUT. DOWN. EVERYTHING
