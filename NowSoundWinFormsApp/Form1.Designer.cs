@@ -87,12 +87,20 @@ namespace NowSoundWinFormsApp
                 string pluginName = buffer.ToString();
                 Debug.WriteLine($"Plugin #{pluginIndex}: '{pluginName}'");
 
-                int programCount = NowSoundGraphAPI.PluginProgramCount((PluginId)pluginIndex);
-                for (int programIndex = 1; programIndex <= programCount; programIndex++)
+                if (pluginName == "Manipulator")
                 {
-                    NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer, buffer.Capacity);
-                    string programName = buffer.ToString();
-                    Debug.WriteLine($"    Program #{programIndex}: '{programName}'");
+                    buffer.Clear();
+                    buffer.Append(@"C:\git\holofunk2\presets\Manipulator");
+                    NowSoundGraphAPI.LoadPluginPrograms((PluginId)pluginIndex, buffer);
+
+                    int programCount = NowSoundGraphAPI.PluginProgramCount((PluginId)pluginIndex);
+                    for (int programIndex = 1; programIndex <= programCount; programIndex++)
+                    {
+                        NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer, buffer.Capacity);
+                        string programName = buffer.ToString();
+                        Debug.WriteLine($"    Program #{programIndex}: '{programName}'");
+                    }
+
                 }
             }
         }
