@@ -92,6 +92,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MeasurableAudio.h" />
     <ClInclude Include="MeasurementAudioProcessor.h" />
     <ClInclude Include="BaseAudioProcessor.h" />
     <ClInclude Include="SpatialAudioProcessor.h" />

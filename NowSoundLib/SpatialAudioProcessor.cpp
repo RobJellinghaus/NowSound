@@ -10,8 +10,8 @@
 using namespace NowSound;
 using namespace std;
 
-SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialPan) :
-    MeasurementAudioProcessor(graph, name),
+SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialPan) 
+	: BaseAudioProcessor(graph, name),
     _isMuted{ false },
     _pan{ initialPan }
 {}
@@ -37,7 +37,7 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
     double rightCoefficient = std::sin(angularPosition);
 
     // Measure the audio now -- at the moment we only track channel 0 anyway
-    MeasurementAudioProcessor::processBlock(audioBuffer, midiBuffer);
+    // MeasurementAudioProcessor::processBlock(audioBuffer, midiBuffer);
 
     float* outputBufferChannel0 = audioBuffer.getWritePointer(0);
     float* outputBufferChannel1 = audioBuffer.getWritePointer(1);
@@ -53,7 +53,7 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
 
 PluginInstanceId SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
-
+	return PluginInstanceId::PluginInstanceIdUndefined; // TODO
 }
 
 void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceId pluginInstanceId)

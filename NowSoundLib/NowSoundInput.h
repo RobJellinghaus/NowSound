@@ -57,6 +57,6 @@ namespace NowSound
 		// Note that this is not concurrency-safe with respect to other calls to this method.
 		// (It is of course concurrency-safe with respect to ongoing audio activity.)
         // Returns a reference to the newly created Node which holds the new TrackAudioProcessor instance.
-        juce::AudioProcessorGraph::Node::Ptr CreateRecordingTrack(TrackId id);
+        NowSoundTrackAudioProcessor* CreateRecordingTrack(TrackId id);
 	};
 }

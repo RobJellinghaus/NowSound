@@ -63,6 +63,9 @@
     <ClInclude Include="MeasurementAudioProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MeasurableAudio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

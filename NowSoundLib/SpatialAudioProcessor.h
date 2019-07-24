@@ -9,13 +9,14 @@
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundGraph.h"
 #include "MeasurementAudioProcessor.h"
+#include "MeasurableAudio.h"
 
 namespace NowSound
 {
     // Expects one input channel and N output channels; applies appropriate spatialization (at the moment,
     // stereo panning only) and writes to all N output channels.
 	// Also supports a chain of PluginProgramInstances.
-    class SpatialAudioProcessor : public MeasurementAudioProcessor
+    class SpatialAudioProcessor : public BaseAudioProcessor, public MeasurableAudio
     {
         // current pan value; 0 = left, 0.5 = center, 1 = right
         float _pan;
@@ -27,13 +28,27 @@ namespace NowSound
 		// vector of PluginProgramInstances
 		std::vector<PluginInstanceState>  _pluginInstances;
 
+		// MeasurementAudioProcessor that carries the output of the effect chain.
+		// This is not an owning reference; the JUCE graph owns all processors.
+		MeasurementAudioProcessor* _outputProcessor;
+
     public:
         SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialPan);
 
         // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
-        // True if this is muted.
+		// Get a (non-owning) pointer to the MeasurementAudioProcessor that carries the output of this SpatialAudioProcessor.
+		// The intent is to facilitate getting the signal info and frequencies of the post-sound-effected input audio.
+		MeasurementAudioProcessor* OutputProcessor() { return _outputProcessor; }
+
+		// Get the output signal information of this processor (post-effects).
+		NowSoundSignalInfo SignalInfo() { return _outputProcessor->SignalInfo(); }
+
+		// Get the output frequency histogram, writing it into this (presumed) vector of floats.
+		void GetFrequencies(void* floatBuffer, int floatBufferCapacity) { _outputProcessor->GetFrequencies(floatBuffer, floatBufferCapacity); }
+		
+		// True if this is muted.
         // 
         // Note that something can be in FinishRecording state but still be muted, if the user is fast!
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.

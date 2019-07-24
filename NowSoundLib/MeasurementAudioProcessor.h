@@ -8,16 +8,14 @@
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundGraph.h"
 #include "BaseAudioProcessor.h"
+#include "MeasurableAudio.h"
 
 namespace NowSound
 {
     // Measures the contents of its process block, measuring all output channels.
     // Subclasses can use this to measure either before or after subclass processing.
-    class MeasurementAudioProcessor : public BaseAudioProcessor
+    class MeasurementAudioProcessor : public BaseAudioProcessor, public MeasurableAudio
     {
-        // NowSoundGraph we're part of
-        NowSoundGraph* _graph;
-
         // Mutex to use when returning or updating signal info; to prevent racing between data access and update.
         std::mutex _mutex;
 
@@ -31,14 +29,9 @@ namespace NowSound
     public:
         MeasurementAudioProcessor(NowSoundGraph* graph, const std::wstring& name);
 
-        virtual const String getName() const override { return String(_name.c_str()); }
-
         // Process the given buffer; use the number of output channels as the channel count.
         // This locks the info mutex.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
-
-        // The graph this processor is part of.
-        NowSoundGraph* Graph() const { return _graph; }
 
         // Copy out the volume signal info for reading.
         // This locks the info mutex.

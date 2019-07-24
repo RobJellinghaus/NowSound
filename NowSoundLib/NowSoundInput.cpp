@@ -35,23 +35,20 @@ namespace NowSound
 
 	NowSoundInputInfo NowSoundInputAudioProcessor::Info()
 	{
-		float volume = SignalInfo().Avg;
-
 		NowSoundInputInfo ret;
-		ret.Volume = volume;
+		ret.Volume = 0; // TODO: fix this by going to output node
 		ret.Pan = Pan();
 		return ret;
 	}
 
-    juce::AudioProcessorGraph::Node::Ptr NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
+    NowSoundTrackAudioProcessor* NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
 	{
-		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Graph()->JuceGraph().addNode(
-            new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan()));
+		NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan());
 
 		// Add the new track to the collection of tracks in NowSoundTrackAPI.
-		Graph()->AddTrack(id, newTrackPtr);
+		Graph()->AddTrack(id, track);
 
-        return newTrackPtr;
+        return track;
 	}
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)

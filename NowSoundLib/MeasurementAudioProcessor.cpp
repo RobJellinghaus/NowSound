@@ -12,23 +12,8 @@ using namespace std;
 
 using namespace NowSound;
 
-BaseAudioProcessor::BaseAudioProcessor(const wstring& name) : _name{ name }
-{}
-
-bool BaseAudioProcessor::CheckLogThrottle()
-{
-	// TODO: revive if necessary... for now, always false
-	/*
-	int counter = _logThrottlingCounter;
-	_logThrottlingCounter = ++_logThrottlingCounter % LogThrottle;
-	return counter == 0;
-	*/
-	return false;
-}
-
 MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const wstring& name)
-    : BaseAudioProcessor(name),
-    _graph{ graph },
+    : BaseAudioProcessor(graph, name),
     _mutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
     _volumeHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },

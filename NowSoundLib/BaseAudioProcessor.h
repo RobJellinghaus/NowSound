@@ -38,6 +38,13 @@ namespace NowSound
         virtual void setStateInformation(const void * data, int sizeInBytes) override;
 
 	private:
+		// NowSoundGraph we're part of
+		NowSoundGraph* _graph;
+
+		// Our node ID in that graph if any; this gets assigned post-construction after the node gets added to
+		// (and becomes owned by) the graph
+		juce::AudioProcessorGraph::NodeID _nodeId;
+
 		// log throttling counter, to limit the amount of logging we emit (too much is useless)
 		int _logThrottlingCounter;
 
@@ -48,11 +55,24 @@ namespace NowSound
 		// the max counter at which _logThrottlingCounter rolls over
 		static const int LogThrottle = 1000;
 
+		// The graph this processor is part of.
+		NowSoundGraph* Graph() const { return _graph; }
+
+		// The ID of this node in the JUCE graph which owns it.
+		// This is the default value, until SetNodeId gets called post-construction.
+		juce::AudioProcessorGraph::NodeID NodeId() { return _nodeId; }
+
+		// Set the node ID after it has been added to the JUCE graph.
+		// This allows the processor to get hold of its owning node, for graph reconnections.
+		void SetNodeId(juce::AudioProcessorGraph::NodeID nodeId);
+
+		virtual const String getName() const override { return String(_name.c_str()); }
+
 	protected:
 		// The name of this processor.
 		const std::wstring _name;
 
-		BaseAudioProcessor(const std::wstring& name);
+		BaseAudioProcessor(NowSoundGraph* graph, const std::wstring& name);
 
 		// Return true if it is appropriate to emit a log message (happens every MaxCounter calls to this method).
 		bool CheckLogThrottle();

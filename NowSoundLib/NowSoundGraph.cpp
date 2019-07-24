@@ -76,10 +76,10 @@ namespace NowSound
 		Check(_logMessages.size() == 0);
 	}
 
-	void NowSoundGraph::AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track)
+	void NowSoundGraph::AddTrack(TrackId id, NowSoundTrackAudioProcessor* track)
 	{
 		// we want to insert the track by copy, since it's ref-counted
-		_tracks.insert(std::pair<TrackId, juce::AudioProcessorGraph::Node::Ptr>{id, track});
+		_tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, track});
 
 		// this is an async update
 		AsyncUpdate();
@@ -91,7 +91,7 @@ namespace NowSound
 		// The only way this will be correct is if all modifications to s_tracks happen only as a result of
 		// non-concurrent, serialized external calls to NowSoundTrackAPI.
 		Check(id > TrackId::TrackIdUndefined);
-		NowSoundTrackAudioProcessor* value = static_cast<NowSoundTrackAudioProcessor*>(_tracks.at(id)->getProcessor());
+		NowSoundTrackAudioProcessor* value = _tracks.at(id);
 		Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
 		return value;
 	}
@@ -464,16 +464,15 @@ namespace NowSound
 	void NowSoundGraph::CreateNowSoundInputForChannel(int channel)
 	{
 		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
-		juce::AudioProcessorGraph::Node::Ptr newPtr = _audioProcessorGraph.addNode(
-			new NowSoundInputAudioProcessor(
-				this,
-				nextAudioInputId,
-				_audioAllocator.get(),
-				channel));
+		NowSoundInputAudioProcessor* inputProcessor = new NowSoundInputAudioProcessor(
+			this,
+			nextAudioInputId,
+			_audioAllocator.get(),
+			channel);
 
-		AddNodeToJuceGraph(newPtr, channel);
+		AddNodeToJuceGraph(inputProcessor, channel);
 
-		_audioInputs.emplace_back(newPtr);
+		_audioInputs.push_back(inputProcessor);
 	}
 
 	NowSoundTimeInfo NowSoundGraph::TimeInfo()
@@ -496,6 +495,16 @@ namespace NowSound
 		return timeInfo;
 	}
 
+	juce::AudioProcessorGraph::Node::Ptr NowSoundGraph::GetNodePtr(BaseAudioProcessor* audioProcessor)
+	{
+		juce::AudioProcessorGraph::NodeID nodeId = audioProcessor->NodeId();
+		// must have been set
+		Check(nodeId != juce::AudioProcessorGraph::NodeID{});
+
+		juce::AudioProcessorGraph::Node::Ptr nodePtr = JuceGraph().getNodeForId(nodeId);
+		return nodePtr;
+	}
+
 	NowSoundInputAudioProcessor* NowSoundGraph::Input(AudioInputId audioInputId)
 	{
 		Check(_audioGraphState > NowSoundGraphState::GraphInError);
@@ -504,12 +513,7 @@ namespace NowSound
 		// Input IDs are one-based
 		Check((audioInputId - 1) < _audioInputs.size());
 
-		juce::AudioProcessorGraph::Node::Ptr& input = _audioInputs[(int)audioInputId - 1];
-
-		// ensure non-null -- should be true by construction, but, you know, bugs
-		Check(input.get());
-
-		return static_cast<NowSoundInputAudioProcessor*>(input->getProcessor());
+		return _audioInputs[((int)audioInputId) - 1];
 	}
 
 	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
@@ -526,10 +530,10 @@ namespace NowSound
 		TrackId id = (TrackId)((int)_nextTrackId + 1);
 		_nextTrackId = id;
 
-		juce::AudioProcessorGraph::Node::Ptr newTrackPtr = Input(audioInputId)->CreateRecordingTrack(id);
+		NowSoundTrackAudioProcessor* newTrack = Input(audioInputId)->CreateRecordingTrack(id);
 
 		// convert from audio input numbering (1-based) to channel id (0-based)
-		AddNodeToJuceGraph(newTrackPtr, audioInputId - 1);
+		AddNodeToJuceGraph(newTrack, audioInputId - 1);
 
 		return id;
 	}
@@ -538,12 +542,14 @@ namespace NowSound
 	{
 		Check(trackId >= TrackId::TrackIdUndefined && trackId <= _tracks.size());
 
-		// remove the Node
-		juce::AudioProcessorGraph::Node::Ptr& nodePtr = _tracks.at(trackId);
-		JuceGraph().removeNode(nodePtr.get());
-
-		// place a null pointer... this *should* cause the track to be deleted
+		// remove the owning Node from the graph
+		NowSoundTrackAudioProcessor* track = _tracks.at(trackId);
+		// wipe the weak reference before we drop the strong reference
 		_tracks[trackId] = nullptr;
+
+		// now drop the strong reference from the graph
+		juce::AudioProcessorGraph::Node::Ptr nodePtr = GetNodePtr(track);
+		JuceGraph().removeNode(nodePtr.get());
 
 		// this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
 		AsyncUpdate();
@@ -715,7 +721,7 @@ namespace NowSound
 
 	PluginInstanceId NowSoundGraph::AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
 	{
-
+		return PluginInstanceId::PluginInstanceIdUndefined; // TODO
 	}
 
 	void NowSoundGraph::SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
@@ -751,23 +757,30 @@ namespace NowSound
 		_audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
 	}
 
-	void NowSoundGraph::AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newNode, int inputChannel)
+	void NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, int inputChannel)
 	{
 		// set play config details BEFORE making connections to the graph
 		// otherwise addConnection doesn't think the new node has any connections
-		newNode->getProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+		newProcessor->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+		newProcessor->OutputProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+
+		juce::AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
+		newProcessor->SetNodeId(inputNode->nodeID);
+
+		juce::AudioProcessorGraph::Node::Ptr outputNode = JuceGraph().addNode(newProcessor->OutputProcessor());
+		newProcessor->OutputProcessor()->SetNodeId(outputNode->nodeID);
 
 		// Input connection (one)
-		Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNode->nodeID, 0 } }));
+		Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { inputNode->nodeID, 0 } }));
 
 		// Output connections
 		// TODO: enumerate based on actual graph count... for the moment, stereo only
-		Check(JuceGraph().addConnection({ { newNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
-		Check(JuceGraph().addConnection({ { newNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
+		Check(JuceGraph().addConnection({ { outputNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
+		Check(JuceGraph().addConnection({ { outputNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
 
 		{
 			std::wstringstream wstr{};
-			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << newNode->nodeID.uid << L", " << inputChannel << ")";
+			wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << inputNode->nodeID.uid << L", " << outputNode->nodeID.uid << L", " << inputChannel << L")";
 			NowSoundGraph::Instance()->Log(wstr.str());
 		}
 	}

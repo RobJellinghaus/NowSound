@@ -21,6 +21,8 @@
 
 namespace NowSound
 {
+	class BaseAudioProcessor;
+	class SpatialAudioProcessor;
     class NowSoundInputAudioProcessor;
 	class NowSoundTrackAudioProcessor;
 
@@ -237,9 +239,9 @@ namespace NowSound
 		int _fftSize;
 
 		// The audio inputs we have; currently unchanging after graph creation.
-        // Note that the processors held by these Ptrs are NowSoundInputAudioProcessors.
+		// Note that this vector does not own the processors; the JUCE graph does.
 		// TODO: vaguely consider supporting dynamically added/removed inputs.
-		std::vector<juce::AudioProcessorGraph::Node::Ptr> _audioInputs;
+		std::vector<NowSoundInputAudioProcessor*> _audioInputs;
 
         // Mutex for the state of the graph.
         // The combination of _audioGraphState and _changingState must be updated atomically, or hazards are possible.
@@ -248,7 +250,8 @@ namespace NowSound
 		int _logThrottlingCounter;
 
 		// The collection of all tracks.
-		std::map<TrackId, juce::AudioProcessorGraph::Node::Ptr> _tracks;
+		// Note that this vector does not own the processors; the JUCE graph does.
+		std::map<TrackId, NowSoundTrackAudioProcessor*> _tracks;
 
 		// True if there was an async update.
 		bool _asyncUpdate;
@@ -276,7 +279,7 @@ namespace NowSound
 
 	public:
 		// non-exported methods for "internal" use
-		void AddTrack(TrackId id, juce::AudioProcessorGraph::Node::Ptr track);
+		void AddTrack(TrackId id, NowSoundTrackAudioProcessor* track);
 
 		// Accessor for track by ID.
 		NowSoundTrackAudioProcessor* Track(TrackId id);
@@ -327,16 +330,20 @@ namespace NowSound
         // Access to the audio graph for node instantiation.
         juce::AudioProcessorGraph& JuceGraph();
 
+		// Get a reference-counted reference on this BaseAudioProcessor.
+		// The processor must have had its node ID set.
+		juce::AudioProcessorGraph::Node::Ptr GetNodePtr(BaseAudioProcessor* processor);
+
         // Get a reference on one of the NowSoundInputs.
         NowSoundInputAudioProcessor* Input(AudioInputId audioInputId);
 
         // Add the connections of a SpatialAudioProcessor node.
         // This entails connecting the given inputChannel to newSpatialNode's channel 0,
-        // and connecting all newSpatialNode's output channels to the graph's output channels.
+        // and connecting all newSpatialNode's OutputProcessor()'s output channels to the graph's output channels.
         // (Note that this does not modify this NowSoundGraph's collection of Inputs or of Tracks; 
         // this just makes the JUCE graph connections.)
         // For now this always sets up one input connection and two output connections.
-        void AddNodeToJuceGraph(juce::AudioProcessorGraph::Node::Ptr newSpatialNode, int inputChannel);
+        void AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, int inputChannel);
 
 		// Actually shut down the audio processing.
 		void Shutdown();
