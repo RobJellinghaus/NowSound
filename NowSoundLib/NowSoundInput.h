@@ -51,7 +51,7 @@ namespace NowSound
         virtual void processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer);
         
 		// Get information about this input.
-		NowSoundInputInfo Info();
+		NowSoundSpatialParameters Info();
 
 		// Create a recording track monitoring this input.
 		// Note that this is not concurrency-safe with respect to other calls to this method.

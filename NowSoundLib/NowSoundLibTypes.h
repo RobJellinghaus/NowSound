@@ -65,7 +65,7 @@ namespace NowSound
 
 		// Information about a created input; currently only mono inputs are supported.
 		// (Stereo inputs can be represented as a pair of mono inputs.)
-		typedef struct NowSoundInputInfo
+		typedef struct NowSoundSpatialParameters
 		{
 			// Volume for the input signal.
 			float Volume;
@@ -211,7 +211,7 @@ namespace NowSound
 			float beatsPerMinute,
 			float beatInMeasure);
 
-		NowSoundInputInfo CreateNowSoundInputInfo(
+		NowSoundSpatialParameters CreateNowSoundInputInfo(
 			float volume,
 			float pan);
 

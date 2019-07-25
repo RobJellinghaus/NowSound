@@ -352,10 +352,23 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern NowSoundSignalInfo NowSoundGraph_InputSignalInfo(AudioInputId audioInputId);
+
+        /// <summary>
+        /// Get information about the post-effects signal of an input channel.
+        /// Graph must be Running.
+        /// </summary>
+        /// <returns></returns>
+        public static NowSoundSignalInfo InputSignalInfo(AudioInputId audioInputId)
+        {
+            return NowSoundGraph_InputSignalInfo(audioInputId);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
         /// <summary>
-        /// Get information about the current (final mix) output signal.
+        /// Get information about the post-mixing signal of the output channels.
         /// Graph must be Running.
         /// </summary>
         /// <returns></returns>

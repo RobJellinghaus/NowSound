@@ -61,9 +61,13 @@ namespace NowSound
 		// Graph must be at least Initialized.
 		NowSoundGraphInfo Info();
 
-        // Information about the final mixed output signal.
-        // Graph must be at least Initialized.
-        NowSoundSignalInfo OutputSignalInfo();
+		// Information about a post-effects input signal.
+		// Graph must be at least Initialized.
+		NowSoundSignalInfo InputSignalInfo(AudioInputId audioInputId);
+
+		// Information about the final mixed output signal.
+		// Graph must be at least Initialized.
+		NowSoundSignalInfo OutputSignalInfo();
 
 		// Get the ID of the input device with the given index (from 0 to Info().InputDeviceCount-1).
 		// JUCETODO: void InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);
@@ -87,9 +91,9 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundTimeInfo TimeInfo();
 
-		// Info about the given input.
+		// The spatial parameters of the given input.
 		// Graph must be Created or Running.
-		NowSoundInputInfo InputInfo(AudioInputId inputId);
+		NowSoundSpatialParameters SpatialParameters(AudioInputId inputId);
 
 		// Get the post-effects frequency histogram for the given input.
 		void GetInputFrequencies(AudioInputId inputId, void* floatBuffer, int floatBufferCapacity);

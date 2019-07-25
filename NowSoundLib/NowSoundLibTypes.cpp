@@ -38,11 +38,11 @@ namespace NowSound
 		return info;
 	}
 
-	NowSoundInputInfo CreateNowSoundInputInfo(
+	NowSoundSpatialParameters CreateNowSoundInputInfo(
 		float volume,
 		float pan)
 	{
-		NowSoundInputInfo info;
+		NowSoundSpatialParameters info;
 		info.Volume = volume;
 		info.Pan = pan;
 		return info;

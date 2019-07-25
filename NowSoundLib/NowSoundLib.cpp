@@ -4,8 +4,9 @@
 
 #include "stdafx.h"
 
-#include "NowSoundLib.h"
 #include "NowSoundGraph.h"
+#include "NowSoundInput.h"
+#include "NowSoundLib.h"
 #include "NowSoundTrack.h"
 
 namespace NowSound
@@ -92,8 +93,8 @@ namespace NowSound
 	}
 
 	NowSoundSignalInfo NowSoundGraph_OutputSignalInfo()
-    {
-        if (NowSoundGraph::Instance() != nullptr)
+	{
+		if (NowSoundGraph::Instance() != nullptr)
 		{
 			return NowSoundGraph::Instance()->OutputSignalInfo();
 		}
@@ -101,7 +102,19 @@ namespace NowSound
 		{
 			return NowSoundSignalInfo{};
 		}
-    }
+	}
+
+	NowSoundSignalInfo NowSoundGraph_InputSignalInfo(AudioInputId audioInputId)
+	{
+		if (NowSoundGraph::Instance() != nullptr)
+		{
+			return NowSoundGraph::Instance()->Input(audioInputId)->SignalInfo();
+		}
+		else
+		{
+			return NowSoundSignalInfo{};
+		}
+	}
 
 #ifdef INPUT_DEVICE_SELECTION // JUCETODO
 	void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
@@ -148,12 +161,10 @@ namespace NowSound
 		NowSoundGraph::Instance()->GetInputFrequencies(audioInputId, floatBuffer, floatBufferCapacity);
 	}
 
-#ifdef INPUT_DEVICE_SELECTION
-	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
+	NowSoundSpatialParameters NowSoundGraph_SpatialParameters(AudioInputId audioInputId)
 	{
-		return NowSoundGraph::Instance()->InputInfo(audioInputId);
+		return NowSoundGraph::Instance()->SpatialParameters(audioInputId);
 	}
-#endif
 
 	void NowSoundGraph_PlayUserSelectedSoundFileAsync()
 	{

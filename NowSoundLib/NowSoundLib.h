@@ -96,7 +96,7 @@ namespace NowSound
 
 		// Get the info for the specified input.
 		// Graph must be at least Created; time will not be running until the graph is Running.
-		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
+		__declspec(dllexport) NowSoundSpatialParameters NowSoundGraph_InputInfo(AudioInputId inputId);
 
 		// Get the current input frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
 		// same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR

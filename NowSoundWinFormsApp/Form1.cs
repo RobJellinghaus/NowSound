@@ -13,9 +13,9 @@ namespace NowSoundWinFormsApp
         public Form1()
         {
             InitializeComponent();
-
-            timer1.Start();
         }
+
+        private List<InputRow> _inputRows = new List<InputRow>();
 
         private List<TrackRow> _trackRows = new List<TrackRow>();
 
@@ -49,6 +49,10 @@ namespace NowSoundWinFormsApp
             infoLabel.Text = $"Sample rate {info.SampleRate}, buffer size {info.SamplesPerQuantum}, sample time {timeInfo.TimeInSamples}, exact beat {timeInfo.ExactBeat}, "
                 + $"maxsignal {outputSignalInfo.Max:F4}, avgsignal {outputSignalInfo.Avg:F4}";
 
+            for (int i = 0; i < _inputRows.Count; i++)
+            {
+                _inputRows[i].Update();
+            }
             for (int i = 0; i < _trackRows.Count; i++)
             {
                 _trackRows[i].Update();

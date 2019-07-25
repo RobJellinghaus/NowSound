@@ -33,9 +33,9 @@ namespace NowSound
 	{
 	}
 
-	NowSoundInputInfo NowSoundInputAudioProcessor::Info()
+	NowSoundSpatialParameters NowSoundInputAudioProcessor::Info()
 	{
-		NowSoundInputInfo ret;
+		NowSoundSpatialParameters ret;
 		ret.Volume = 0; // TODO: fix this by going to output node
 		ret.Pan = Pan();
 		return ret;

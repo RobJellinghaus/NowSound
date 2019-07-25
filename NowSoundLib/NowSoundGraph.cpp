@@ -463,10 +463,10 @@ namespace NowSound
 
 	void NowSoundGraph::CreateNowSoundInputForChannel(int channel)
 	{
-		AudioInputId nextAudioInputId(static_cast<AudioInputId>((int)(_audioInputs.size() + 1)));
+		AudioInputId id(static_cast<AudioInputId>((int)(channel + 1)));
 		NowSoundInputAudioProcessor* inputProcessor = new NowSoundInputAudioProcessor(
 			this,
-			nextAudioInputId,
+			id,
 			_audioAllocator.get(),
 			channel);
 
@@ -516,7 +516,7 @@ namespace NowSound
 		return _audioInputs[((int)audioInputId) - 1];
 	}
 
-	NowSoundInputInfo NowSoundGraph::InputInfo(AudioInputId audioInputId)
+	NowSoundSpatialParameters NowSoundGraph::SpatialParameters(AudioInputId audioInputId)
 	{
 		return Input(audioInputId)->Info();
 	}
