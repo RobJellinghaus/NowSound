@@ -38,6 +38,10 @@ namespace NowSound
         // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
+		// Assign both input and output node IDs at once.
+		// This allows the processor to do its own internal JUCE graph connections and setup as well.
+		void SetNodeIds(juce::AudioProcessorGraph::NodeID inputNodeId, juce::AudioProcessorGraph::NodeID outputNodeId);
+
 		// Get a (non-owning) pointer to the MeasurementAudioProcessor that carries the output of this SpatialAudioProcessor.
 		// The intent is to facilitate getting the signal info and frequencies of the post-sound-effected input audio.
 		MeasurementAudioProcessor* OutputProcessor() { return _outputProcessor; }

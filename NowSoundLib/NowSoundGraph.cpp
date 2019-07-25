@@ -762,13 +762,11 @@ namespace NowSound
 		// set play config details BEFORE making connections to the graph
 		// otherwise addConnection doesn't think the new node has any connections
 		newProcessor->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
-		newProcessor->OutputProcessor()->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+		newProcessor->OutputProcessor()->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
 		juce::AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
-		newProcessor->SetNodeId(inputNode->nodeID);
-
 		juce::AudioProcessorGraph::Node::Ptr outputNode = JuceGraph().addNode(newProcessor->OutputProcessor());
-		newProcessor->OutputProcessor()->SetNodeId(outputNode->nodeID);
+		newProcessor->SetNodeIds(inputNode->nodeID, outputNode->nodeID);
 
 		// Input connection (one)
 		Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { inputNode->nodeID, 0 } }));

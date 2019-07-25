@@ -13,7 +13,8 @@ using namespace std;
 SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialPan) 
 	: BaseAudioProcessor(graph, name),
     _isMuted{ false },
-    _pan{ initialPan }
+    _pan{ initialPan },
+	_outputProcessor{ new MeasurementAudioProcessor(graph, name) }
 {}
 
 bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }
@@ -49,6 +50,17 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
         outputBufferChannel0[i] = (float)(leftCoefficient * value);
         outputBufferChannel1[i] = (float)(rightCoefficient * value);
     }
+}
+
+void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNodeId, juce::AudioProcessorGraph::NodeID outputNodeId)
+{
+	SetNodeId(inputNodeId);
+	OutputProcessor()->SetNodeId(outputNodeId);
+
+	// now set up the connections here
+	// TODO: add in effects when pre-creating them
+	Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 0 }, { outputNodeId, 0 } }));
+	Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { outputNodeId, 1 } }));
 }
 
 PluginInstanceId SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
