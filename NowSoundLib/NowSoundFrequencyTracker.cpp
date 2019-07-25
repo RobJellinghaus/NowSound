@@ -48,7 +48,7 @@ namespace NowSound
 		std::copy(_outputBuffer.get(), _outputBuffer.get() + capacity, outputBuffer);
 	}
 
-	void NowSoundFrequencyTracker::Record(const float* monoInputBuffer, int sampleCount)
+	void NowSoundFrequencyTracker::Record(const float* buffer0, const float* buffer1, int sampleCount)
 	{
 		// lock the buffers as we may very well fill the recording buffer now
 		std::lock_guard<std::mutex> guard(_bufferMutex);
@@ -70,7 +70,7 @@ namespace NowSound
 				// Assigning float to complex leaves imaginary value as 0, as desired.
 				// Note that std::copy is inapplicable here as we are writing into a Complex array.
 				// TODO: add back Blackman-Harris windowing here
-				recordingBuffer[_recordingBufferSize + i] = monoInputBuffer[inputPosition + i];
+				recordingBuffer[_recordingBufferSize + i] = buffer0[inputPosition + i] / 2 + buffer1[inputPosition + 1] / 2;
 			}
 
 			_recordingBufferSize += samplesToRecord;

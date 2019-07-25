@@ -56,7 +56,9 @@
     <Compile Include="MagicConstants.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="InputRow.cs" />
     <Compile Include="TrackRow.cs" />
+    <Compile Include="Utilities.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

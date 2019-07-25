@@ -98,6 +98,12 @@ namespace NowSound
 		// Graph must be at least Created; time will not be running until the graph is Running.
 		__declspec(dllexport) NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId inputId);
 
+		// Get the current input frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
+		// same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
+		// and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
+		// "pass in StringBuilder", known to work well).
+		__declspec(dllexport) void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity);
+
 		// Play a user-selected sound file.
 		// Graph must be Started.
 		__declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
@@ -171,11 +177,10 @@ namespace NowSound
         // Contractually requires State == NowSoundTrack_State.Recording.
         __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 
-		// Get the current track frequency histogram; LPWSTR must actually reference a float buffer of the
+		// Get the current track frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
 		// same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
 		// and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
 		// "pass in StringBuilder", known to work well).
-		// Returns true if there was enough data to update the buffer, or false if there was not.
 		__declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity);
 
 		// True if this is muted.

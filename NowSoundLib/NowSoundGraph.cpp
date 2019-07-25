@@ -521,6 +521,11 @@ namespace NowSound
 		return Input(audioInputId)->Info();
 	}
 
+	void NowSoundGraph::GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity)
+	{
+		Input(audioInputId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+	}
+
 	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInputId)
 	{
 		// TODO: verify not on audio graph thread

@@ -47,7 +47,8 @@ const double Pi = std::atan(1) * 4;
 void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
 {
 	// temporary debugging code: see if processBlock is ever being called under Holofunk
-	if (CheckLogThrottle()) {
+	if (CheckLogThrottle())
+	{
 		std::wstringstream wstr{};
 		wstr << getName() << L"::processBlock: count " << NextCounter();
 		NowSoundGraph::Instance()->Log(wstr.str());
@@ -58,23 +59,21 @@ void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, Mi
     int numSamples = audioBuffer.getNumSamples();
 
     const float* outputBufferChannel0 = audioBuffer.getReadPointer(0);
-    // TODO: track right channel at all
-    // const float* outputBufferChannel1 = audioBuffer.getReadPointer(1);
+    const float* outputBufferChannel1 = audioBuffer.getReadPointer(1);
 
     // Pan each mono sample (and track its volume), if we're not muted.
     std::lock_guard<std::mutex> guard(_mutex);
 
     for (int i = 0; i < numSamples; i++)
     {
-        float value = outputBufferChannel0[i];
-        _volumeHistogram->Add(std::abs(value));
-    }
+		float value0 = outputBufferChannel0[i];
+		float value1 = outputBufferChannel1[i];
+		_volumeHistogram->Add(std::abs(value0) / 2 + std::abs(value1) / 2);
+	}
 
     // and provide it to frequency histogram as well
     if (_frequencyTracker != nullptr)
     {
-        // TODO: average both channels? or handle tracking stereo frequencies?
-        // for now only frequency track channel 0
-        _frequencyTracker->Record(outputBufferChannel0, numSamples);
+        _frequencyTracker->Record(outputBufferChannel0, outputBufferChannel1, numSamples);
     }
 }

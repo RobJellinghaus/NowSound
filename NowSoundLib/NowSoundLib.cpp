@@ -142,6 +142,12 @@ namespace NowSound
 		}
 	}
 
+	void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity)
+	{
+		Check(NowSoundGraph::Instance() != nullptr);
+		NowSoundGraph::Instance()->GetInputFrequencies(audioInputId, floatBuffer, floatBufferCapacity);
+	}
+
 #ifdef INPUT_DEVICE_SELECTION
 	NowSoundInputInfo NowSoundGraph_InputInfo(AudioInputId audioInputId)
 	{

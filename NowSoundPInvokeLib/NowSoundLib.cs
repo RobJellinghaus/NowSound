@@ -422,6 +422,19 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern bool NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, float[] floatBuffer, int floatBufferCapacity);
+
+        // Get the current input frequency histogram; LPWSTR must actually reference a float buffer of the
+        // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
+        // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
+        // "pass in StringBuilder", known to work well).
+        // Returns true if there was enough data to update the buffer, or false if there was not.
+        public static bool GetInputFrequencies(AudioInputId audioInputId, float[] floatBuffer, int floatBufferCapacity)
+        {
+            return NowSoundGraph_GetInputFrequencies(audioInputId, floatBuffer, floatBufferCapacity);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
         /// <summary>

@@ -91,6 +91,9 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundInputInfo InputInfo(AudioInputId inputId);
 
+		// Get the post-effects frequency histogram for the given input.
+		void GetInputFrequencies(AudioInputId inputId, void* floatBuffer, int floatBufferCapacity);
+
 		// The current log info.
 		NowSoundLogInfo LogInfo();
 
