@@ -518,7 +518,7 @@ namespace NowSound
 
 	NowSoundSpatialParameters NowSoundGraph::SpatialParameters(AudioInputId audioInputId)
 	{
-		return Input(audioInputId)->Info();
+		return Input(audioInputId)->SpatialParameters();
 	}
 
 	void NowSoundGraph::GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity)

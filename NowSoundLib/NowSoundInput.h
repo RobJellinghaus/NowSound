@@ -39,7 +39,13 @@ namespace NowSound
 		// so let's at least experiment with it.)
 		BufferedSliceStream<AudioSample, float> _incomingAudioStream;
 
-    public:
+		// Volume histogram for recording the raw input volume.
+		std::unique_ptr<Histogram> _rawInputHistogram;
+
+		// Mutex to use when returning or updating signal info; to prevent racing between data access and update.
+		std::mutex _mutex;
+
+	public:
 		// Construct a NowSoundInput.
 		NowSoundInputAudioProcessor(
 			NowSoundGraph* audioGraph,
@@ -51,7 +57,10 @@ namespace NowSound
         virtual void processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer);
         
 		// Get information about this input.
-		NowSoundSpatialParameters Info();
+		NowSoundSpatialParameters SpatialParameters();
+
+		// Get the raw signal info for the mono source of this input.
+		NowSoundSignalInfo RawSignalInfo();
 
 		// Create a recording track monitoring this input.
 		// Note that this is not concurrency-safe with respect to other calls to this method.

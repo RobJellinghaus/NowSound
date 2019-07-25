@@ -29,11 +29,13 @@ namespace NowSound
 		: SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), 0.5),
 		_audioInputId{ inputId },
 		_channel{ channel },
-		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false }		
+		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
+		_rawInputHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
+		_mutex{}
 	{
 	}
 
-	NowSoundSpatialParameters NowSoundInputAudioProcessor::Info()
+	NowSoundSpatialParameters NowSoundInputAudioProcessor::SpatialParameters()
 	{
 		NowSoundSpatialParameters ret;
 		ret.Volume = 0; // TODO: fix this by going to output node
@@ -49,6 +51,15 @@ namespace NowSound
 		Graph()->AddTrack(id, track);
 
         return track;
+	}
+
+	NowSoundSignalInfo NowSoundInputAudioProcessor::RawSignalInfo()
+	{
+		std::lock_guard<std::mutex> guard(_mutex);
+		float min = _rawInputHistogram->Min();
+		float max = _rawInputHistogram->Max();
+		float avg = _rawInputHistogram->Average();
+		return CreateNowSoundSignalInfo(min, max, avg);
 	}
 
 	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
@@ -73,6 +84,16 @@ namespace NowSound
         {
             Clock::Instance().AdvanceFromAudioGraph(audioBuffer.getNumSamples());
         }
+
+		// Because the input channels get wired up separately to channel 0 of each NowSoundInput, this should always be 0 here
+		// even for the input corresponding to channel 1.  (I THINK)
+		const float* buffer = audioBuffer.getReadPointer(0);
+
+		// update raw input data because need ALL THE SIGNAL DATA
+		for (int i = 0; i < audioBuffer.getNumSamples(); i++)
+		{
+			_rawInputHistogram->Add(std::abs(buffer[i]));
+		}
 
         // TODO: actually record into the bounded input stream!  if we decide that lookback is actually needed again.
 

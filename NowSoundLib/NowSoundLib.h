@@ -61,6 +61,12 @@ namespace NowSound
 		// Graph must be at least Created.
 		__declspec(dllexport) NowSoundGraphInfo NowSoundGraph_Info();
 
+		// Get the current pre-effects (raw) signal from the given input.
+		__declspec(dllexport) NowSoundSignalInfo NowSoundGraph_RawInputSignalInfo(AudioInputId audioInputId);
+
+		// Get the current info for the post-effects signal from the given input.
+		__declspec(dllexport) NowSoundSignalInfo NowSoundGraph_InputSignalInfo(AudioInputId audioInputId);
+
 		// Get the current info for the graph's final mixed output (channel 0 only, currently).
 		__declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 

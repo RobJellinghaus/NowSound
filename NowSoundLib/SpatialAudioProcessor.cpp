@@ -37,13 +37,10 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
     double leftCoefficient = std::cos(angularPosition);
     double rightCoefficient = std::sin(angularPosition);
 
-    // Measure the audio now -- at the moment we only track channel 0 anyway
-    // MeasurementAudioProcessor::processBlock(audioBuffer, midiBuffer);
-
     float* outputBufferChannel0 = audioBuffer.getWritePointer(0);
     float* outputBufferChannel1 = audioBuffer.getWritePointer(1);
 
-    // Pan each mono sample (and track its volume), if we're not muted.
+    // Pan each mono sample, if we're not muted.
     for (int i = 0; i < numSamples; i++)
     {
         float value = _isMuted ? 0 : outputBufferChannel0[i];

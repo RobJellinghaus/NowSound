@@ -63,12 +63,13 @@ namespace NowSoundWinFormsApp
 
         public void Update()
         {
-            NowSoundSignalInfo signalInfo = NowSoundGraphAPI.OutputSignalInfo();
-            
+            NowSoundSignalInfo rawSignalInfo = NowSoundGraphAPI.RawInputSignalInfo(_audioInputId);
+            NowSoundSignalInfo signalInfo = NowSoundGraphAPI.InputSignalInfo(_audioInputId);
+
             NowSoundGraphAPI.GetInputFrequencies(_audioInputId, _fftBuffer, _fftBuffer.Length);
             Utilities.RenderFrequencyBuffer(_fftBuffer, _builder);
 
-            _label.Text = $"Input {_audioInputId}: maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}, fft {_builder.ToString()}";
+            _label.Text = $"Input {_audioInputId}: rawmax {rawSignalInfo.Max:F4}, rawavg {rawSignalInfo.Avg:F4}, max {signalInfo.Max:F4}, avg {signalInfo.Avg:F4}, fft {_builder.ToString()}";
         }
     }
 }

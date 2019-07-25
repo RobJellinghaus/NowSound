@@ -352,6 +352,19 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern NowSoundSignalInfo NowSoundGraph_RawInputSignalInfo(AudioInputId audioInputId);
+
+        /// <summary>
+        /// Get information about the pre-effects mono signal of an input channel.
+        /// Graph must be Running.
+        /// </summary>
+        /// <returns></returns>
+        public static NowSoundSignalInfo RawInputSignalInfo(AudioInputId audioInputId)
+        {
+            return NowSoundGraph_RawInputSignalInfo(audioInputId);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern NowSoundSignalInfo NowSoundGraph_InputSignalInfo(AudioInputId audioInputId);
 
         /// <summary>

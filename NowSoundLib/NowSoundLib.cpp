@@ -92,11 +92,11 @@ namespace NowSound
 		NowSoundGraph::Instance()->DropLogMessages(messageCountToDrop);
 	}
 
-	NowSoundSignalInfo NowSoundGraph_OutputSignalInfo()
+	NowSoundSignalInfo NowSoundGraph_RawInputSignalInfo(AudioInputId audioInputId)
 	{
 		if (NowSoundGraph::Instance() != nullptr)
 		{
-			return NowSoundGraph::Instance()->OutputSignalInfo();
+			return NowSoundGraph::Instance()->Input(audioInputId)->SignalInfo();
 		}
 		else
 		{
@@ -109,6 +109,18 @@ namespace NowSound
 		if (NowSoundGraph::Instance() != nullptr)
 		{
 			return NowSoundGraph::Instance()->Input(audioInputId)->SignalInfo();
+		}
+		else
+		{
+			return NowSoundSignalInfo{};
+		}
+	}
+
+	NowSoundSignalInfo NowSoundGraph_OutputSignalInfo()
+	{
+		if (NowSoundGraph::Instance() != nullptr)
+		{
+			return NowSoundGraph::Instance()->OutputSignalInfo();
 		}
 		else
 		{
