@@ -289,7 +289,12 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_InitializeInstance();
+        static extern void NowSoundGraph_InitializeInstance(
+            int outputBinCount,
+            float centralFrequency,
+            int octaveDivisions,
+            int centralBinIndex,
+            int fftSize);
 
         /// <summary>
         /// Initialize the audio graph subsystem such that device information can be queried.
@@ -297,9 +302,19 @@ namespace NowSoundLib
         /// Must be called from message/UI thread. May have a momentary delay as JUCE doesn't support
         /// async initialization.
         /// </summary>
-        public static void InitializeInstance()
+        public static void InitializeInstance(
+            int outputBinCount,
+            float centralFrequency,
+            int octaveDivisions,
+            int centralBinIndex,
+            int fftSize)
         {
-            NowSoundGraph_InitializeInstance();
+            NowSoundGraph_InitializeInstance(
+                outputBinCount,
+                centralFrequency,
+                octaveDivisions,
+                centralBinIndex,
+                fftSize);
         }
 
         [DllImport("NowSoundLib")]
@@ -403,35 +418,6 @@ namespace NowSoundLib
         public static void InitializeDeviceInputs(int deviceIndex)
         {
             NowSoundGraph_InitializeDeviceInputs(deviceIndex);
-        }
-
-        // Initialize the FFT subsystem, which for now must be done before graph creation.
-        [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_InitializeFFT(
-            int outputBinCount,
-            float centralFrequency,
-            int octaveDivisions,
-            int centralBinIndex,
-            int fftSize);
-
-        public static void InitializeFFT(
-            // How many output bins in the (logarithmic) frequency histogram?
-            int outputBinCount,
-            // What central frequency to use for the histogram?
-            float centralFrequency,
-            // How many divisions to make in each octave?
-            int octaveDivisions,
-            // Which bin index should be centered on centralFrequency?
-            int centralBinIndex,
-            // How many samples as input to and output from the FFT?
-            int fftSize)
-        {
-            NowSoundGraph_InitializeFFT(
-                outputBinCount,
-                centralFrequency,
-                octaveDivisions,
-                centralBinIndex,
-                fftSize);
         }
 
         [DllImport("NowSoundLib")]

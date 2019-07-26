@@ -47,7 +47,12 @@ namespace NowSound
 
         // Initialize the audio graph subsystem.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.
-        void Initialize();
+        void Initialize(
+			int outputBinCount,
+			float centralFrequency,
+			int octaveDivisions,
+			int centralBinIndex,
+			int fftSize);
 
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is one of the only two methods that may be called in any state whatoever.
@@ -83,14 +88,6 @@ namespace NowSound
 		// This must be called only in Initialized state (for now; could relax this later perhaps).
 		// JUCETODO: void InitializeDeviceInputs(int deviceIndex);
 
-		// Initialize the FFT bins and other state.
-		void InitializeFFT(
-			int outputBinCount,
-			float centralFrequency,
-			int octaveDivisions,
-			int centralBinIndex,
-			int fftSize);
-			
 		// Info about the current graph time.
 		// Graph must be Created or Running.
 		NowSoundTimeInfo TimeInfo();
@@ -307,7 +304,12 @@ namespace NowSound
         static NowSoundGraph* Instance();
 
 		// Create the singleton graph instance and initialize it.
-		static void InitializeInstance();
+		static void InitializeInstance(
+			int outputBinCount,
+			float centralFrequency,
+			int octaveDivisions,
+			int centralBinIndex,
+			int fftSize);
 
 		// Shut down the singleton graph instance and release it.
 		static void ShutdownInstance();

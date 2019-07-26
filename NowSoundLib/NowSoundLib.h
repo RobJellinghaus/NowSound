@@ -55,7 +55,17 @@ namespace NowSound
 
 		// Initialize the audio graph subsystem such that device information can be queried.
 		// Graph must be Uninitialized.  On completion, graph becomes Initialized.
-		__declspec(dllexport) void NowSoundGraph_InitializeInstance();
+		__declspec(dllexport) void NowSoundGraph_InitializeInstance(
+			// How many output bins in the (logarithmic) frequency histogram?
+			int outputBinCount,
+			// What central frequency to use for the histogram?
+			float centralFrequency,
+			// How many divisions to make in each octave?
+			int octaveDivisions,
+			// Which bin index should be centered on centralFrequency?
+			int centralBinIndex,
+			// How many samples as input to and output from the FFT?
+			int fftSize);
 
 		// Get the info for the created graph.
 		// Graph must be at least Created.
@@ -82,19 +92,6 @@ namespace NowSound
 		// input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
 		// but only the first will be returned.
 		// JUCETODO: __declspec(dllexport) void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
-
-		// Initialize the FFT subsystem, which for now must be done before graph creation.
-		__declspec(dllexport) void NowSoundGraph_InitializeFFT(
-			// How many output bins in the (logarithmic) frequency histogram?
-			int outputBinCount,
-			// What central frequency to use for the histogram?
-			float centralFrequency,
-			// How many divisions to make in each octave?
-			int octaveDivisions,
-			// Which bin index should be centered on centralFrequency?
-			int centralBinIndex,
-			// How many samples as input to and output from the FFT?
-			int fftSize);
 
 		// Get the time info for the created graph.
 		// Graph must be at least Created; time will not be running until the graph is Running.

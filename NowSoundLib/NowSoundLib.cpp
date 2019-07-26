@@ -45,10 +45,20 @@ namespace NowSound
 		}
 	}
 
-	void NowSoundGraph_InitializeInstance()
+	void NowSoundGraph_InitializeInstance(
+		int outputBinCount,
+		float centralFrequency,
+		int octaveDivisions,
+		int centralBinIndex,
+		int fftSize)
 	{
 		Check(NowSoundGraph_State() == NowSoundGraphState::GraphUninitialized);
-		NowSoundGraph::InitializeInstance();
+		NowSoundGraph::InitializeInstance(
+			outputBinCount,
+			centralFrequency,
+			octaveDivisions,
+			centralBinIndex,
+			fftSize);
 	}
 
 	NowSoundGraphInfo NowSoundGraph_Info()
@@ -144,16 +154,6 @@ namespace NowSound
 		NowSoundGraph::Instance()->InitializeDeviceInputs(deviceIndex);
 	}
 #endif
-
-	void NowSoundGraph_InitializeFFT(
-		int outputBinCount,
-		float centralFrequency,
-		int octaveDivisions,
-		int centralBinIndex,
-		int fftSize)
-	{
-		NowSoundGraph::Instance()->InitializeFFT(outputBinCount, centralFrequency, octaveDivisions, centralBinIndex, fftSize);
-	}
 
 	NowSoundTimeInfo NowSoundGraph_TimeInfo()
 	{

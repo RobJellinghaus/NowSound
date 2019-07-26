@@ -57,20 +57,18 @@ namespace NowSoundWinFormsApp
             // let's see when this gets called
             Console.WriteLine("OnLoad");
 
-            // and let's P/Invoke up in here!
-            NowSoundGraphAPI.InitializeInstance();
-
-            // No longer necessary really since JUCE initialization is synchronous.
-            // JUCETODO: clean this up eventually.
-            bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphRunning, timeoutMsec: 10);
-
             // These constant values obtained by experiment relative to my personal baritone :-P
-            NowSoundGraphAPI.InitializeFFT(
+            // and let's P/Invoke up in here!
+            NowSoundGraphAPI.InitializeInstance(
                 MagicConstants.OutputBinCount,
                 MagicConstants.CentralFrequency,
                 MagicConstants.OctaveDivisions,
                 MagicConstants.CentralFrequencyBin,
                 MagicConstants.FftBinSize);
+
+            // No longer necessary really since JUCE initialization is synchronous.
+            // JUCETODO: clean this up eventually.
+            bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphRunning, timeoutMsec: 10);
 
             Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");
 

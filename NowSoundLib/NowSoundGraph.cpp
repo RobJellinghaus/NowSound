@@ -44,11 +44,21 @@ namespace NowSound
 
 	NowSoundGraph* NowSoundGraph::Instance() { return s_instance.get(); }
 
-	void NowSoundGraph::InitializeInstance()
+	void NowSoundGraph::InitializeInstance(
+		int outputBinCount,
+		float centralFrequency,
+		int octaveDivisions,
+		int centralBinIndex,
+		int fftSize)
 	{
 		std::unique_ptr<NowSoundGraph> temp{ new NowSoundGraph() };
 		s_instance = std::move(temp);
-		s_instance.get()->Initialize();
+		s_instance.get()->Initialize(
+			outputBinCount,
+			centralFrequency,
+			octaveDivisions,
+			centralBinIndex,
+			fftSize);
 	}
 
 	NowSoundGraph::NowSoundGraph() :
@@ -241,7 +251,12 @@ namespace NowSound
 		}
 	}
 
-	void NowSoundGraph::Initialize()
+	void NowSoundGraph::Initialize(
+		int outputBinCount,
+		float centralFrequency,
+		int octaveDivisions,
+		int centralBinIndex,
+		int fftSize)
 	{
 		Log(L"Initialize(): start");
 
@@ -313,6 +328,24 @@ namespace NowSound
 			_audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
 				(int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
 				MagicConstants::InitialAudioBufferCount));
+		}
+
+		{
+			_fftBinBounds.resize(outputBinCount);
+			Check(_fftBinBounds.capacity() == outputBinCount);
+			Check(_fftBinBounds.size() == outputBinCount);
+
+			_fftSize = fftSize;
+
+			// Initialize the bounds of the bins into which we collate FFT data.
+			RosettaFFT::MakeBinBounds(
+				_fftBinBounds,
+				centralFrequency,
+				octaveDivisions,
+				outputBinCount,
+				centralBinIndex,
+				Clock::Instance().SampleRateHz(),
+				fftSize);
 		}
 
 		// Set up the audio processor graph and its related components.
@@ -420,42 +453,6 @@ namespace NowSound
 		_inputDeviceIndicesToInitialize.push_back(deviceIndex);
 	}
 #endif
-
-	void NowSoundGraph::InitializeFFT(
-		int outputBinCount,
-		float centralFrequency,
-		int octaveDivisions,
-		int centralBinIndex,
-		int fftSize)
-	{
-		_fftBinBounds.resize(outputBinCount);
-
-		Check(_fftBinBounds.capacity() == outputBinCount);
-		Check(_fftBinBounds.capacity() == outputBinCount);
-		Check(_fftBinBounds.capacity() == outputBinCount);
-		Check(_fftBinBounds.capacity() == outputBinCount);
-		Check(_fftBinBounds.capacity() == outputBinCount);
-		Check(_fftBinBounds.capacity() == outputBinCount);
-
-		Check(_fftBinBounds.size() == outputBinCount);
-		Check(_fftBinBounds.size() == outputBinCount);
-		Check(_fftBinBounds.size() == outputBinCount);
-		Check(_fftBinBounds.size() == outputBinCount);
-		Check(_fftBinBounds.size() == outputBinCount);
-		Check(_fftBinBounds.size() == outputBinCount);
-
-		_fftSize = fftSize;
-
-		// Initialize the bounds of the bins into which we collate FFT data.
-		RosettaFFT::MakeBinBounds(
-			_fftBinBounds,
-			centralFrequency,
-			octaveDivisions,
-			outputBinCount,
-			centralBinIndex,
-			Clock::Instance().SampleRateHz(),
-			fftSize);
-	}
 
 	const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
