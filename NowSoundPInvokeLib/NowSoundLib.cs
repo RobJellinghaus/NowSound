@@ -453,18 +453,6 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_PlayUserSelectedSoundFileAsync();
-
-        /// <summary>
-        /// Play a user-selected sound file.
-        /// Graph must be Started.
-        /// </summary>
-        public static void PlayUserSelectedSoundFileAsync()
-        {
-            NowSoundGraph_PlayUserSelectedSoundFileAsync();
-        }
-
-        [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_MessageTick();
 
         /// <summary>

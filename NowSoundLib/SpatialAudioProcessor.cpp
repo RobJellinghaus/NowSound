@@ -14,7 +14,9 @@ SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring
 	: BaseAudioProcessor(graph, name),
     _isMuted{ false },
     _pan{ initialPan },
-	_outputProcessor{ new MeasurementAudioProcessor(graph, name) }
+	_outputProcessor{ new MeasurementAudioProcessor(graph, name) },
+	_pluginInstances{},
+	_pluginNodeIds{}
 {}
 
 bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }
@@ -62,16 +64,63 @@ void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNo
 
 PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
-	return PluginInstanceIndex::PluginInstanceIndexUndefined; // TODO
-}
+	// ok here goes nothing!
+	AudioProcessor* newPluginInstance = Graph()->CreatePluginProcessor(pluginId, programId);
 
+	// create a node for it
+	AudioProcessorGraph::Node::Ptr newNode = Graph()->JuceGraph().addNode(newPluginInstance);
+
+	// and connect it up!
+	// what is the most recent (e.g. end) plugin?  If none, then we're hooking to the input.
+	AudioProcessorGraph::NodeID inputNodeId = NodeId();
+	if (_pluginNodeIds.size() > 0)
+	{
+		inputNodeId = _pluginNodeIds[_pluginNodeIds.size() - 1];
+	}
+	AudioProcessorGraph::NodeID outputNodeId = OutputProcessor()->NodeId();
+
+	// remove connections from sourceNode to outputNode
+	Check(Graph()->JuceGraph().removeConnection({ { inputNodeId, 0 }, { outputNodeId, 0 } }));
+	Check(Graph()->JuceGraph().removeConnection({ { inputNodeId, 1 }, { outputNodeId, 1 } }));
+
+	// add connections from input to new plugin instance...
+	Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 0 }, { newNode->nodeID, 0 } }));
+	Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { newNode->nodeID, 1 } }));
+
+	// ...and from new plugin instance to output
+	Check(Graph()->JuceGraph().addConnection({ { newNode->nodeID, 0 }, { outputNodeId, 0 } }));
+	Check(Graph()->JuceGraph().addConnection({ { newNode->nodeID, 1 }, { outputNodeId, 1 } }));
+
+	_pluginInstances.push_back(PluginInstanceState(pluginId, programId, dryWet_0_100));
+	_pluginNodeIds.push_back(newNode->nodeID);
+}
 
 void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex pluginInstanceIndex, int32_t dryWet_0_100)
 {
 
 }
 
-void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex PluginInstanceIndex)
+void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInstanceIndex)
 {
+	Check(pluginInstanceIndex >= 1);
+	Check(pluginInstanceIndex < _pluginNodeIds.size() + 1);
 
+	AudioProcessorGraph::NodeID priorNodeId =
+		pluginInstanceIndex == 1 
+		? NodeId()
+		: _pluginNodeIds[pluginInstanceIndex - 2];
+
+	AudioProcessorGraph::NodeID deletedNodeId = _pluginNodeIds[pluginInstanceIndex - 1];
+
+	AudioProcessorGraph::NodeID subsequentNodeId =
+		pluginInstanceIndex == _pluginNodeIds.size() + 1
+		? OutputProcessor()->NodeId()
+		: _pluginNodeIds[pluginInstanceIndex];
+	
+	// drop the node and all connections
+	Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedNodeId));
+
+	// reconnect prior node to subsequent
+	Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { subsequentNodeId, 0 } }));
+	Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { subsequentNodeId, 1 } }));
 }

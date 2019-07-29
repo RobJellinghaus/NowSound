@@ -178,12 +178,6 @@ namespace NowSound
 		return NowSoundGraph::Instance()->Input(audioInputId)->SpatialParameters();
 	}
 
-	void NowSoundGraph_PlayUserSelectedSoundFileAsync()
-	{
-		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundGraph::Instance()->PlayUserSelectedSoundFileAsync();
-	}
-
 	TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);

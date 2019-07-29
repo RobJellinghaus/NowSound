@@ -547,48 +547,6 @@ namespace NowSound
 		AsyncUpdate();
 	}
 
-	void NowSoundGraph::PlayUserSelectedSoundFileAsyncImpl()
-	{
-#if JUCETODO
-		// This must be called on the UI thread.
-		FileOpenPicker picker;
-		picker.SuggestedStartLocation(PickerLocationId::MusicLibrary);
-		picker.FileTypeFilter().Append(L".wav");
-		StorageFile file = co_await picker.PickSingleFileAsync();
-
-		if (!file)
-		{
-			Check(false);
-			return;
-		}
-
-		CreateAudioFileInputNodeResult fileInputResult = co_await _audioGraph.CreateFileInputNodeAsync(file);
-		if (AudioFileNodeCreationStatus::Success != fileInputResult.Status())
-		{
-			// Cannot read input file
-			Check(false);
-			return;
-		}
-
-		AudioFileInputNode fileInput = fileInputResult.FileInputNode();
-
-		if (fileInput.Duration() <= timeSpanFromSeconds(3))
-		{
-			// Imported file is too short
-			Check(false);
-			return;
-		}
-
-		fileInput.AddOutgoingConnection(_deviceOutputNode);
-		fileInput.Start();
-#endif
-	}
-
-	void NowSoundGraph::PlayUserSelectedSoundFileAsync()
-	{
-		PlayUserSelectedSoundFileAsyncImpl();
-	}
-
 	void NowSoundGraph::AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)
 	{
 		juce::String path(wcharBuffer);
@@ -694,13 +652,6 @@ namespace NowSound
 
 	int32_t NowSoundGraph::PluginProgramCount(PluginId pluginId)
 	{
-		/*
-		juce::PluginDescription* description = _knownPluginList.getType(((int)pluginId) - 1);
-		juce::String errorMessage;
-		AudioPluginInstance* plugin = _audioPluginFormatManager.createPluginInstance(
-			*description, Info().SampleRateHz, Info().SamplesPerQuantum, errorMessage);
-		*/
-
 		return _loadedPluginPrograms[(int)pluginId - 1].size();
 	}
 
@@ -709,29 +660,6 @@ namespace NowSound
 		const String& name = _loadedPluginPrograms[(int)pluginId - 1][(int)programId - 1].Name();
 
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
-	}
-
-	void NowSoundGraph::ShutdownInstance()
-	{
-		// SHUT. DOWN. EVERYTHING
-		s_instance->Shutdown();
-
-		// and then destruct the singleton
-		s_instance = nullptr;
-
-		// and destruct the clock
-		// TODO: make the clock a component of the graph
-		// (the clock has utility as a lower-level NowSoundLibShared-specific point of access to the sound data,
-		// but having two singletons already led to bugs and is generally a bad smell)
-		Clock::Shutdown();
-	}
-
-	// instance shutdown method for instance internal state
-	void NowSoundGraph::Shutdown()
-	{
-		_audioDeviceManager.removeAllChangeListeners();
-		_audioDeviceManager.closeAudioDevice();
-		_audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
 	}
 
 	void NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, int inputChannel)
@@ -821,6 +749,25 @@ namespace NowSound
 		return result;
 	}
 
+	AudioProcessor* NowSoundGraph::CreatePluginProcessor(PluginId pluginId, ProgramId programId)
+	{
+		PluginDescription* pluginDescription = _knownPluginList.getType(pluginId);
+		String errorMessage;
+		AudioProcessor* instance = _audioPluginFormatManager.createPluginInstance(
+			*pluginDescription,
+			Info().SampleRateHz,
+			Info().SamplesPerQuantum,
+			errorMessage);
+
+		Check(errorMessage == L"");
+
+		// and set the state according to the requested program
+		const MemoryBlock& state = _loadedPluginPrograms[((int)pluginId) - 1][((int)programId) - 1].State();
+		instance->setStateInformation(state.getData(), state.getSize());
+
+		return instance;
+	}
+
 	void NowSoundGraph::MessageTick()
 	{
 		if (WasAsyncUpdate())
@@ -828,5 +775,28 @@ namespace NowSound
 			// call the JUCE graph's handleAsyncUpdate() method directly.
 			_audioProcessorGraph.handleAsyncUpdate();
 		}
+	}
+
+	void NowSoundGraph::ShutdownInstance()
+	{
+		// SHUT. DOWN. EVERYTHING
+		s_instance->Shutdown();
+
+		// and then destruct the singleton
+		s_instance = nullptr;
+
+		// and destruct the clock
+		// TODO: make the clock a component of the graph
+		// (the clock has utility as a lower-level NowSoundLibShared-specific point of access to the sound data,
+		// but having two singletons already led to bugs and is generally a bad smell)
+		Clock::Shutdown();
+	}
+
+	// instance shutdown method for instance internal state
+	void NowSoundGraph::Shutdown()
+	{
+		_audioDeviceManager.removeAllChangeListeners();
+		_audioDeviceManager.closeAudioDevice();
+		_audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
 	}
 }

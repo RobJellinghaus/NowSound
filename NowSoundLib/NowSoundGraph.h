@@ -101,10 +101,6 @@ namespace NowSound
 		// Drop all messages up to (and including) the given log message index.
 		void DropLogMessages(int32_t messageCountToDrop);
 
-        // Play a user-selected sound file.
-        // Graph must be Started.
-        void PlayUserSelectedSoundFileAsync();
-
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
 		TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
@@ -146,9 +142,6 @@ namespace NowSound
 
         // construct a graph, but do not yet initialize it
         NowSoundGraph();
-
-        // Async helper method, to work around compiler bug with lambdas which await and capture this.
-        void PlayUserSelectedSoundFileAsyncImpl();
 
         // Check that the expected state is the current state, and that no current state change is happening;
         // then mark that a state change is now happening.
@@ -295,16 +288,8 @@ namespace NowSound
 			int centralBinIndex,
 			int fftSize);
 
-		// Shut down the singleton graph instance and release it.
-		static void ShutdownInstance();
 
         // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
-
-        // The (currently singleton) AudioGraph.
-        // winrt::Windows::Media::Audio::AudioGraph GetAudioGraph() const;
-
-        // The default audio output node.  TODO: support device selection.
-        // winrt::Windows::Media::Audio::AudioDeviceOutputNode AudioDeviceOutputNode() const;
 
 		// Record this log message.
 		// These messages can be queried via the external NowSoundGraphAPI, for scenarios when native debugging is
@@ -342,8 +327,9 @@ namespace NowSound
         // For now this always sets up one input connection and two output connections.
         void AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, int inputChannel);
 
-		// Actually shut down the audio processing.
-		void Shutdown();
+		// Construct a stereo AudioProcessor for the given plugin and program.
+		// The returned reference is unowned and raw; this needs to be added to the JUCE AudioProcessorGraph immediately.
+		AudioProcessor* CreatePluginProcessor(PluginId pluginId, ProgramId programId);
 
 		// Log the current connections in the graph
 		void LogConnections();
@@ -352,5 +338,11 @@ namespace NowSound
 		void LogNode(juce::AudioProcessorGraph::NodeID nodeId);
 
 		bool CheckLogThrottle();
-    };
+
+		// Actually shut down the audio processing.
+		void Shutdown();
+
+		// Shut down the singleton graph instance and release it.
+		static void ShutdownInstance();
+	};
 }

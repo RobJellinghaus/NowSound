@@ -25,8 +25,11 @@ namespace NowSound
         // if so, output audio is zeroed
         bool _isMuted;
 
-		// vector of PluginProgramInstances
+		// vector of PluginInstanceStates
 		std::vector<PluginInstanceState>  _pluginInstances;
+
+		// parallel vector of plugin nodeIds
+		std::vector<juce::AudioProcessorGraph::NodeID> _pluginNodeIds;
 
 		// MeasurementAudioProcessor that carries the output of the effect chain.
 		// This is not an owning reference; the JUCE graph owns all processors.
@@ -68,12 +71,12 @@ namespace NowSound
 		PluginInstanceIndex AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100);
 
 		// Set the dry/wet ratio for the given plugin.
-		void SetPluginInstanceDryWet(PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
+		void SetPluginInstanceDryWet(PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100);
 
 		// Delete a plugin instance. Will cause all subsequent instances to be renumbered.
 		// (e.g. plugin instance IDs are really just indexes into the current sequence, not
 		// persistent values.)
-		void DeletePluginInstance(PluginInstanceIndex PluginInstanceIndex);
+		void DeletePluginInstance(PluginInstanceIndex pluginInstanceIndex);
 
 	protected: 
 		static std::wstring MakeName(const wchar_t* label, int id)
