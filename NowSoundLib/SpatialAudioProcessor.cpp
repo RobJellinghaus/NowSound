@@ -60,12 +60,12 @@ void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNo
 	Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { outputNodeId, 1 } }));
 }
 
-PluginInstanceId SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
+PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
-	return PluginInstanceId::PluginInstanceIdUndefined; // TODO
+	return PluginInstanceIndex::PluginInstanceIndexUndefined; // TODO
 }
 
-void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceId pluginInstanceId)
+void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex PluginInstanceIndex)
 {
 
 }

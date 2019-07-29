@@ -250,24 +250,24 @@ namespace NowSound
 	}
 
 	// Add an instance of the given plugin on the given input.
-	PluginInstanceId NowSoundGraph_AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
+	PluginInstanceIndex NowSoundGraph_AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->AddInputPlugin(inputId, pluginId, programId, dryWet_0_100);
 	}
 
 	// Set the dry/wet balance on the given plugin.
-	void NowSoundGraph_SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	void NowSoundGraph_SetInputPluginDryWet(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundGraph::Instance()->SetInputPluginDryWet(inputId, pluginInstanceId, dryWet_0_100);
+		NowSoundGraph::Instance()->SetInputPluginDryWet(inputId, PluginInstanceIndex, dryWet_0_100);
 	}
 
 	// Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
-	void NowSoundGraph_DeleteInputPlugin(AudioInputId inputId, PluginInstanceId pluginInstanceId)
+	void NowSoundGraph_DeleteInputPlugin(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundGraph::Instance()->DeleteInputPlugin(inputId, pluginInstanceId);
+		NowSoundGraph::Instance()->DeleteInputPlugin(inputId, PluginInstanceIndex);
 	}
 
 	void NowSoundGraph_ShutdownInstance()
@@ -359,21 +359,21 @@ namespace NowSound
 		NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
 	}
 
-	PluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
+	PluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
 		return NowSoundGraph::Instance()->Track(trackId)->AddPlugin(pluginId, programId);
 	}
 
-	void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		NowSoundGraph::Instance()->Track(trackId)->SetPluginDryWet(pluginInstanceId, dryWet_0_100);
+		NowSoundGraph::Instance()->Track(trackId)->SetPluginDryWet(PluginInstanceIndex, dryWet_0_100);
 	}
 
-	void NowSoundTrack_AddPlugin(TrackId trackId, PluginInstanceId pluginInstanceId)
+	void NowSoundTrack_AddPlugin(TrackId trackId, PluginInstanceIndex PluginInstanceIndex)
 	{
 		Check(NowSoundGraph::Instance() != nullptr);
-		return NowSoundGraph::Instance()->Track(trackId)->DeletePlugin(pluginInstanceId);
+		return NowSoundGraph::Instance()->Track(trackId)->DeletePlugin(PluginInstanceIndex);
 	}
 }

@@ -189,10 +189,12 @@ namespace NowSound
 			ProgramIdUndefined = 0
 		};
 
-		// The ID of an instantiated plugin.
-		enum PluginInstanceId
+		// The index of an instantiated plugin.  Note that this is *not* a persistent identifier; it is the
+		// index of the plugin in the vector of plugins associated with the given input or track.
+		// TODO: revisit this if a persistent ID turns out to be more usable in the API.
+		enum PluginInstanceIndex
 		{
-			PluginInstanceIdUndefined = 0
+			PluginInstanceIndexUndefined = 0
 		};
 
 		NowSoundGraphInfo CreateNowSoundGraphInfo(

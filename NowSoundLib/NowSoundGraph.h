@@ -150,13 +150,13 @@ namespace NowSound
 		void PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
 		// Add effects on the given input.
-		PluginInstanceId AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
+		PluginInstanceIndex AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
 		
 		// Set the wet/dry level of the given plugin instance.
-		void SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+		void SetInputPluginDryWet(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
 
 		// Delete the given plugin instance.
-		void DeleteInputPlugin(AudioInputId inputId, PluginInstanceId pluginInstanceId);
+		void DeleteInputPlugin(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex);
 
 	private: // Constructor and internal implementations
 

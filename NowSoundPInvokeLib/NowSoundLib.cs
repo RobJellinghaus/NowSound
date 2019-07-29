@@ -233,7 +233,7 @@ namespace NowSoundLib
     /// <summary>
     /// 1-based ID for a particular instance of a plugin instantiated on a track.
     /// </summary>
-    public enum TrackPluginInstanceId
+    public enum TrackPluginInstanceIndex
     {
         Undefined = 0
     }
@@ -676,20 +676,20 @@ namespace NowSoundLib
 
         // Add an instance of the given plugin on the given track.
         [DllImport("NowSoundLib")]
-        static extern TrackPluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+        static extern TrackPluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
 
-        public static TrackPluginInstanceId AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
+        public static TrackPluginInstanceIndex AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
         {
             return NowSoundTrack_AddPlugin(trackId, pluginId, programId);
         }
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]
-        static extern void NowSoundTrack_SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int dryWet_0_100);
+        static extern void NowSoundTrack_SetPluginDryWet(TrackId trackId, TrackPluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
 
-        public static void SetPluginDryWet(TrackId trackId, TrackPluginInstanceId pluginInstanceId, int dryWet_0_100)
+        public static void SetPluginDryWet(TrackId trackId, TrackPluginInstanceIndex PluginInstanceIndex, int dryWet_0_100)
         {
-            NowSoundTrack_SetPluginDryWet(trackId, pluginInstanceId, dryWet_0_100);
+            NowSoundTrack_SetPluginDryWet(trackId, PluginInstanceIndex, dryWet_0_100);
         }
     }
 }

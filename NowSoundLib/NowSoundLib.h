@@ -146,11 +146,11 @@ namespace NowSound
 		__declspec(dllexport) void NowSoundGraph_PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
 		// Add an instance of the given plugin on the given input.
-		__declspec(dllexport) PluginInstanceId NowSoundGraph_AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId);
+		__declspec(dllexport) PluginInstanceIndex NowSoundGraph_AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId);
 		// Set the dry/wet balance on the given plugin.
-		__declspec(dllexport) void NowSoundGraph_SetInputPluginDryWet(TrackId trackId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+		__declspec(dllexport) void NowSoundGraph_SetInputPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
 		// Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
-		__declspec(dllexport) void NowSoundGraph_DeleteInputPlugin(TrackId trackId, PluginInstanceId pluginInstanceId);
+		__declspec(dllexport) void NowSoundGraph_DeleteInputPlugin(TrackId trackId, PluginInstanceIndex PluginInstanceIndex);
 
 		// Tear down the whole graph.
 		// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
@@ -194,10 +194,10 @@ namespace NowSound
         __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
 
 		// Add an instance of the given plugin on the given track.
-		__declspec(dllexport) PluginInstanceId NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+		__declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
 		// Set the dry/wet balance on the given plugin.
-		__declspec(dllexport) void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100);
+		__declspec(dllexport) void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
 		// Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
-		__declspec(dllexport) void NowSoundTrack_DeletePlugin(TrackId trackId, PluginInstanceId pluginInstanceId);
+		__declspec(dllexport) void NowSoundTrack_DeletePlugin(TrackId trackId, PluginInstanceIndex PluginInstanceIndex);
 	};
 }

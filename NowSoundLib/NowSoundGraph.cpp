@@ -721,17 +721,17 @@ namespace NowSound
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
 	}
 
-	PluginInstanceId NowSoundGraph::AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
+	PluginInstanceIndex NowSoundGraph::AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
 	{
-		return PluginInstanceId::PluginInstanceIdUndefined; // TODO
+		return PluginInstanceIndex::PluginInstanceIndexUndefined; // TODO
 	}
 
-	void NowSoundGraph::SetInputPluginDryWet(AudioInputId inputId, PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	void NowSoundGraph::SetInputPluginDryWet(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100)
 	{
 
 	}
 
-	void NowSoundGraph::DeleteInputPlugin(AudioInputId inputId, PluginInstanceId pluginInstanceId)
+	void NowSoundGraph::DeleteInputPlugin(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex)
 	{
 
 	}

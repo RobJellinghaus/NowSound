@@ -65,12 +65,15 @@ namespace NowSound
 
 		// Install a new instance of a plugin with the specified program and wetdry level.
 		// Currently all new plugins go on the end of the chain.
-		PluginInstanceId AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100);
+		PluginInstanceIndex AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100);
+
+		// Set the dry/wet ratio for the given plugin.
+		void SetPluginInstanceDryWet(PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
 
 		// Delete a plugin instance. Will cause all subsequent instances to be renumbered.
 		// (e.g. plugin instance IDs are really just indexes into the current sequence, not
 		// persistent values.)
-		void DeletePluginInstance(PluginInstanceId pluginInstanceId);
+		void DeletePluginInstance(PluginInstanceIndex PluginInstanceIndex);
 
 	protected: 
 		static std::wstring MakeName(const wchar_t* label, int id)

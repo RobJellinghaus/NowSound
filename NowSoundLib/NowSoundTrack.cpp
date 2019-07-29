@@ -291,17 +291,17 @@ namespace NowSound
         }
     }
 
-	PluginInstanceId NowSoundTrackAudioProcessor::AddPlugin(PluginId pluginId, ProgramId programId)
+	PluginInstanceIndex NowSoundTrackAudioProcessor::AddPlugin(PluginId pluginId, ProgramId programId)
 	{
-		return PluginInstanceId::PluginInstanceIdUndefined;
+		return PluginInstanceIndex::PluginInstanceIndexUndefined;
 	}
 
-	void NowSoundTrackAudioProcessor::SetPluginDryWet(PluginInstanceId pluginInstanceId, int32_t dryWet_0_100)
+	void NowSoundTrackAudioProcessor::SetPluginDryWet(PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100)
 	{
 
 	}
 
-	void NowSoundTrackAudioProcessor::DeletePlugin(PluginInstanceId pluginInstanceId)
+	void NowSoundTrackAudioProcessor::DeletePlugin(PluginInstanceIndex PluginInstanceIndex)
 	{
 
 	}
