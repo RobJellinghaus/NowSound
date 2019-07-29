@@ -92,13 +92,6 @@ namespace NowSound
 		// Graph must be Created or Running.
 		NowSoundTimeInfo TimeInfo();
 
-		// The spatial parameters of the given input.
-		// Graph must be Created or Running.
-		NowSoundSpatialParameters SpatialParameters(AudioInputId inputId);
-
-		// Get the post-effects frequency histogram for the given input.
-		void GetInputFrequencies(AudioInputId inputId, void* floatBuffer, int floatBufferCapacity);
-
 		// The current log info.
 		NowSoundLogInfo LogInfo();
 
@@ -148,15 +141,6 @@ namespace NowSound
 
 		// Get the name of the specified plugin's program.  Note that IDs are 1-based.
 		void PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity);
-
-		// Add effects on the given input.
-		PluginInstanceIndex AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
-		
-		// Set the wet/dry level of the given plugin instance.
-		void SetInputPluginDryWet(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
-
-		// Delete the given plugin instance.
-		void DeleteInputPlugin(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex);
 
 	private: // Constructor and internal implementations
 

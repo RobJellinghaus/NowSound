@@ -513,16 +513,6 @@ namespace NowSound
 		return _audioInputs[((int)audioInputId) - 1];
 	}
 
-	NowSoundSpatialParameters NowSoundGraph::SpatialParameters(AudioInputId audioInputId)
-	{
-		return Input(audioInputId)->SpatialParameters();
-	}
-
-	void NowSoundGraph::GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity)
-	{
-		Input(audioInputId)->GetFrequencies(floatBuffer, floatBufferCapacity);
-	}
-
 	TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInputId)
 	{
 		// TODO: verify not on audio graph thread
@@ -719,21 +709,6 @@ namespace NowSound
 		const String& name = _loadedPluginPrograms[(int)pluginId - 1][(int)programId - 1].Name();
 
 		wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
-	}
-
-	PluginInstanceIndex NowSoundGraph::AddInputPlugin(AudioInputId inputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
-	{
-		return PluginInstanceIndex::PluginInstanceIndexUndefined; // TODO
-	}
-
-	void NowSoundGraph::SetInputPluginDryWet(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100)
-	{
-
-	}
-
-	void NowSoundGraph::DeleteInputPlugin(AudioInputId inputId, PluginInstanceIndex PluginInstanceIndex)
-	{
-
 	}
 
 	void NowSoundGraph::ShutdownInstance()

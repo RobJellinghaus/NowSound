@@ -65,6 +65,12 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 	return PluginInstanceIndex::PluginInstanceIndexUndefined; // TODO
 }
 
+
+void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex pluginInstanceIndex, int32_t dryWet_0_100)
+{
+
+}
+
 void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex PluginInstanceIndex)
 {
 
