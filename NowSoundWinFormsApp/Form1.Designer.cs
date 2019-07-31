@@ -105,6 +105,11 @@ namespace NowSoundWinFormsApp
                 }
             }
 
+            // Aaaand let's see if input effects work
+            // for me, at this instant, plugin 1 = Manipulator and program 2 = Barry
+            // and throw away the returned index since this is a temporary hack TODO: UNDO HACK
+            NowSoundGraphAPI.AddInputPluginInstance(AudioInputId.AudioInput1, (PluginId)1, (ProgramId)2, /*all wet:*/ 100);
+
             // Now we can begin UI updating.
             timer1.Start();
         }

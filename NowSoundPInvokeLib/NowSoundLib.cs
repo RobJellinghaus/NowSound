@@ -574,29 +574,29 @@ namespace NowSoundLib
 
         // Add an instance of the given plugin on the given track.
         [DllImport("NowSoundLib")]
-        static extern PluginInstanceIndex NowSoundGraph_AddInputPlugin(AudioInputId audioInputId, PluginId pluginId, ProgramId programId);
+        static extern PluginInstanceIndex NowSoundGraph_AddInputPluginInstance(AudioInputId audioInputId, PluginId pluginId, ProgramId programId, Int32 dryWet_0_100);
 
-        public static PluginInstanceIndex AddInputPlugin(AudioInputId audioInputId, PluginId pluginId, ProgramId programId)
+        public static PluginInstanceIndex AddInputPluginInstance(AudioInputId audioInputId, PluginId pluginId, ProgramId programId, int dryWet_0_100)
         {
-            return NowSoundGraph_AddInputPlugin(audioInputId, pluginId, programId);
+            return NowSoundGraph_AddInputPluginInstance(audioInputId, pluginId, programId, dryWet_0_100);
         }
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_SetInputPluginDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100);
+        static extern void NowSoundGraph_SetInputPluginInstanceDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100);
 
-        public static void SetInputPluginDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100)
+        public static void SetInputPluginInstanceDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100)
         {
-            NowSoundGraph_SetInputPluginDryWet(audioInputId, pluginInstanceIndex, dryWet_0_100);
+            NowSoundGraph_SetInputPluginInstanceDryWet(audioInputId, pluginInstanceIndex, dryWet_0_100);
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_DeleteInputPlugin(AudioInputId audioInputId, PluginInstanceIndex index);
+        static extern void NowSoundGraph_DeleteInputPluginInstance(AudioInputId audioInputId, PluginInstanceIndex index);
 
         // Delete a plugin instance.
-        public static void DeleteInputPlugin(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex)
+        public static void DeleteInputPluginInstance(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex)
         {
-            NowSoundGraph_DeleteInputPlugin(audioInputId, pluginInstanceIndex);
+            NowSoundGraph_DeleteInputPluginInstance(audioInputId, pluginInstanceIndex);
         }
 
         [DllImport("NowSoundLib")]

@@ -751,10 +751,10 @@ namespace NowSound
 
 	AudioProcessor* NowSoundGraph::CreatePluginProcessor(PluginId pluginId, ProgramId programId)
 	{
-		PluginDescription* pluginDescription = _knownPluginList.getType(pluginId);
+		PluginDescription* desc = _knownPluginList.getType(((int)pluginId) - 1);
 		String errorMessage;
 		AudioProcessor* instance = _audioPluginFormatManager.createPluginInstance(
-			*pluginDescription,
+			*desc,
 			Info().SampleRateHz,
 			Info().SamplesPerQuantum,
 			errorMessage);

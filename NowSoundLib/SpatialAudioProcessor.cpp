@@ -93,6 +93,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
 	_pluginInstances.push_back(PluginInstanceState(pluginId, programId, dryWet_0_100));
 	_pluginNodeIds.push_back(newNode->nodeID);
+	return (PluginInstanceIndex)_pluginNodeIds.size();
 }
 
 void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex pluginInstanceIndex, int32_t dryWet_0_100)
