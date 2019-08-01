@@ -3,6 +3,7 @@
 
 using NowSoundLib;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
@@ -51,9 +52,6 @@ namespace NowSoundWinFormsApp
         {
             base.OnLoad(e);
 
-            _inputRows.Add(new InputRow(AudioInputId.AudioInput1, flowLayoutPanel0));
-            _inputRows.Add(new InputRow(AudioInputId.AudioInput2, flowLayoutPanel1));
-
             // let's see when this gets called
             Console.WriteLine("OnLoad");
 
@@ -82,6 +80,7 @@ namespace NowSoundWinFormsApp
             int pluginCount = NowSoundGraphAPI.PluginCount();
             StringBuilder buffer = new StringBuilder(100);
 
+            List<string> programs = new List<string>();
             for (int pluginIndex = 1; pluginIndex <= pluginCount; pluginIndex++)
             {
                 NowSoundGraphAPI.PluginName((PluginId)pluginIndex, buffer, buffer.Capacity);
@@ -99,16 +98,14 @@ namespace NowSoundWinFormsApp
                     {
                         NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer, buffer.Capacity);
                         string programName = buffer.ToString();
+                        programs.Add(programName);
                         Debug.WriteLine($"    Program #{programIndex}: '{programName}'");
                     }
-
                 }
             }
 
-            // Aaaand let's see if input effects work
-            // for me, at this instant, plugin 1 = Manipulator and program 2 = Barry
-            // and throw away the returned index since this is a temporary hack TODO: UNDO HACK
-            NowSoundGraphAPI.AddInputPluginInstance(AudioInputId.AudioInput1, (PluginId)1, (ProgramId)2, /*all wet:*/ 100);
+            _inputRows.Add(new InputRow(AudioInputId.AudioInput1, flowLayoutPanel0, programs));
+            _inputRows.Add(new InputRow(AudioInputId.AudioInput2, flowLayoutPanel1, programs));
 
             // Now we can begin UI updating.
             timer1.Start();
@@ -146,12 +143,12 @@ namespace NowSoundWinFormsApp
             this.components = new System.ComponentModel.Container();
             this._tracksPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.infoLabel = new System.Windows.Forms.Label();
+            this.inputPanel0 = new System.Windows.Forms.Panel();
+            this.flowLayoutPanel0 = new System.Windows.Forms.FlowLayoutPanel();
+            this.inputPanel1 = new System.Windows.Forms.Panel();
+            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this._newTrackButton = new System.Windows.Forms.Button();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
-            this.inputPanel0 = new System.Windows.Forms.Panel();
-            this.inputPanel1 = new System.Windows.Forms.Panel();
-            this.flowLayoutPanel0 = new System.Windows.Forms.FlowLayoutPanel();
-            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this._tracksPanel.SuspendLayout();
             this.inputPanel0.SuspendLayout();
             this.inputPanel1.SuspendLayout();
@@ -167,7 +164,7 @@ namespace NowSoundWinFormsApp
             this._tracksPanel.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this._tracksPanel.Location = new System.Drawing.Point(0, 0);
             this._tracksPanel.Name = "_tracksPanel";
-            this._tracksPanel.Size = new System.Drawing.Size(800, 450);
+            this._tracksPanel.Size = new System.Drawing.Size(1121, 466);
             this._tracksPanel.TabIndex = 1;
             // 
             // infoLabel
@@ -178,6 +175,38 @@ namespace NowSoundWinFormsApp
             this.infoLabel.Size = new System.Drawing.Size(35, 13);
             this.infoLabel.TabIndex = 2;
             this.infoLabel.Text = "label1";
+            // 
+            // inputPanel0
+            // 
+            this.inputPanel0.Controls.Add(this.flowLayoutPanel0);
+            this.inputPanel0.Location = new System.Drawing.Point(3, 16);
+            this.inputPanel0.Name = "inputPanel0";
+            this.inputPanel0.Size = new System.Drawing.Size(1106, 28);
+            this.inputPanel0.TabIndex = 3;
+            // 
+            // flowLayoutPanel0
+            // 
+            this.flowLayoutPanel0.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowLayoutPanel0.Location = new System.Drawing.Point(0, 0);
+            this.flowLayoutPanel0.Name = "flowLayoutPanel0";
+            this.flowLayoutPanel0.Size = new System.Drawing.Size(1106, 28);
+            this.flowLayoutPanel0.TabIndex = 0;
+            // 
+            // inputPanel1
+            // 
+            this.inputPanel1.Controls.Add(this.flowLayoutPanel1);
+            this.inputPanel1.Location = new System.Drawing.Point(3, 50);
+            this.inputPanel1.Name = "inputPanel1";
+            this.inputPanel1.Size = new System.Drawing.Size(1106, 28);
+            this.inputPanel1.TabIndex = 4;
+            // 
+            // flowLayoutPanel1
+            // 
+            this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(1106, 28);
+            this.flowLayoutPanel1.TabIndex = 0;
             // 
             // _newTrackButton
             // 
@@ -194,43 +223,11 @@ namespace NowSoundWinFormsApp
             this.timer1.Interval = 20;
             this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
-            // inputPanel0
-            // 
-            this.inputPanel0.Controls.Add(this.flowLayoutPanel0);
-            this.inputPanel0.Location = new System.Drawing.Point(3, 16);
-            this.inputPanel0.Name = "inputPanel0";
-            this.inputPanel0.Size = new System.Drawing.Size(785, 28);
-            this.inputPanel0.TabIndex = 3;
-            // 
-            // inputPanel1
-            // 
-            this.inputPanel1.Controls.Add(this.flowLayoutPanel1);
-            this.inputPanel1.Location = new System.Drawing.Point(3, 50);
-            this.inputPanel1.Name = "inputPanel1";
-            this.inputPanel1.Size = new System.Drawing.Size(785, 28);
-            this.inputPanel1.TabIndex = 4;
-            // 
-            // flowLayoutPanel0
-            // 
-            this.flowLayoutPanel0.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flowLayoutPanel0.Location = new System.Drawing.Point(0, 0);
-            this.flowLayoutPanel0.Name = "flowLayoutPanel0";
-            this.flowLayoutPanel0.Size = new System.Drawing.Size(785, 28);
-            this.flowLayoutPanel0.TabIndex = 0;
-            // 
-            // flowLayoutPanel1
-            // 
-            this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
-            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(785, 28);
-            this.flowLayoutPanel1.TabIndex = 0;
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(1121, 466);
             this.Controls.Add(this._tracksPanel);
             this.Name = "Form1";
             this.Text = "Form1";

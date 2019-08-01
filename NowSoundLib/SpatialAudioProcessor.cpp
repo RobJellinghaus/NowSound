@@ -114,14 +114,17 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
 	AudioProcessorGraph::NodeID deletedNodeId = _pluginNodeIds[pluginInstanceIndex - 1];
 
 	AudioProcessorGraph::NodeID subsequentNodeId =
-		pluginInstanceIndex == _pluginNodeIds.size() + 1
+		pluginInstanceIndex == _pluginNodeIds.size()
 		? OutputProcessor()->NodeId()
 		: _pluginNodeIds[pluginInstanceIndex];
 	
-	// drop the node and all connections
+	// drop the node and all connections 
 	Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedNodeId));
 
 	// reconnect prior node to subsequent
 	Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { subsequentNodeId, 0 } }));
 	Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { subsequentNodeId, 1 } }));
+
+	// and clean up _pluginNodeIds
+	_pluginNodeIds.erase(_pluginNodeIds.begin() + (pluginInstanceIndex - 1));
 }

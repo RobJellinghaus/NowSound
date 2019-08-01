@@ -3,8 +3,10 @@
 
 using NowSoundLib;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -22,6 +24,8 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private readonly Label _label;
 
+        private readonly ComboBox _effectCombo;
+
         /// <summary>
         /// The ID of the input monitored by this row.
         /// </summary>
@@ -30,18 +34,30 @@ namespace NowSoundWinFormsApp
         /// <summary>
         /// FFT buffer.
         /// </summary>
-        private float[] _fftBuffer;
+        private readonly float[] _fftBuffer;
 
         /// <summary>
         /// Output buffer for the text-rendered FFT.
         /// </summary>
-        private StringBuilder _builder;
+        private readonly StringBuilder _builder;
 
-        public InputRow(AudioInputId audioInputId, FlowLayoutPanel parent)
+        /// <summary>
+        /// The list of programs (e.g. sound effects we can apply).
+        /// </summary>
+        private readonly List<string> _programs;
+
+        /// <summary>
+        /// The list of program instances (e.g. active sound effects on this input); each value here is a 1-based index into _programs.
+        /// </summary>
+        private readonly List<int> _programInstances;
+
+        public InputRow(AudioInputId audioInputId, FlowLayoutPanel parent, List<string> programs)
         {
             _audioInputId = audioInputId;
             _fftBuffer = new float[MagicConstants.OutputBinCount];
             _builder = new StringBuilder(new string('0', MagicConstants.OutputBinCount));
+            _programs = programs;
+            _programInstances = new List<int>();
 
             _label = new Label
             {
@@ -52,13 +68,81 @@ namespace NowSoundWinFormsApp
                 AutoSize = true
             };
 
+            _effectCombo = new ComboBox
+            {
+                MinimumSize = new Size(100, 20),
+                MaximumSize = new Size(100, 20)
+            };
+            _effectCombo.Items.AddRange(programs.Cast<object>().ToArray());
+            _effectCombo.SelectedIndexChanged += EffectComboSelectedIndexChanged;
+
             _trackRowPanel = new FlowLayoutPanel
             {
-                AutoSize = true
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight
             };
             _trackRowPanel.Controls.Add(_label);
+            _trackRowPanel.Controls.Add(_effectCombo);
 
             parent.Controls.Add(_trackRowPanel);
+        }
+
+        private void EffectComboSelectedIndexChanged(object sender, EventArgs e)
+        {
+            int index = _effectCombo.SelectedIndex;
+            if (index >= 0)
+            {
+                // a program was picked.  Apply it
+                NowSoundGraphAPI.AddInputPluginInstance(_audioInputId, (PluginId)1, (ProgramId)(index + 1), 100);
+
+                // and add a new label for it 
+                _trackRowPanel.Controls.Add(new Label
+                {
+                    Text = _programs[index],
+                    AutoSize = true,
+                    MinimumSize = new Size(50, 20),
+                    MaximumSize = new Size(50, 20),
+                    TextAlign = ContentAlignment.BottomLeft
+                });
+                Button deleteButton = new Button
+                {
+                    Text = "X",
+                    MinimumSize = new Size(20, 20),
+                    MaximumSize = new Size(20, 20)
+                };
+                deleteButton.Click += DeleteButton_Click;
+                _trackRowPanel.Controls.Add(deleteButton);
+            }
+        }
+
+        private void DeleteButton_Click(object sender, EventArgs e)
+        {
+            // which button is this in the control list?
+            int buttonIndex = 0;
+            foreach (Control c in _trackRowPanel.Controls)
+            {
+                if (c is Button)
+                {
+                    buttonIndex++;
+                }
+
+                if (c == sender)
+                {
+                    // this is the button that was clicked.
+                    // therefore buttonIndex is the 1-based index of this button.
+                    // therefore buttonIndex equals the pluginInstanceIndex of the plugin we want to delete.
+                    NowSoundGraphAPI.DeleteInputPluginInstance(_audioInputId, (PluginInstanceIndex)buttonIndex);
+
+                    int index = _trackRowPanel.Controls.IndexOf(c);
+                    // remove the label prior to the button
+                    _trackRowPanel.Controls.RemoveAt(index - 1);
+                    // and remove at index - 1 again, thereby removing the button itself
+                    _trackRowPanel.Controls.RemoveAt(index - 1);
+
+                    // and we're done
+                    break;
+                }
+            }
         }
 
         public void Update()
