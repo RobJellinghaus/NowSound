@@ -7,30 +7,30 @@
 #include <iostream>
 
 NowSound::BaseAudioProcessor::BaseAudioProcessor(NowSoundGraph* graph, const std::wstring& name)
-	: _graph{ graph },
-	_name { name },
-	_nodeId{}
+    : _graph{ graph },
+    _name { name },
+    _nodeId{}
 {}
 
 bool NowSound::BaseAudioProcessor::CheckLogThrottle()
 {
-	// TODO: revive if necessary... for now, always false
-	/*
-	int counter = _logThrottlingCounter;
-	_logThrottlingCounter = ++_logThrottlingCounter % LogThrottle;
-	return counter == 0;
-	*/
-	return false;
+    // TODO: revive if necessary... for now, always false
+    /*
+    int counter = _logThrottlingCounter;
+    _logThrottlingCounter = ++_logThrottlingCounter % LogThrottle;
+    return counter == 0;
+    */
+    return false;
 }
 
 void NowSound::BaseAudioProcessor::SetNodeId(juce::AudioProcessorGraph::NodeID nodeId)
 {
-	// Check that this node doesn't already have an ID and is actually getting one now.
-	Check(_nodeId == juce::AudioProcessorGraph::NodeID{});
-	Check(nodeId != juce::AudioProcessorGraph::NodeID{});
+    // Check that this node doesn't already have an ID and is actually getting one now.
+    Check(_nodeId == juce::AudioProcessorGraph::NodeID{});
+    Check(nodeId != juce::AudioProcessorGraph::NodeID{});
 
-	// This will now be the node's ID forever.
-	_nodeId = nodeId;
+    // This will now be the node's ID forever.
+    _nodeId = nodeId;
 }
 
 void NowSound::BaseAudioProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)

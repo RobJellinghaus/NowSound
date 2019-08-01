@@ -21,62 +21,62 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	NowSoundInputAudioProcessor::NowSoundInputAudioProcessor(
-		NowSoundGraph* nowSoundGraph,
-		AudioInputId inputId,
-		BufferAllocator<float>* audioAllocator,
-		int channel)
-		: SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), 0.5),
-		_audioInputId{ inputId },
-		_channel{ channel },
-		_incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
-		_rawInputHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
-		_mutex{}
-	{
-	}
+    NowSoundInputAudioProcessor::NowSoundInputAudioProcessor(
+        NowSoundGraph* nowSoundGraph,
+        AudioInputId inputId,
+        BufferAllocator<float>* audioAllocator,
+        int channel)
+        : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), 0.5),
+        _audioInputId{ inputId },
+        _channel{ channel },
+        _incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
+        _rawInputHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
+        _mutex{}
+    {
+    }
 
-	NowSoundSpatialParameters NowSoundInputAudioProcessor::SpatialParameters()
-	{
-		NowSoundSpatialParameters ret;
-		ret.Volume = 0; // TODO: fix this by going to output node
-		ret.Pan = Pan();
-		return ret;
-	}
+    NowSoundSpatialParameters NowSoundInputAudioProcessor::SpatialParameters()
+    {
+        NowSoundSpatialParameters ret;
+        ret.Volume = 0; // TODO: fix this by going to output node
+        ret.Pan = Pan();
+        return ret;
+    }
 
     NowSoundTrackAudioProcessor* NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
-	{
-		NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan());
+    {
+        NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _incomingAudioStream, Pan());
 
-		// Add the new track to the collection of tracks in NowSoundTrackAPI.
-		Graph()->AddTrack(id, track);
+        // Add the new track to the collection of tracks in NowSoundTrackAPI.
+        Graph()->AddTrack(id, track);
 
         return track;
-	}
+    }
 
-	NowSoundSignalInfo NowSoundInputAudioProcessor::RawSignalInfo()
-	{
-		std::lock_guard<std::mutex> guard(_mutex);
-		float min = _rawInputHistogram->Min();
-		float max = _rawInputHistogram->Max();
-		float avg = _rawInputHistogram->Average();
-		return CreateNowSoundSignalInfo(min, max, avg);
-	}
+    NowSoundSignalInfo NowSoundInputAudioProcessor::RawSignalInfo()
+    {
+        std::lock_guard<std::mutex> guard(_mutex);
+        float min = _rawInputHistogram->Min();
+        float max = _rawInputHistogram->Max();
+        float avg = _rawInputHistogram->Average();
+        return CreateNowSoundSignalInfo(min, max, avg);
+    }
 
-	void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
-	{
-		// temporary debugging code: see if processBlock is ever being called under Holofunk
-		if (CheckLogThrottle()) {
-			std::wstringstream wstr{};
-			wstr << getName() << L"::processBlock: count " << NextCounter();
-			NowSoundGraph::Instance()->Log(wstr.str());
-				
-			if (_audioInputId == AudioInput1)
-			{
-				Graph()->LogConnections();
-			}
-		}
+    void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
+    {
+        // temporary debugging code: see if processBlock is ever being called under Holofunk
+        if (CheckLogThrottle()) {
+            std::wstringstream wstr{};
+            wstr << getName() << L"::processBlock: count " << NextCounter();
+            NowSoundGraph::Instance()->Log(wstr.str());
+                
+            if (_audioInputId == AudioInput1)
+            {
+                Graph()->LogConnections();
+            }
+        }
 
-		// HACK!!!  If this is the zeroth input, then update the audio graph time.
+        // HACK!!!  If this is the zeroth input, then update the audio graph time.
         // We don't really have a great graph-level place to receive notifications from the JUCE graph,
         // so this is really a reasonable spot if you squint hard enough.  (At least it is always
         // connected and always receiving data.)
@@ -85,19 +85,19 @@ namespace NowSound
             Clock::Instance().AdvanceFromAudioGraph(audioBuffer.getNumSamples());
         }
 
-		// Because the input channels get wired up separately to channel 0 of each NowSoundInput, this should always be 0 here
-		// even for the input corresponding to channel 1.  (I THINK)
-		const float* buffer = audioBuffer.getReadPointer(0);
+        // Because the input channels get wired up separately to channel 0 of each NowSoundInput, this should always be 0 here
+        // even for the input corresponding to channel 1.  (I THINK)
+        const float* buffer = audioBuffer.getReadPointer(0);
 
-		// update raw input data because need ALL THE SIGNAL DATA
-		for (int i = 0; i < audioBuffer.getNumSamples(); i++)
-		{
-			_rawInputHistogram->Add(std::abs(buffer[i]));
-		}
+        // update raw input data because need ALL THE SIGNAL DATA
+        for (int i = 0; i < audioBuffer.getNumSamples(); i++)
+        {
+            _rawInputHistogram->Add(std::abs(buffer[i]));
+        }
 
         // TODO: actually record into the bounded input stream!  if we decide that lookback is actually needed again.
 
         // now process the input audio spatially so we hear it panned in the output
         SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
-	}
+    }
 }

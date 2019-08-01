@@ -119,7 +119,7 @@ namespace NowSound
             return Subslice(initialOffset, _duration - initialOffset);
         }
 
-		// Return a pointer to the start of the data addressed by this slice.
+        // Return a pointer to the start of the data addressed by this slice.
         TValue* OffsetPointer() { return Buffer().Data() + (_offset.Value() * _sliverCount); }
 
         // Get the prefix of this Slice starting at offset 0 and extending for the requested duration.

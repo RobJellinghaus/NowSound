@@ -28,25 +28,25 @@ using namespace winrt::Windows::Foundation;
 
 namespace NowSound
 {
-	NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
-		NowSoundGraph* graph,
-		TrackId trackId,
-		const BufferedSliceStream<AudioSample, float>& sourceStream,
-		float initialPan)
-		: SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialPan),
-		_trackId{ trackId },
-		_state{ NowSoundTrackState::TrackRecording },
-		// latency compensation effectively means the track started before it was constructed ;-)
-		_audioStream(
-			Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
-			1, // mono streams only for now (and maybe indefinitely)
-			NowSoundGraph::Instance()->AudioAllocator(),
-			/*maxBufferedDuration:*/ 0,
-			/*useContinuousLoopingMapper*/ false),
-		// one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
-		_beatDuration{ 1 },
-		_lastSampleTime{ Clock::Instance().Now() }
-	{
+    NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
+        NowSoundGraph* graph,
+        TrackId trackId,
+        const BufferedSliceStream<AudioSample, float>& sourceStream,
+        float initialPan)
+        : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialPan),
+        _trackId{ trackId },
+        _state{ NowSoundTrackState::TrackRecording },
+        // latency compensation effectively means the track started before it was constructed ;-)
+        _audioStream(
+            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
+            1, // mono streams only for now (and maybe indefinitely)
+            NowSoundGraph::Instance()->AudioAllocator(),
+            /*maxBufferedDuration:*/ 0,
+            /*useContinuousLoopingMapper*/ false),
+        // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
+        _beatDuration{ 1 },
+        _lastSampleTime{ Clock::Instance().Now() }
+    {
         Check(_lastSampleTime.Value() >= 0);
 
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
@@ -55,23 +55,23 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->State() == NowSoundGraphState::GraphRunning);
 
-		/* HACK: try NOT pre-recording any data... just push the start time back
+        /* HACK: try NOT pre-recording any data... just push the start time back
         if (MagicConstants::PreRecordingDuration.Value() > 0)
         {
             // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-			Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration);
+            Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
                 sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensationDuration,
                 latencyCompensationDuration);
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
-		*/
+        */
 
-		{
-			std::wstringstream wstr{};
-			wstr << L"NowSoundTrack::NowSoundTrack(" << trackId << L")";
-			NowSoundGraph::Instance()->Log(wstr.str());
-		}
+        {
+            std::wstringstream wstr{};
+            wstr << L"NowSoundTrack::NowSoundTrack(" << trackId << L")";
+            NowSoundGraph::Instance()->Log(wstr.str());
+        }
     }
 
     bool NowSoundTrackAudioProcessor::JustStoppedRecording()
@@ -127,7 +127,7 @@ namespace NowSound
     {
         Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
         Time<AudioSample> startTime = this->_audioStream.InitialTime();
-		Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
+        Duration<AudioSample> localClockTime = Clock::Instance().Now() - startTime;
         return CreateNowSoundTrackInfo(
             _state == NowSoundTrackState::TrackLooping,
             startTime.Value(),
@@ -135,13 +135,13 @@ namespace NowSound
             this->_audioStream.DiscreteDuration().Value(),
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.ExactDuration().Value() : 0,
-			localClockTime.Value(),
-			TrackBeats(localClockTime, this->_beatDuration).Value(),
-			(lastSampleTime - startTime).Value(),
-			Pan());
+            localClockTime.Value(),
+            TrackBeats(localClockTime, this->_beatDuration).Value(),
+            (lastSampleTime - startTime).Value(),
+            Pan());
     }
 
-	void NowSoundTrackAudioProcessor::FinishRecording()
+    void NowSoundTrackAudioProcessor::FinishRecording()
     {
         // TODO: ThreadContract.RequireUnity();
 
@@ -150,18 +150,18 @@ namespace NowSound
         _state = NowSoundTrackState::TrackFinishRecording;
     }
 
-	const int maxCounter = 1000;
+    const int maxCounter = 1000;
 
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
     {
-		// temporary debugging code: see if processBlock is ever being called under Holofunk
-		if (CheckLogThrottle()) {
-			std::wstringstream wstr{};
-			wstr << getName() << L"::processBlock: count " << NextCounter() << L", state " << _state;
-			NowSoundGraph::Instance()->Log(wstr.str());
-		}
-		
-		// This should always take two channels.  Only channel 0 is used on input.  Both channels are used
+        // temporary debugging code: see if processBlock is ever being called under Holofunk
+        if (CheckLogThrottle()) {
+            std::wstringstream wstr{};
+            wstr << getName() << L"::processBlock: count " << NextCounter() << L", state " << _state;
+            NowSoundGraph::Instance()->Log(wstr.str());
+        }
+        
+        // This should always take two channels.  Only channel 0 is used on input.  Both channels are used
         // on output (only stereo supported for now).
         Check(audioBuffer.getNumChannels() == 2);
 
@@ -241,7 +241,7 @@ namespace NowSound
                 _justStoppedRecording = true;
 
                 // Getting data for channel 0 is always correct, because the JUCE per-channel connections handle
-				// the input-channel-to-track routing.
+                // the input-channel-to-track routing.
                 _audioStream.Append(captureDuration, audioBuffer.getReadPointer(0));
 
                 // now that we have done our final append, shut the stream at the current duration

@@ -21,17 +21,17 @@ void NowSound::Clock::Initialize(int sampleRateHz, int channelCount, float beats
 
 void NowSound::Clock::Shutdown()
 {
-	// this will drop the unique clock reference and deallocate the clock
-	Clock::s_instance = nullptr;
+    // this will drop the unique clock reference and deallocate the clock
+    Clock::s_instance = nullptr;
 }
 
 NowSound::Clock::Clock(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure)
     : _sampleRateHz(sampleRateHz),
-	_channelCount(channelCount),
-	_beatsPerMinute(beatsPerMinute),
-	_beatsPerMeasure(beatsPerMeasure),
-	_now(0),
-	_beatDuration(0)
+    _channelCount(channelCount),
+    _beatsPerMinute(beatsPerMinute),
+    _beatsPerMeasure(beatsPerMeasure),
+    _now(0),
+    _beatDuration(0)
 {
     Check(!IsInitialized()); // No Clock yet
     CalculateBeatDuration();

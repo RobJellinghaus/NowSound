@@ -14,11 +14,11 @@ namespace NowSound
     class MagicConstants
     {
     public:
-		// Request the lowest latency?
-		// All things being equal this is obviously what we want; however unfortunately Windows, and Windows
-		// drivers for audio hardware, can be very unpredictable regarding performance of actual low latency
-		// capture and playback.
-		static const bool UseLowestLatency;
+        // Request the lowest latency?
+        // All things being equal this is obviously what we want; however unfortunately Windows, and Windows
+        // drivers for audio hardware, can be very unpredictable regarding performance of actual low latency
+        // capture and playback.
+        static const bool UseLowestLatency;
 
         // The initial tempo.
         static const float InitialBeatsPerMinute;
@@ -44,7 +44,7 @@ namespace NowSound
         // The histogram helps detect spikes in the latency observed by the FrameInputNode_QuantumStarted method.
         static const int AudioQuantumHistogramCapacity;
 
-		// Amount of time over which to measure volume.
-		static const ContinuousDuration<Second> RecentVolumeDuration;
+        // Amount of time over which to measure volume.
+        static const ContinuousDuration<Second> RecentVolumeDuration;
     };
 }

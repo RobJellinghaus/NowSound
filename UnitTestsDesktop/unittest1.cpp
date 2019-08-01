@@ -12,48 +12,48 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace NowSound;
 
 namespace UnitTestsDesktop
-{		
-	TEST_CLASS(NowSoundDesktopTests)
-	{
-	public:		
-		TEST_METHOD(TestCheck)
-		{
+{        
+    TEST_CLASS(NowSoundDesktopTests)
+    {
+    public:        
+        TEST_METHOD(TestCheck)
+        {
             // this should be fine
             Check(true);
-		}
+        }
 
-		TEST_METHOD(TestHistogram)
-		{
-			Histogram h(4);
-			h.Add(10);
-			Check(h.Min() == 10);
-			Check(h.Max() == 10);
-			Check(h.Average() == 10);
-			h.Add(20);
-			Check(h.Min() == 10);
-			Check(h.Max() == 20);
-			Check(h.Average() == 15);
-			h.Add(30);
-			Check(h.Min() == 10);
-			Check(h.Max() == 30);
-			Check(h.Average() == 20);
-			h.Add(0);
-			Check(h.Min() == 0);
-			Check(h.Max() == 30);
-			Check(h.Average() == 15);
-			h.Add(-10);
-			Check(h.Min() == -10);
-			Check(h.Max() == 30);
-			Check(h.Average() == 10);
-			h.Add(-20);
-			Check(h.Min() == -20);
-			Check(h.Max() == 30);
-			Check(h.Average() == 0);
-			h.Add(-30);
-			Check(h.Min() == -30);
-			Check(h.Max() == 0);
-			Check(h.Average() == -15);
-		}
+        TEST_METHOD(TestHistogram)
+        {
+            Histogram h(4);
+            h.Add(10);
+            Check(h.Min() == 10);
+            Check(h.Max() == 10);
+            Check(h.Average() == 10);
+            h.Add(20);
+            Check(h.Min() == 10);
+            Check(h.Max() == 20);
+            Check(h.Average() == 15);
+            h.Add(30);
+            Check(h.Min() == 10);
+            Check(h.Max() == 30);
+            Check(h.Average() == 20);
+            h.Add(0);
+            Check(h.Min() == 0);
+            Check(h.Max() == 30);
+            Check(h.Average() == 15);
+            h.Add(-10);
+            Check(h.Min() == -10);
+            Check(h.Max() == 30);
+            Check(h.Average() == 10);
+            h.Add(-20);
+            Check(h.Min() == -20);
+            Check(h.Max() == 30);
+            Check(h.Average() == 0);
+            h.Add(-30);
+            Check(h.Min() == -30);
+            Check(h.Max() == 0);
+            Check(h.Average() == -15);
+        }
 
         static const int FloatSliverCount = 2;
         static const int FloatNumSlices = 128;

@@ -17,9 +17,9 @@ MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const
     _mutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
     _volumeHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
-	_frequencyTracker{ graph->FftSize() < 0 
-	    ? ((NowSoundFrequencyTracker*)nullptr)
-	    : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) }
+    _frequencyTracker{ graph->FftSize() < 0 
+        ? ((NowSoundFrequencyTracker*)nullptr)
+        : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) }
 {}
 
 NowSoundSignalInfo MeasurementAudioProcessor::SignalInfo()
@@ -46,15 +46,15 @@ const double Pi = std::atan(1) * 4;
 
 void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
 {
-	// temporary debugging code: see if processBlock is ever being called under Holofunk
-	if (CheckLogThrottle())
-	{
-		std::wstringstream wstr{};
-		wstr << getName() << L"::processBlock: count " << NextCounter();
-		NowSoundGraph::Instance()->Log(wstr.str());
-	}
+    // temporary debugging code: see if processBlock is ever being called under Holofunk
+    if (CheckLogThrottle())
+    {
+        std::wstringstream wstr{};
+        wstr << getName() << L"::processBlock: count " << NextCounter();
+        NowSoundGraph::Instance()->Log(wstr.str());
+    }
 
-	Check(audioBuffer.getNumChannels() == 2);
+    Check(audioBuffer.getNumChannels() == 2);
 
     int numSamples = audioBuffer.getNumSamples();
 
@@ -66,10 +66,10 @@ void MeasurementAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, Mi
 
     for (int i = 0; i < numSamples; i++)
     {
-		float value0 = outputBufferChannel0[i];
-		float value1 = outputBufferChannel1[i];
-		_volumeHistogram->Add(std::abs(value0) / 2 + std::abs(value1) / 2);
-	}
+        float value0 = outputBufferChannel0[i];
+        float value1 = outputBufferChannel1[i];
+        _volumeHistogram->Add(std::abs(value0) / 2 + std::abs(value1) / 2);
+    }
 
     // and provide it to frequency histogram as well
     if (_frequencyTracker != nullptr)

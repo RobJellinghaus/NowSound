@@ -22,8 +22,8 @@
 
 namespace NowSound
 {
-	// Represents a single looping track of recorded audio.
-	// Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
+    // Represents a single looping track of recorded audio.
+    // Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
     class NowSoundTrackAudioProcessor : public SpatialAudioProcessor
     {
     private:
@@ -51,11 +51,11 @@ namespace NowSound
         bool _justStoppedRecording;
 
     public: // Non-exported methods for internal use
-		NowSoundTrackAudioProcessor(
-			NowSoundGraph* graph,
-			TrackId trackId,
-			const BufferedSliceStream<AudioSample, float>& sourceStream,
-			float initialPan);
+        NowSoundTrackAudioProcessor(
+            NowSoundGraph* graph,
+            TrackId trackId,
+            const BufferedSliceStream<AudioSample, float>& sourceStream,
+            float initialPan);
 
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
@@ -86,7 +86,7 @@ namespace NowSound
         Time<AudioSample> StartTime() const;
 
         // The full time info for this track (to allow just one call per track for all this info).
-		// Note that this is not const because it may recalculate histograms etc. when called.
+        // Note that this is not const because it may recalculate histograms etc. when called.
         NowSoundTrackInfo Info();
 
         // The user wishes the track to finish recording now.

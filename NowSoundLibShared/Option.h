@@ -9,26 +9,26 @@
 
 namespace NowSound
 {
-	template <typename T>
-	class Option
-	{
-	private:
-		const T _value;
-		const bool _hasValue;
+    template <typename T>
+    class Option
+    {
+    private:
+        const T _value;
+        const bool _hasValue;
 
-	public:
-		T Value()
-		{
-			Check(HasValue());
-			return _value;
-		}
+    public:
+        T Value()
+        {
+            Check(HasValue());
+            return _value;
+        }
 
-		bool HasValue() { return _hasValue; }
+        bool HasValue() { return _hasValue; }
 
-		Option(T value) : _value{ value }, _hasValue{ true }
-		{ }
+        Option(T value) : _value{ value }, _hasValue{ true }
+        { }
 
-		Option() : _value{}, _hasValue { false }
-		{ }
-	};
+        Option() : _value{}, _hasValue { false }
+        { }
+    };
 }

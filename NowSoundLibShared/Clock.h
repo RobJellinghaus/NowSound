@@ -32,7 +32,7 @@ namespace NowSound
         // overlapped in time in which case they will race).
         static void Initialize(int sampleRateHz, int channelCount, float beatsPerMinute, int beatsPerMeasure);
 
-		static bool IsInitialized() { return s_instance != nullptr; }
+        static bool IsInitialized() { return s_instance != nullptr; }
 
         // The singleton Clock used by the application.
         static Clock& Instance()
@@ -40,18 +40,18 @@ namespace NowSound
             Check(s_instance != nullptr); // Clock must have been initialized
             return *(s_instance.get());
         }
-		
-		// Shutdown the instance and deallocate it.
-		static void Shutdown();
+        
+        // Shutdown the instance and deallocate it.
+        static void Shutdown();
 
     private:
-		// The sample rate.
-		const int _sampleRateHz;
-		
-		// How many channels are there?
-		const int _channelCount;
+        // The sample rate.
+        const int _sampleRateHz;
+        
+        // How many channels are there?
+        const int _channelCount;
 
-		// The current BPM of this Clock. (NOT const; can be changed while running.
+        // The current BPM of this Clock. (NOT const; can be changed while running.
         float _beatsPerMinute;
 
         // The beats per MEASURE.  e.g. 3/4 time = 3 beats per measure.
@@ -83,9 +83,9 @@ namespace NowSound
         float BeatsPerMinute() const { return _beatsPerMinute; }
         void BeatsPerMinute(float value);
 
-		int SampleRateHz() const { return _sampleRateHz; }
+        int SampleRateHz() const { return _sampleRateHz; }
 
-		int ChannelCount() const { return _channelCount; }
+        int ChannelCount() const { return _channelCount; }
 
         int BytesPerSecond() const { return SampleRateHz() * _channelCount * sizeof(float); }
 
@@ -97,7 +97,7 @@ namespace NowSound
 
         Time<AudioSample> Now() { return _now; }
 
-		Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return (int64_t)(SampleRateHz() * seconds.Value()); }
+        Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return (int64_t)(SampleRateHz() * seconds.Value()); }
 
         // Approximately how many beats?
         ContinuousDuration<Beat> TimeToBeats(Time<AudioSample> time) const

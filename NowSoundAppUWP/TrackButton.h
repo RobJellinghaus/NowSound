@@ -17,34 +17,34 @@ class NowSoundApp;
 // Note that every method in TrackButton() expects to be called on the UI context.
 class TrackButton
 {
-	NowSoundApp* _app;
-	int _trackNumber;
-	NowSound::TrackId _trackId;
-	NowSound::NowSoundTrackState _trackState;
-	winrt::Windows::UI::Xaml::Controls::Button _button;
-	winrt::Windows::UI::Xaml::Controls::ComboBox _combo;
-	winrt::Windows::UI::Xaml::Controls::TextBlock _textBlock;
-	std::wstring _label;
-	int64_t _recordingStartTime;
-	std::unique_ptr<float> _frequencyBuffer;
-	std::wstring _frequencyOutputString;
+    NowSoundApp* _app;
+    int _trackNumber;
+    NowSound::TrackId _trackId;
+    NowSound::NowSoundTrackState _trackState;
+    winrt::Windows::UI::Xaml::Controls::Button _button;
+    winrt::Windows::UI::Xaml::Controls::ComboBox _combo;
+    winrt::Windows::UI::Xaml::Controls::TextBlock _textBlock;
+    std::wstring _label;
+    int64_t _recordingStartTime;
+    std::unique_ptr<float> _frequencyBuffer;
+    std::wstring _frequencyOutputString;
 
-	void RenderFrequencyBuffer(std::wstring& output);
+    void RenderFrequencyBuffer(std::wstring& output);
 
-	void UpdateUI();
+    void UpdateUI();
 
-	void HandleClick();
+    void HandleClick();
 
-	// don't allow these to be copied ever
-	TrackButton(TrackButton& other) = delete;
-	TrackButton(TrackButton&& other) = delete;
+    // don't allow these to be copied ever
+    TrackButton(TrackButton& other) = delete;
+    TrackButton(TrackButton&& other) = delete;
 
 public:
-	// Update this track button.  If this track button just started looping, then make and return
-	// a new (uninitialized) track button.
-	std::unique_ptr<TrackButton> Update();
+    // Update this track button.  If this track button just started looping, then make and return
+    // a new (uninitialized) track button.
+    std::unique_ptr<TrackButton> Update();
 
-	TrackButton(NowSoundApp* app);
+    TrackButton(NowSoundApp* app);
 };
 
 

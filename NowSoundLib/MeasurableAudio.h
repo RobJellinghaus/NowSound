@@ -11,17 +11,17 @@
 
 namespace NowSound
 {
-	// Interface type 
-	class MeasurableAudio 
-	{
-		// Copy out the volume signal info for reading.
-		// This locks the info mutex.
-		virtual NowSoundSignalInfo SignalInfo() = 0;
+    // Interface type 
+    class MeasurableAudio 
+    {
+        // Copy out the volume signal info for reading.
+        // This locks the info mutex.
+        virtual NowSoundSignalInfo SignalInfo() = 0;
 
-		// Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
-		// This locks the info mutex.  The frequency histogram is averaged over all channels; this is not per-channel.
-		virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) = 0;
-	};
+        // Get the frequency histogram, by updating the given WCHAR buffer as though it were a float* buffer.
+        // This locks the info mutex.  The frequency histogram is averaged over all channels; this is not per-channel.
+        virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) = 0;
+    };
 }
 
 #pragma once
