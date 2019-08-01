@@ -204,7 +204,7 @@ namespace NowSound
         _logMessages.erase(_logMessages.begin(), _logMessages.begin() + messageCountToDrop);
     }
 
-    juce::AudioProcessorGraph& NowSoundGraph::JuceGraph()
+    AudioProcessorGraph& NowSoundGraph::JuceGraph()
     {
         return _audioProcessorGraph;
     }
@@ -264,10 +264,10 @@ namespace NowSound
 
         // Before anything else, ensure that a MessageManager exists.
         // This is because, in this code, unless we do this, we get a crash with this stack:
-        // >    NowSoundLib.dll!juce::Timer::startTimer(int interval) Line 327    C++
-        //    NowSoundLib.dll!juce::DeviceChangeDetector::triggerAsyncDeviceChangeCallback() Line 108    C++
-        //    NowSoundLib.dll!juce::WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::notify() Line 1517    C++
-        //    NowSoundLib.dll!juce::WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::OnPropertyValueChanged(const wchar_t * __formal, const _tagpropertykey __formal) Line 1512    C++
+        // >    NowSoundLib.dll!Timer::startTimer(int interval) Line 327    C++
+        //    NowSoundLib.dll!DeviceChangeDetector::triggerAsyncDeviceChangeCallback() Line 108    C++
+        //    NowSoundLib.dll!WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::notify() Line 1517    C++
+        //    NowSoundLib.dll!WasapiClasses::WASAPIAudioIODeviceType::ChangeNotificationClient::OnPropertyValueChanged(const wchar_t * __formal, const _tagpropertykey __formal) Line 1512    C++
         //    MMDevAPI.dll!00007ffdcb280f02()    Unknown
         // Not yet investigated....
         MessageManager::getInstance();
@@ -285,7 +285,7 @@ namespace NowSound
             // ASIO, on the other hand, is silky smooth and crackle-free at **16** sample buffer size.
             // So, so much for native Windows audio, they gave up the low latency game years ago and
             // forgot how to really play.
-            juce::String desiredDeviceType = L"ASIO";
+            String desiredDeviceType = L"ASIO";
 
             const OwnedArray<AudioIODeviceType>& deviceTypes = _audioDeviceManager.getAvailableDeviceTypes();
 
@@ -353,10 +353,10 @@ namespace NowSound
             _audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
             _audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
 
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
-                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
-            juce::AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
-                new juce::AudioProcessorGraph::AudioGraphIOProcessor(juce::AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
+            AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
+                new AudioProcessorGraph::AudioGraphIOProcessor(AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioInputNode);
+            AudioProcessorGraph::AudioGraphIOProcessor* outputAudioProcessor =
+                new AudioProcessorGraph::AudioGraphIOProcessor(AudioProcessorGraph::AudioGraphIOProcessor::IODeviceType::audioOutputNode);
 
             MeasurementAudioProcessor* outputMixAudioProcessor = new MeasurementAudioProcessor(this, L"OutputMix");
 
@@ -402,7 +402,7 @@ namespace NowSound
     NowSoundGraphInfo NowSoundGraph::Info()
     {
         // TODO: verify not on audio graph thread
-        juce::AudioIODevice* device = _audioDeviceManager.getCurrentAudioDevice();
+        AudioIODevice* device = _audioDeviceManager.getCurrentAudioDevice();
 
         auto activeInputChannels = device->getActiveInputChannels();
         auto activeOutputChannels = device->getActiveOutputChannels();
@@ -492,13 +492,13 @@ namespace NowSound
         return timeInfo;
     }
 
-    juce::AudioProcessorGraph::Node::Ptr NowSoundGraph::GetNodePtr(BaseAudioProcessor* audioProcessor)
+    AudioProcessorGraph::Node::Ptr NowSoundGraph::GetNodePtr(BaseAudioProcessor* audioProcessor)
     {
-        juce::AudioProcessorGraph::NodeID nodeId = audioProcessor->NodeId();
+        AudioProcessorGraph::NodeID nodeId = audioProcessor->NodeId();
         // must have been set
-        Check(nodeId != juce::AudioProcessorGraph::NodeID{});
+        Check(nodeId != AudioProcessorGraph::NodeID{});
 
-        juce::AudioProcessorGraph::Node::Ptr nodePtr = JuceGraph().getNodeForId(nodeId);
+        AudioProcessorGraph::Node::Ptr nodePtr = JuceGraph().getNodeForId(nodeId);
         return nodePtr;
     }
 
@@ -540,7 +540,7 @@ namespace NowSound
         _tracks[trackId] = nullptr;
 
         // now drop the strong reference from the graph
-        juce::AudioProcessorGraph::Node::Ptr nodePtr = GetNodePtr(track);
+        AudioProcessorGraph::Node::Ptr nodePtr = GetNodePtr(track);
         JuceGraph().removeNode(nodePtr.get());
 
         // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
@@ -549,7 +549,7 @@ namespace NowSound
 
     void NowSoundGraph::AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)
     {
-        juce::String path(wcharBuffer);
+        String path(wcharBuffer);
         _audioPluginSearchPaths.push_back(path);
     }
 
@@ -561,7 +561,7 @@ namespace NowSound
         for (int i = 0; i < _audioPluginFormatManager.getNumFormats(); i++)
         {
             vstFormat = _audioPluginFormatManager.getFormat(i);
-            if (vstFormat->getName() == juce::String(L"VST"))
+            if (vstFormat->getName() == String(L"VST"))
             {
                 break;
             }
@@ -570,7 +570,7 @@ namespace NowSound
         Check(vstFormat != nullptr);
 
         FileSearchPath fileSearchPath{};
-        for (const juce::String& path : _audioPluginSearchPaths)
+        for (const String& path : _audioPluginSearchPaths)
         {
             fileSearchPath.add(path);
         }
@@ -583,7 +583,7 @@ namespace NowSound
             File(),
             false }; // turns out "allowAsync" parameter is a no-op for VST2 plugins
 
-        juce::String pluginBeingScanned{};
+        String pluginBeingScanned{};
         // loop over all files synchronously, this is a bad experience if the path is huge so don't ever do that
         while (scanner.scanNextFile(/*dontRescanIfAlreadyInList*/true, pluginBeingScanned)) {};
 
@@ -604,8 +604,8 @@ namespace NowSound
 
     void NowSoundGraph::PluginName(PluginId pluginId, LPWSTR wcharBuffer, int32_t bufferCapacity)
     {
-        juce::PluginDescription* desc = _knownPluginList.getType(((int)pluginId) - 1);
-        const juce::String& name = desc->name;
+        PluginDescription* desc = _knownPluginList.getType(((int)pluginId) - 1);
+        const String& name = desc->name;
 
         wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
     }
@@ -631,13 +631,13 @@ namespace NowSound
         std::vector<PluginProgram> programs{};
 
         // Iterate over all ".state" files in path
-        auto childFiles = path.findChildFiles(juce::File::TypesOfFileToFind::findFiles, /*searchRecursively*/ false, "*.state");
+        auto childFiles = path.findChildFiles(File::TypesOfFileToFind::findFiles, /*searchRecursively*/ false, "*.state");
         FileNameComparer comparer{};
         childFiles.sort(comparer, /*retainOrderOfEquivalentItems*/ false);
         for (File file : childFiles)
         {
             String programName = file.getFileNameWithoutExtension();
-            juce::FileInputStream finStream(file);
+            FileInputStream finStream(file);
             int32_t size = finStream.readInt();
             MemoryBlock state;
             state.ensureSize(size);
@@ -669,8 +669,8 @@ namespace NowSound
         newProcessor->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
         newProcessor->OutputProcessor()->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
-        juce::AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
-        juce::AudioProcessorGraph::Node::Ptr outputNode = JuceGraph().addNode(newProcessor->OutputProcessor());
+        AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
+        AudioProcessorGraph::Node::Ptr outputNode = JuceGraph().addNode(newProcessor->OutputProcessor());
         newProcessor->SetNodeIds(inputNode->nodeID, outputNode->nodeID);
 
         // Input connection (one)
@@ -709,13 +709,13 @@ namespace NowSound
         }
         for (int i = 1; i <= maxConnNodeId; i++)
         {
-            LogNode((juce::AudioProcessorGraph::NodeID)i);
+            LogNode((AudioProcessorGraph::NodeID)i);
         }
     }
 
-    void NowSoundGraph::LogNode(juce::AudioProcessorGraph::NodeID nodeId)
+    void NowSoundGraph::LogNode(AudioProcessorGraph::NodeID nodeId)
     {
-        const juce::AudioProcessorGraph::Node* nodePtr = JuceGraph().getNodeForId(nodeId);
+        const AudioProcessorGraph::Node* nodePtr = JuceGraph().getNodeForId(nodeId);
         std::wstringstream wstr;
         wstr << L"Node #" << nodePtr->nodeID.uid << L": "
             << nodePtr->getProcessor()->getName()
