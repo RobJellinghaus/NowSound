@@ -27,7 +27,7 @@ namespace NowSound
     class NowSoundTrackAudioProcessor : public SpatialAudioProcessor
     {
     private:
-        // Sequence number of this Track; purely diagnostic, never exposed to outside except diagnostically.
+        // Identifier of this Track.
         const TrackId _trackId;
 
         // The current state of the track.
@@ -39,8 +39,9 @@ namespace NowSound
         // TODO: relax this to permit non-quantized looping.
         Duration<Beat> _beatDuration;
 
-        // The stream containing this Track's data; this is an owning reference.
-        BufferedSliceStream<AudioSample, float> _audioStream;
+        // The streams containing this Track's data, one per channel.
+        BufferedSliceStream<AudioSample, float> _audioStream0;
+        BufferedSliceStream<AudioSample, float> _audioStream1;
 
         // Last sample time is based on the Now when the track started looping, and advances strictly
         // based on what the Track has pushed during looping; this variable should be unused except
@@ -51,6 +52,7 @@ namespace NowSound
         bool _justStoppedRecording;
 
     public: // Non-exported methods for internal use
+
         NowSoundTrackAudioProcessor(
             NowSoundGraph* graph,
             TrackId trackId,
