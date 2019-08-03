@@ -62,7 +62,7 @@ namespace NowSound
         return CreateNowSoundSignalInfo(min, max, avg);
     }
 
-    void NowSoundInputAudioProcessor::processBlock(juce::AudioBuffer<float>& audioBuffer, juce::MidiBuffer& midiBuffer)
+    void NowSoundInputAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
     {
         // temporary debugging code: see if processBlock is ever being called under Holofunk
         if (CheckLogThrottle()) {
