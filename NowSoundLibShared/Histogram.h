@@ -15,7 +15,14 @@ namespace NowSound
     class Histogram
     {
     private:
+        // The number of elements.
         int _capacity;
+        
+        // The number of values inserted. Once this reaches capacity, it remains constant.
+        int _size;
+
+        // The index at which to insert the next element.
+        int _index;
 
         // The possibly stale values of _min and _max (if !_minMaxKnown).
         float _min;
@@ -31,7 +38,7 @@ namespace NowSound
         bool _minMaxKnown;
 
         // This deque simply tracks the values in the order they entered the histogram.
-        std::deque<float> _valuesInInsertionOrder;
+        std::unique_ptr<float> _values;
 
         // Recalculate min/max if necessary.
         void EnsureMinMaxKnown();

@@ -10,11 +10,13 @@ using namespace NowSound;
 
 Histogram::Histogram(int capacity)
     : _capacity{ capacity },
+    _size{ 0 },
+    _index{ 0 },
     _min{ 0 },
     _max{ 0 },
     _total{ 0 },
     _minMaxKnown{ false },
-    _valuesInInsertionOrder{}
+    _values{ new float[capacity] }
 {
     Check(capacity > 0);
 }
@@ -34,26 +36,32 @@ void Histogram::AddAll(const float* data, int count, bool absoluteValue)
 
 void Histogram::AddImpl(float value)
 {
-    if (_valuesInInsertionOrder.size() == 0)
+    if (_size == 0)
     {
-        _valuesInInsertionOrder.push_back(value);
+        _values.get()[0] = value;
+        _size = _index = 1;
         _min = _max = _total = value;
         _minMaxKnown = true;
     }
     else
     {
-        bool atCapacity = _valuesInInsertionOrder.size() == _capacity;
+        bool atCapacity = _size == _capacity;
 
         if (atCapacity)
         {
-            float oldValue = _valuesInInsertionOrder.front();
-            _valuesInInsertionOrder.pop_front();
+            _index = _index % _size;
+
+            float oldValue = _values.get()[_index];
             _total -= oldValue;
 
             _minMaxKnown = _minMaxKnown && (oldValue > _min && oldValue < _max);
         }
+        else
+        {
+            _size++;
+        }
 
-        _valuesInInsertionOrder.push_back(value);
+        _values.get()[_index] = value;
         _total += value;
         // Update _min or _max if applicable.  Note that this doesn't change _minMaxKnown.
         if (value < _min)
@@ -64,21 +72,22 @@ void Histogram::AddImpl(float value)
         {
             _max = value;
         }
+
+        _index++;
     }
 
-    _average = _total / _valuesInInsertionOrder.size();
+    _average = _total / _size;
 }
 
 void Histogram::EnsureMinMaxKnown()
 {
-    if (!_minMaxKnown && _valuesInInsertionOrder.size() > 0)
+    if (!_minMaxKnown && _size > 0)
     {
-        _min = _valuesInInsertionOrder[0];
-        _max = _valuesInInsertionOrder[0];
-        for (int i = 1; i < _valuesInInsertionOrder.size(); i++)
+        _min = _max = _values.get()[0];
+        for (int i = 1; i < _size; i++)
         {
-            _min = std::min<float>(_min, _valuesInInsertionOrder[i]);
-            _max = std::max<float>(_max, _valuesInInsertionOrder[i]);
+            _min = std::min<float>(_min, _values.get()[i]);
+            _max = std::max<float>(_max, _values.get()[i]);
         }
         _minMaxKnown = true;
     }
