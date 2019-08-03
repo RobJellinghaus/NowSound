@@ -160,6 +160,12 @@ namespace NowSound
         // Did an async update happen since the last call to this method?
         bool WasAsyncUpdate();
 
+        // Add the connections of a SpatialAudioProcessor node.
+        // This returns the input node so that input connections can be set up.
+        // If isRecording, the returned node will have two input connections; otherwise, it will have one.
+        // (If isRecording is false, the node is presumed to be handling mono input.)
+        AudioProcessorGraph::NodeID AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, bool isRecording);
+
     private: // instance variables
 
         // The singleton (for now) graph; created by Initialize(), destroyed by Shutdown().
@@ -288,9 +294,6 @@ namespace NowSound
             int centralBinIndex,
             int fftSize);
 
-
-        // These methods are for "internal" use only (since they not dllexported and are not using exportable types).
-
         // Record this log message.
         // These messages can be queried via the external NowSoundGraphAPI, for scenarios when native debugging is
         // inaccessible (such as VS2019 debugging Unity with the Mono runtime).
@@ -319,13 +322,13 @@ namespace NowSound
         // Get a reference on one of the NowSoundInputs.
         NowSoundInputAudioProcessor* Input(AudioInputId audioInputId);
 
-        // Add the connections of a SpatialAudioProcessor node.
-        // This entails connecting the given inputChannel to newSpatialNode's channel 0,
-        // and connecting all newSpatialNode's OutputProcessor()'s output channels to the graph's output channels.
-        // (Note that this does not modify this NowSoundGraph's collection of Inputs or of Tracks; 
-        // this just makes the JUCE graph connections.)
-        // For now this always sets up one input connection and two output connections.
-        void AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, int inputChannel);
+        // Add the connections of a SpatialAudioProcessor node consuming and spatializing a single-channel input.
+        // This sets up one input connection and two output connections.
+        void AddInputNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, int inputChannel);
+
+        // Add the connections of a SpatialAudioProcessor node consuming (not spatializing) a two-channel input.
+        // This sets up two input connections and two output connections.
+        void AddRecordingNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, AudioInputId audioInputId);
 
         // Construct a stereo AudioProcessor for the given plugin and program.
         // The returned reference is unowned and raw; this needs to be added to the JUCE AudioProcessorGraph immediately.

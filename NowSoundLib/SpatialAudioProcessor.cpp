@@ -30,24 +30,38 @@ const double Pi = std::atan(1) * 4;
 void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
 {
     Check(audioBuffer.getNumChannels() == 2);
+    Check(getTotalNumOutputChannels() == 2);
+    Check(getTotalNumInputChannels() == 1 || getTotalNumInputChannels() == 2);
 
     int numSamples = audioBuffer.getNumSamples();
-
-    // Coefficients for panning the mono data into the audio buffer.
-    // Use cosine panner for volume preservation.
-    double angularPosition = _pan * Pi / 2;
-    double leftCoefficient = std::cos(angularPosition);
-    double rightCoefficient = std::sin(angularPosition);
 
     float* outputBufferChannel0 = audioBuffer.getWritePointer(0);
     float* outputBufferChannel1 = audioBuffer.getWritePointer(1);
 
-    // Pan each mono sample, if we're not muted.
-    for (int i = 0; i < numSamples; i++)
+    if (getTotalNumInputChannels() == 1)
     {
-        float value = _isMuted ? 0 : outputBufferChannel0[i];
-        outputBufferChannel0[i] = (float)(leftCoefficient * value);
-        outputBufferChannel1[i] = (float)(rightCoefficient * value);
+        // Coefficients for panning the mono data into the audio buffer.
+        // Use cosine panner for volume preservation.
+        double angularPosition = _pan * Pi / 2;
+        double leftCoefficient = std::cos(angularPosition);
+        double rightCoefficient = std::sin(angularPosition);
+
+        // Pan each mono sample, if we're not muted.
+        for (int i = 0; i < numSamples; i++)
+        {
+            float value = _isMuted ? 0 : outputBufferChannel0[i];
+            outputBufferChannel0[i] = (float)(leftCoefficient * value);
+            outputBufferChannel1[i] = (float)(rightCoefficient * value);
+        }
+    }
+    else
+    {
+        // if we're muted, then mute
+        if (_isMuted)
+        {
+            memset(outputBufferChannel0, 0, sizeof(float) * numSamples);
+            memset(outputBufferChannel1, 0, sizeof(float) * numSamples);
+        }        
     }
 }
 

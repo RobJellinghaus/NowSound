@@ -467,7 +467,7 @@ namespace NowSound
             _audioAllocator.get(),
             channel);
 
-        AddNodeToJuceGraph(inputProcessor, channel);
+        AddInputNodeToJuceGraph(inputProcessor, channel);
 
         _audioInputs.push_back(inputProcessor);
     }
@@ -525,7 +525,7 @@ namespace NowSound
         NowSoundTrackAudioProcessor* newTrack = Input(audioInputId)->CreateRecordingTrack(id);
 
         // convert from audio input numbering (1-based) to channel id (0-based)
-        AddNodeToJuceGraph(newTrack, audioInputId - 1);
+        AddRecordingNodeToJuceGraph(newTrack, audioInputId);
 
         return id;
     }
@@ -662,30 +662,52 @@ namespace NowSound
         wcsncpy_s(wcharBuffer, (size_t)bufferCapacity, name.getCharPointer(), name.length());
     }
 
-    void NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, int inputChannel)
+    void NowSoundGraph::AddInputNodeToJuceGraph(SpatialAudioProcessor* newProcessor, int inputChannel)
+    {
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, /*isRecording:*/ false);
+
+        // Input connection (only one, from designated channel to new processor's channel 0)
+        Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNodeId, 0 } }));
+
+        {
+            std::wstringstream wstr{};
+            wstr << L"NowSoundGraph::AddInputNodeToJuceGraph(channel #" << inputChannel << L") = " << newNodeId.uid;
+            NowSoundGraph::Instance()->Log(wstr.str());
+        }
+    }
+
+    void NowSoundGraph::AddRecordingNodeToJuceGraph(SpatialAudioProcessor* newProcessor, AudioInputId audioInputId)
+    {
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, /*isRecording:*/ true);
+
+        // Input connections (one per output channel); consume the *post-effect* input
+        Check(JuceGraph().addConnection({ { Input(audioInputId)->OutputProcessor()->NodeId(), 0 }, { newNodeId, 0 } }));
+        Check(JuceGraph().addConnection({ { Input(audioInputId)->OutputProcessor()->NodeId(), 1 }, { newNodeId, 1 } }));
+
+        {
+            std::wstringstream wstr{};
+            wstr << L"NowSoundGraph::AddRecordingNodeToJuceGraph(input #" << audioInputId << L") = " << newNodeId.uid;
+            NowSoundGraph::Instance()->Log(wstr.str());
+        }
+    }
+
+    AudioProcessorGraph::NodeID NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, bool isRecording)
     {
         // set play config details BEFORE making connections to the graph
         // otherwise addConnection doesn't think the new node has any connections
-        newProcessor->setPlayConfigDetails(1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+        newProcessor->setPlayConfigDetails(isRecording ? 2 : 1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
         newProcessor->OutputProcessor()->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
         AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
         AudioProcessorGraph::Node::Ptr outputNode = JuceGraph().addNode(newProcessor->OutputProcessor());
         newProcessor->SetNodeIds(inputNode->nodeID, outputNode->nodeID);
 
-        // Input connection (one)
-        Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { inputNode->nodeID, 0 } }));
-
         // Output connections
         // TODO: enumerate based on actual graph count... for the moment, stereo only
         Check(JuceGraph().addConnection({ { outputNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
         Check(JuceGraph().addConnection({ { outputNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
 
-        {
-            std::wstringstream wstr{};
-            wstr << L"NowSoundGraph::AddNodeToJuceGraph(" << inputNode->nodeID.uid << L", " << outputNode->nodeID.uid << L", " << inputChannel << L")";
-            NowSoundGraph::Instance()->Log(wstr.str());
-        }
+        return inputNode->nodeID;
     }
 
     void NowSoundGraph::LogConnections()
