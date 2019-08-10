@@ -266,8 +266,11 @@ namespace NowSound
 
     void NowSoundGraph_ShutdownInstance()
     {
-        Check(NowSoundGraph::Instance() != nullptr);
-        NowSoundGraph::ShutdownInstance();
+        // In this one case we decide to tolerate shutting down before ever starting up.
+        if (NowSoundGraph::Instance() != nullptr)
+        {
+            NowSoundGraph::ShutdownInstance();
+        }
     }
 
     __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo()
