@@ -78,6 +78,10 @@ void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNo
 
 PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
+    std::wstringstream obuf;
+    obuf << L"AddPluginInstance pluginId " << (int)pluginId << L" programId " << (int)programId;
+    Graph()->Log(obuf.str());
+
     // ok here goes nothing!
     AudioProcessor* newPluginInstance = Graph()->CreatePluginProcessor(pluginId, programId);
 

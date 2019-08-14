@@ -625,6 +625,9 @@ namespace NowSound
         File path{ pathname };
         if (!path.isDirectory())
         {
+            Log(L"NowSoundGraph::LoadPluginPrograms(): path is not directory");
+            std::wstring pathNameWString{ pathnameBuffer };
+            Log(pathNameWString);
             return false;
         }
 
@@ -637,6 +640,9 @@ namespace NowSound
         for (File file : childFiles)
         {
             String programName = file.getFileNameWithoutExtension();
+            Log(L"NowSoundGraph::LoadPluginPrograms(): loaded program");
+            std::wstring wstr{ programName.getCharPointer() };
+            Log(wstr);
             FileInputStream finStream(file);
             int32_t size = finStream.readInt();
             MemoryBlock state;
