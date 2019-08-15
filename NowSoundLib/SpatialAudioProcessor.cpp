@@ -111,6 +111,10 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     _pluginInstances.push_back(PluginInstanceState(pluginId, programId, dryWet_0_100));
     _pluginNodeIds.push_back(newNode->nodeID);
+
+    // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
+    Graph()->JuceGraphChanged();
+
     return (PluginInstanceIndex)_pluginNodeIds.size();
 }
 

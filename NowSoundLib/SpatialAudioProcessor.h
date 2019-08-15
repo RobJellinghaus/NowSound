@@ -14,8 +14,8 @@
 namespace NowSound
 {
     // Expects one input channel and N output channels; applies appropriate spatialization (at the moment,
-    // stereo panning only) and writes to all N output channels.
-    // Also supports a chain of PluginProgramInstances.
+    // stereo panning only), applies a possible internal chain of PluginProgramInstances (instantiated as
+    // VSTAudioProcessor nodes), and provides an output MeasurementAudioProcessor for measuring the final audio.
     class SpatialAudioProcessor : public BaseAudioProcessor, public MeasurableAudio
     {
         // current pan value; 0 = left, 0.5 = center, 1 = right
@@ -46,7 +46,7 @@ namespace NowSound
         void SetNodeIds(juce::AudioProcessorGraph::NodeID inputNodeId, juce::AudioProcessorGraph::NodeID outputNodeId);
 
         // Get a (non-owning) pointer to the MeasurementAudioProcessor that carries the output of this SpatialAudioProcessor.
-        // The intent is to facilitate getting the signal info and frequencies of the post-sound-effected input audio.
+        // This provides the signal info and frequencies of the post-sound-effected input audio.
         MeasurementAudioProcessor* OutputProcessor() { return _outputProcessor; }
 
         // Get the output signal information of this processor (post-effects).

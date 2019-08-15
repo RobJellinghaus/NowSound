@@ -50,7 +50,7 @@ namespace NowSound
         // methods are not thread-safe with respect to each other.
         __declspec(dllexport) void NowSoundGraph_GetLogMessage(int32_t logMessageIndex, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
-{        // Drop this many log messages.
+        // Drop this many log messages.
         __declspec(dllexport) void NowSoundGraph_DropLogMessages(int32_t messageCountToDrop);
 
         // Log the current JUCE audio processor graph connections.
@@ -198,7 +198,7 @@ namespace NowSound
 
         // Add an instance of the given plugin on the given track.
         __declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
-        // Set the dry/wet balance on the given plugin.
+        // Set the dry/wet balance on the given plugin. TODO: implement this!
         __declspec(dllexport) void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
         // Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
         __declspec(dllexport) void NowSoundTrack_DeletePlugin(TrackId trackId, PluginInstanceIndex PluginInstanceIndex);
