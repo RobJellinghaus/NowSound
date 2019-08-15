@@ -76,8 +76,8 @@ namespace NowSound
         _outputSignalMutex{},
         _logMessages{},
         _logMutex{},
-        _asyncUpdate{},
-        _asyncUpdateMutex{},
+        _juceGraphChanged{},
+        _juceGraphChangedMutex{},
         _audioPluginSearchPaths{},
         _knownPluginList{},
         _audioPluginFormatManager{}
@@ -90,9 +90,6 @@ namespace NowSound
     {
         // we want to insert the track by copy, since it's ref-counted
         _tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, track});
-
-        // this is an async update
-        AsyncUpdate();
     }
 
     NowSoundTrackAudioProcessor* NowSoundGraph::Track(TrackId id)
@@ -541,10 +538,11 @@ namespace NowSound
 
         // now drop the strong reference from the graph
         AudioProcessorGraph::Node::Ptr nodePtr = GetNodePtr(track);
+        // Removing the node also removes all its connections
         JuceGraph().removeNode(nodePtr.get());
 
         // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
-        AsyncUpdate();
+        JuceGraphChanged();
     }
 
     void NowSoundGraph::AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)
@@ -713,6 +711,9 @@ namespace NowSound
         Check(JuceGraph().addConnection({ { outputNode->nodeID, 0 }, { _audioOutputMixNodePtr->nodeID, 0 } }));
         Check(JuceGraph().addConnection({ { outputNode->nodeID, 1 }, { _audioOutputMixNodePtr->nodeID, 1 } }));
 
+        // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
+        JuceGraphChanged();
+
         return inputNode->nodeID;
     }
 
@@ -757,23 +758,23 @@ namespace NowSound
         Log(wstr.str());
     }
 
-    void NowSoundGraph::AsyncUpdate()
+    void NowSoundGraph::JuceGraphChanged()
     {
         // This would seem to be unnecessary, but we need to ensure we do not lose a call to this method
         // in the event that the message tick thread is calling WasAsyncUpdate() concurrently with this,
         // resulting in the update here being lost (because WasAsyncUpdate() resets this flag).
-        std::lock_guard<std::mutex> guard(_asyncUpdateMutex);
-        _asyncUpdate = true;
+        std::lock_guard<std::mutex> guard(_juceGraphChangedMutex);
+        _juceGraphChanged = true;
     }
 
-    bool NowSoundGraph::WasAsyncUpdate()
+    bool NowSoundGraph::WasJuceGraphChanged()
     {
         // This would seem to be unnecessary, but we need to ensure we do not lose a call to this method
         // in the event that the message tick thread is calling WasAsyncUpdate() concurrently with this,
         // resulting in the update here being lost (because WasAsyncUpdate() resets this flag).
-        std::lock_guard<std::mutex> guard(_asyncUpdateMutex);
-        bool result = _asyncUpdate;
-        _asyncUpdate = false;
+        std::lock_guard<std::mutex> guard(_juceGraphChangedMutex);
+        bool result = _juceGraphChanged;
+        _juceGraphChanged = false;
         return result;
     }
 
@@ -798,7 +799,7 @@ namespace NowSound
 
     void NowSoundGraph::MessageTick()
     {
-        if (WasAsyncUpdate())
+        if (WasJuceGraphChanged())
         {
             // call the JUCE graph's handleAsyncUpdate() method directly.
             _audioProcessorGraph.handleAsyncUpdate();

@@ -101,6 +101,9 @@ namespace NowSound
         // Drop all messages up to (and including) the given log message index.
         void DropLogMessages(int32_t messageCountToDrop);
 
+        // Log the current connections in the graph
+        void LogConnections();
+
         // Create a new track and begin recording.
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
@@ -154,11 +157,8 @@ namespace NowSound
         // Set minimum buffer size in the device manager.
         void setBufferSize();
 
-        // Record that an async update happened.
-        void AsyncUpdate();
-
-        // Did an async update happen since the last call to this method?
-        bool WasAsyncUpdate();
+        // Was the JUCE audio processor graph changed since the last call to this method?
+        bool WasJuceGraphChanged();
 
         // Add the connections of a SpatialAudioProcessor node.
         // This returns the input node so that input connections can be set up.
@@ -244,13 +244,13 @@ namespace NowSound
         // Note that this vector does not own the processors; the JUCE graph does.
         std::map<TrackId, NowSoundTrackAudioProcessor*> _tracks;
 
-        // True if there was an async update.
-        bool _asyncUpdate;
+        // True if the JUCE graph was changed.
+        bool _juceGraphChanged;
 
-        // Mutex for changing the state of _asyncUpdate.
-        // This is to avoid a potential race between testing _asyncUpdate to find it true,
+        // Mutex for changing the state of _juceGraphChanged.
+        // This is to avoid a potential race between testing _juceGraphChanged to find it true,
         // and then resetting it to false concurrently with an audio thread setting it to true again.
-        std::mutex _asyncUpdateMutex;
+        std::mutex _juceGraphChangedMutex;
 
         // Vector of search paths for plugin searching.
         std::vector<juce::String> _audioPluginSearchPaths;
@@ -334,13 +334,15 @@ namespace NowSound
         // The returned reference is unowned and raw; this needs to be added to the JUCE AudioProcessorGraph immediately.
         AudioProcessor* CreatePluginProcessor(PluginId pluginId, ProgramId programId);
 
-        // Log the current connections in the graph
-        void LogConnections();
-
         // Log a single node in all detail.
         void LogNode(juce::AudioProcessorGraph::NodeID nodeId);
 
         bool CheckLogThrottle();
+
+        // Record that an async update happened (e.g. a change to the JUCE audio processor graph, that needs to cause
+        // the audio rendering graph to be recreated).
+        // If we weren't running JUCE in such a hacky way under Unity, this wouldn't be needed.
+        void JuceGraphChanged();
 
         // Actually shut down the audio processing.
         void Shutdown();

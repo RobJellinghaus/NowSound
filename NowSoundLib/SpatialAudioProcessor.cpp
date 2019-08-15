@@ -145,4 +145,7 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
 
     // and clean up _pluginNodeIds
     _pluginNodeIds.erase(_pluginNodeIds.begin() + (pluginInstanceIndex - 1));
+
+    // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
+    Graph()->JuceGraphChanged();
 }

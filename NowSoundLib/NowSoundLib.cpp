@@ -102,6 +102,12 @@ namespace NowSound
         NowSoundGraph::Instance()->DropLogMessages(messageCountToDrop);
     }
 
+    void NowSoundGraph_LogConnections()
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->LogConnections();
+    }
+
     NowSoundSignalInfo NowSoundGraph_RawInputSignalInfo(AudioInputId audioInputId)
     {
         if (NowSoundGraph::Instance() != nullptr)

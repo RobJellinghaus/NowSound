@@ -50,8 +50,11 @@ namespace NowSound
         // methods are not thread-safe with respect to each other.
         __declspec(dllexport) void NowSoundGraph_GetLogMessage(int32_t logMessageIndex, LPWSTR wcharBuffer, int32_t bufferCapacity);
 
-        // Drop this many log messages.
+{        // Drop this many log messages.
         __declspec(dllexport) void NowSoundGraph_DropLogMessages(int32_t messageCountToDrop);
+
+        // Log the current JUCE audio processor graph connections.
+        __declspec(dllexport) void NowSoundGraph_LogConnections();
 
         // Initialize the audio graph subsystem such that device information can be queried.
         // Graph must be Uninitialized.  On completion, graph becomes Initialized.

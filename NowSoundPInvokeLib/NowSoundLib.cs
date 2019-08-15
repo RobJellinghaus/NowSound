@@ -373,6 +373,17 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_LogConnections();
+
+        /// <summary>
+        /// Log all connections in the current JUCE graph.
+        /// </summary>
+        public static void LogConnections()
+        {
+            NowSoundGraph_LogConnections();
+        }
+
+        [DllImport("NowSoundLib")]
         static extern NowSoundSignalInfo NowSoundGraph_RawInputSignalInfo(AudioInputId audioInputId);
 
         /// <summary>
