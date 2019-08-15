@@ -14,7 +14,7 @@ SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring
     : BaseAudioProcessor(graph, name),
     _isMuted{ false },
     _pan{ initialPan },
-    _outputProcessor{ new MeasurementAudioProcessor(graph, name) },
+    _outputProcessor{ new MeasurementAudioProcessor(graph, MakeName(name, L" Output")) },
     _pluginInstances{},
     _pluginNodeIds{}
 {}
@@ -78,9 +78,11 @@ void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNo
 
 PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
-    std::wstringstream obuf;
-    obuf << L"AddPluginInstance pluginId " << (int)pluginId << L" programId " << (int)programId;
-    Graph()->Log(obuf.str());
+    {
+        std::wstringstream obuf;
+        obuf << L"AddPluginInstance pluginId " << (int)pluginId << L" programId " << (int)programId;
+        Graph()->Log(obuf.str());
+    }
 
     // ok here goes nothing!
     AudioProcessor* newPluginInstance = Graph()->CreatePluginProcessor(pluginId, programId);
@@ -114,6 +116,12 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
     Graph()->JuceGraphChanged();
+
+    {
+        std::wstringstream wstr{};
+        wstr << L"SpatialAudioProcessor::AddPluginProgramInstance(): new node " << newNode->nodeID.uid;
+        Graph()->Log(wstr.str());
+    }
 
     return (PluginInstanceIndex)_pluginNodeIds.size();
 }

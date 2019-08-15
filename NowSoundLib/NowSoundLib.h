@@ -108,7 +108,7 @@ namespace NowSound
         // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
         // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
         // "pass in StringBuilder", known to work well).
-        __declspec(dllexport) void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity);
+        __declspec(dllexport) void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int32_t floatBufferCapacity);
 
         // Play a user-selected sound file.
         // Graph must be Started.
@@ -187,7 +187,7 @@ namespace NowSound
         // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
         // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
         // "pass in StringBuilder", known to work well).
-        __declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity);
+        __declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int32_t floatBufferCapacity);
 
         // True if this is muted.
         // 
@@ -197,10 +197,10 @@ namespace NowSound
         __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
 
         // Add an instance of the given plugin on the given track.
-        __declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+        __declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
         // Set the dry/wet balance on the given plugin. TODO: implement this!
-        __declspec(dllexport) void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
+        __declspec(dllexport) void NowSoundTrack_SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
         // Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
-        __declspec(dllexport) void NowSoundTrack_DeletePlugin(TrackId trackId, PluginInstanceIndex PluginInstanceIndex);
+        __declspec(dllexport) void NowSoundTrack_DeletePluginInstance(TrackId trackId, PluginInstanceIndex PluginInstanceIndex);
     };
 }

@@ -708,29 +708,29 @@ namespace NowSoundLib
 
         // Add an instance of the given plugin on the given track.
         [DllImport("NowSoundLib")]
-        static extern PluginInstanceIndex NowSoundTrack_AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId);
+        static extern PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int dryWet_0_100);
 
-        public static PluginInstanceIndex AddPlugin(TrackId trackId, PluginId pluginId, ProgramId programId)
+        public static PluginInstanceIndex AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int dryWet_0_100)
         {
-            return NowSoundTrack_AddPlugin(trackId, pluginId, programId);
+            return NowSoundTrack_AddPluginInstance(trackId, pluginId, programId, dryWet_0_100);
         }
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]
-        static extern void NowSoundTrack_SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
+        static extern void NowSoundTrack_SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
 
-        public static void SetPluginDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100)
+        public static void SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100)
         {
-            NowSoundTrack_SetPluginDryWet(trackId, PluginInstanceIndex, dryWet_0_100);
+            NowSoundTrack_SetPluginInstanceDryWet(trackId, PluginInstanceIndex, dryWet_0_100);
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundTrack_DeletePlugin(TrackId trackId, PluginInstanceIndex index);
+        static extern void NowSoundTrack_DeletePluginInstance(TrackId trackId, PluginInstanceIndex index);
 
         // Delete a plugin instance.
-        public static void DeletePlugin(TrackId trackId, PluginInstanceIndex pluginInstanceIndex)
+        public static void DeletePluginInstance(TrackId trackId, PluginInstanceIndex pluginInstanceIndex)
         {
-            NowSoundTrack_DeletePlugin(trackId, pluginInstanceIndex);
+            NowSoundTrack_DeletePluginInstance(trackId, pluginInstanceIndex);
         }
     }
 }

@@ -11,7 +11,7 @@
 
 namespace NowSound
 {
-    __declspec(dllexport) NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo()
+    NowSoundGraphInfo NowSoundGraph_GetStaticGraphInfo()
     {
         return CreateNowSoundGraphInfo(
             1,
@@ -23,7 +23,7 @@ namespace NowSound
         );
     }
 
-    __declspec(dllexport) NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo()
+    NowSoundTimeInfo NowSoundGraph_GetStaticTimeInfo()
     {
         return CreateNowSoundTimeInfo(
             // JUCETODO: 1,
@@ -173,7 +173,7 @@ namespace NowSound
         }
     }
 
-    void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int floatBufferCapacity)
+    void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int32_t floatBufferCapacity)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         NowSoundGraph::Instance()->Input(audioInputId)->GetFrequencies(floatBuffer, floatBufferCapacity);
@@ -190,7 +190,7 @@ namespace NowSound
         return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
     }
 
-    __declspec(dllexport) void NowSoundGraph_DeleteTrack(TrackId trackId)
+    void NowSoundGraph_DeleteTrack(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         NowSoundGraph::Instance()->DeleteTrack(trackId);
@@ -279,7 +279,7 @@ namespace NowSound
         }
     }
 
-    __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo()
+    NowSoundTrackInfo NowSoundTrack_GetStaticTrackInfo()
     {
         return CreateNowSoundTrackInfo(
             // don't pass 0 for zeroth (bool) field
@@ -295,49 +295,49 @@ namespace NowSound
             (float)10);
     }
 
-    __declspec(dllexport) NowSoundTrackState NowSoundTrack_State(TrackId trackId)
+    NowSoundTrackState NowSoundTrack_State(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->State();
     }
 
-    __declspec(dllexport) int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
+    int64_t /*Duration<Beat>*/ NowSoundTrack_BeatDuration(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->BeatDuration().Value();
     }
 
-    __declspec(dllexport) float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
+    float /*ContinuousDuration<Beat>*/ NowSoundTrack_BeatPositionUnityNow(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->BeatPositionUnityNow().Value();
     }
 
-    __declspec(dllexport) float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId)
+    float /*ContinuousDuration<AudioSample>*/ NowSoundTrack_ExactDuration(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->ExactDuration().Value();
     }
 
-    __declspec(dllexport) NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId)
+    NowSoundTrackInfo NowSoundTrack_Info(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->Info();
     }
 
-    __declspec(dllexport) NowSoundSignalInfo NowSoundTrack_SignalInfo(TrackId trackId)
+    NowSoundSignalInfo NowSoundTrack_SignalInfo(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->SignalInfo();
     }
 
-    __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId)
+    void NowSoundTrack_FinishRecording(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         NowSoundGraph::Instance()->Track(trackId)->FinishRecording();
     }
 
-    __declspec(dllexport) void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int floatBufferCapacity)
+    void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int32_t floatBufferCapacity)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         if (NowSoundGraph::Instance()->TrackIsDefined(trackId))
@@ -350,19 +350,19 @@ namespace NowSound
         }
     }
 
-    __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId)
+    bool NowSoundTrack_IsMuted(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->IsMuted();
     }
 
-    __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
+    void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
     }
 
-    PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int dryWet_0_100)
+    PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->AddPluginInstance(pluginId, programId, dryWet_0_100);

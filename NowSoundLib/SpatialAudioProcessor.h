@@ -85,5 +85,11 @@ namespace NowSound
             wstr << label << id;
             return wstr.str();
         }
+        static std::wstring MakeName(const std::wstring& str1, const std::wstring& str2)
+        {
+            std::wstringstream wstr;
+            wstr << str1 << str2;
+            return wstr.str();
+        }
     };
 }

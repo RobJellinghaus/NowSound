@@ -745,17 +745,38 @@ namespace NowSound
     void NowSoundGraph::LogNode(AudioProcessorGraph::NodeID nodeId)
     {
         const AudioProcessorGraph::Node* nodePtr = JuceGraph().getNodeForId(nodeId);
+
         std::wstringstream wstr;
-        wstr << L"Node #" << nodePtr->nodeID.uid << L": "
-            << nodePtr->getProcessor()->getName()
-            << L": bypassed " << nodePtr->isBypassed()
-            << L", suspended " << nodePtr->getProcessor()->isSuspended()
-            << L", latencySamples " << nodePtr->getProcessor()->getLatencySamples()
-            << L", sampleRate " << nodePtr->getProcessor()->getSampleRate()
-            << L", totalNumInputChannels " << nodePtr->getProcessor()->getTotalNumInputChannels()
-            << L", totalNumOutputChannels " << nodePtr->getProcessor()->getTotalNumOutputChannels()
-            << L", isUsingDoublePrecision " << nodePtr->getProcessor()->isUsingDoublePrecision();
-        Log(wstr.str());
+
+        if (nodePtr != nullptr)
+        {
+            if (nodePtr->getProcessor() != nullptr)
+            {
+                String name{ nodePtr->getProcessor()->getName() };
+                bool isBypassed{ nodePtr->isBypassed() };
+                bool isSuspended{ nodePtr->getProcessor()->isSuspended() };
+                int latencySamples{ nodePtr->getProcessor()->getLatencySamples() };
+                double sampleRate{ nodePtr->getProcessor()->getSampleRate() };
+                int totalNumInputChannels{ nodePtr->getProcessor()->getTotalNumInputChannels() };
+                int totalNumOutputChannels{ nodePtr->getProcessor()->getTotalNumOutputChannels() };
+
+                wstr << L"Node #" << nodeId.uid << L": "
+                    << name
+                    << L": bypassed " << isBypassed
+                    << L", suspended " << isSuspended
+                    << L", latencySamples " << latencySamples
+                    << L", sampleRate " << sampleRate
+                    << L", totalNumInputChannels " << totalNumInputChannels
+                    << L", totalNumOutputChannels " << totalNumOutputChannels;
+            }
+            else
+            {
+                wstr << L"Node #" << nodeId.uid << L": no processor";
+            }
+            Log(wstr.str());
+        }
+
+        // ...else, if no such node, don't even mention it
     }
 
     void NowSoundGraph::JuceGraphChanged()
