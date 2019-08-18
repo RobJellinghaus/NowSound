@@ -117,6 +117,8 @@ namespace NowSoundWinFormsApp
                 _trackRowPanel.Parent.Controls.Remove(_trackRowPanel);
                 _removeAction(_trackId);
                 NowSoundGraphAPI.DeleteTrack(_trackId);
+
+                NowSoundGraphAPI.LogConnections();
             }
         }
 

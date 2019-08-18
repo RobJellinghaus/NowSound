@@ -533,13 +533,12 @@ namespace NowSound
 
         // remove the owning Node from the graph
         NowSoundTrackAudioProcessor* track = _tracks.at(trackId);
+
+        // call delete on it; this drops all nodes it manages from the JUCE graph
+        track->Delete();
+
         // wipe the weak reference before we drop the strong reference
         _tracks[trackId] = nullptr;
-
-        // now drop the strong reference from the graph
-        AudioProcessorGraph::Node::Ptr nodePtr = GetNodePtr(track);
-        // Removing the node also removes all its connections
-        JuceGraph().removeNode(nodePtr.get());
 
         // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
         JuceGraphChanged();

@@ -76,6 +76,20 @@ void SpatialAudioProcessor::SetNodeIds(juce::AudioProcessorGraph::NodeID inputNo
     Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { outputNodeId, 1 } }));
 }
 
+void SpatialAudioProcessor::Delete()
+{
+    // first remove all the plugins
+    for (AudioProcessorGraph::NodeID nodeId : _pluginNodeIds)
+    {
+        Graph()->JuceGraph().removeNode(nodeId);
+    }
+    // then remove the output
+    Graph()->JuceGraph().removeNode(OutputProcessor()->NodeId());
+    // finally, remove this node -- after this line, this object may be destructed, as the graph holds the only
+    // strong node (and hence audioprocessor) references
+    Graph()->JuceGraph().removeNode(NodeId());
+}
+
 PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100)
 {
     {

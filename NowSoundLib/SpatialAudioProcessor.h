@@ -66,6 +66,9 @@ namespace NowSound
         float Pan() const;
         void Pan(float pan);
 
+        // Delete this processor, by dropping all its nodes.
+        void Delete();
+
         // Install a new instance of a plugin with the specified program and wetdry level.
         // Currently all new plugins go on the end of the chain.
         PluginInstanceIndex AddPluginInstance(PluginId pluginId, ProgramId programId, int dryWet_0_100);
