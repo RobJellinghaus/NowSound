@@ -30,6 +30,9 @@ namespace NowSound
         // Identifier of this Track.
         const TrackId _trackId;
 
+        // Identifier of the input we record from (for tracking input frequencies while recording).
+        const AudioInputId _audioInputId;
+
         // The current state of the track.
         NowSoundTrackState _state;
 
@@ -56,6 +59,7 @@ namespace NowSound
         NowSoundTrackAudioProcessor(
             NowSoundGraph* graph,
             TrackId trackId,
+            AudioInputId inputId,
             const BufferedSliceStream<AudioSample, float>& sourceStream,
             float initialPan);
 
@@ -64,6 +68,12 @@ namespace NowSound
         // Did this track stop recording since the last time this method was called?
         // The message thread polls this value to determine when to remove tracks' input connections after recording.
         bool JustStoppedRecording();
+
+        // If we are recording, monitor the input; otherwise, monitor the track itself.
+        virtual NowSoundSignalInfo SignalInfo() override;
+
+        // If we are recording, monitor the input; otherwise, monitor the track itself.
+        virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) override;
 
     public: // Exported methods via NowSoundTrackAPI
 

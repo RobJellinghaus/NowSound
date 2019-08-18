@@ -50,10 +50,10 @@ namespace NowSound
         MeasurementAudioProcessor* OutputProcessor() { return _outputProcessor; }
 
         // Get the output signal information of this processor (post-effects).
-        NowSoundSignalInfo SignalInfo() { return _outputProcessor->SignalInfo(); }
+        virtual NowSoundSignalInfo SignalInfo() { return _outputProcessor->SignalInfo(); }
 
         // Get the output frequency histogram, writing it into this (presumed) vector of floats.
-        void GetFrequencies(void* floatBuffer, int floatBufferCapacity) { _outputProcessor->GetFrequencies(floatBuffer, floatBufferCapacity); }
+        virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) { _outputProcessor->GetFrequencies(floatBuffer, floatBufferCapacity); }
         
         // True if this is muted.
         // 

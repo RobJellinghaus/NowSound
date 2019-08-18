@@ -13,6 +13,7 @@
 #include "GetBuffer.h"
 #include "MagicConstants.h"
 #include "NowSoundGraph.h"
+#include "NowSoundInput.h"
 #include "NowSoundLib.h"
 #include "NowSoundTrack.h"
 #include "Slice.h"
@@ -31,10 +32,12 @@ namespace NowSound
     NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(
         NowSoundGraph* graph,
         TrackId trackId,
+        AudioInputId inputId,
         const BufferedSliceStream<AudioSample, float>& sourceStream,
         float initialPan)
         : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialPan),
         _trackId{ trackId },
+        _audioInputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream0(
@@ -90,6 +93,34 @@ namespace NowSound
         else
         { 
             return false;
+        }
+    }
+
+    // If we are recording, monitor the input; otherwise, monitor the track itself.
+    NowSoundSignalInfo NowSoundTrackAudioProcessor::SignalInfo()
+    {
+        if (_state == NowSoundTrackState::TrackRecording
+            || _state == NowSoundTrackState::TrackFinishRecording)
+        {
+            return NowSoundGraph::Instance()->Input(_audioInputId)->SignalInfo();
+        }
+        else
+        {
+            return SpatialAudioProcessor::SignalInfo();
+        }
+    }
+
+    // If we are recording, monitor the input; otherwise, monitor the track itself.
+    void NowSoundTrackAudioProcessor::GetFrequencies(void* floatBuffer, int floatBufferCapacity)
+    {
+        if (_state == NowSoundTrackState::TrackRecording
+            || _state == NowSoundTrackState::TrackFinishRecording)
+        {
+            NowSoundGraph::Instance()->Input(_audioInputId)->GetFrequencies(floatBuffer, floatBufferCapacity);
+        }
+        else
+        {
+            return SpatialAudioProcessor::GetFrequencies(floatBuffer, floatBufferCapacity);
         }
     }
 
