@@ -92,6 +92,9 @@ namespace NowSound
         // Graph must be Created or Running.
         NowSoundTimeInfo TimeInfo();
 
+        // Set the BPM of the graph; only effective when no tracks exist (does nothing if any tracks exist).
+        void SetBeatsPerMinute(float bpm);
+
         // The current log info.
         NowSoundLogInfo LogInfo();
 

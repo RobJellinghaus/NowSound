@@ -489,6 +489,17 @@ namespace NowSound
         return timeInfo;
     }
 
+    void NowSoundGraph::SetBeatsPerMinute(float bpm)
+    {
+        if (_tracks.size() > 0)
+        {
+            // not gonna happen
+            return;
+        }
+
+        Clock::Instance().BeatsPerMinute(bpm);
+    }
+
     AudioProcessorGraph::Node::Ptr NowSoundGraph::GetNodePtr(BaseAudioProcessor* audioProcessor)
     {
         AudioProcessorGraph::NodeID nodeId = audioProcessor->NodeId();

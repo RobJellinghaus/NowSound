@@ -173,6 +173,12 @@ namespace NowSound
         }
     }
 
+    void NowSoundGraph_SetBeatsPerMinute(float bpm)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->SetBeatsPerMinute(bpm);
+    }
+
     void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int32_t floatBufferCapacity)
     {
         Check(NowSoundGraph::Instance() != nullptr);

@@ -100,6 +100,9 @@ namespace NowSound
         // Graph must be at least Created; time will not be running until the graph is Running.
         __declspec(dllexport) NowSoundTimeInfo NowSoundGraph_TimeInfo();
 
+        // Set the BPM. Only functions when there are no tracks at all.
+        __declspec(dllexport) void NowSoundGraph_SetBeatsPerMinute(float bpm);
+
         // Get the info for the specified input.
         // Graph must be at least Created; time will not be running until the graph is Running.
         __declspec(dllexport) NowSoundSpatialParameters NowSoundGraph_InputInfo(AudioInputId inputId);

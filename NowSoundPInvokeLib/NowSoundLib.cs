@@ -451,6 +451,18 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_SetBeatsPerMinute(float bpm);
+
+        /// <summary>
+        /// Set the BPM of the graph; only functions when no Tracks exist.
+        /// Graph must be Running.
+        /// </summary>
+        public static void SetBeatsPerMinute(float bpm)
+        {
+            NowSoundGraph_SetBeatsPerMinute(bpm);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern bool NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, float[] floatBuffer, int floatBufferCapacity);
 
         // Get the current input frequency histogram; LPWSTR must actually reference a float buffer of the
