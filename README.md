@@ -16,6 +16,7 @@ The P/Invokable C API is defined in [NowSoundLib.h](https://github.com/RobJellin
 NowSound consists of the following subprojects:
 
 - NowSoundLibShared: the core C++ classes for streaming and buffering
+  - Had I started this project with JUCE I might have used JUCE's classes for these functions; as it is, I'm sticking with mine
 - NowSoundLib: a UWP C++ library sharing NowSoundLibShared and invoking AudioGraph,
   exposing a P/Invoke interface
 - NowSoundPInvokeLib: a .NET C# library that wraps the P/Invoke NowSoundLib interface
