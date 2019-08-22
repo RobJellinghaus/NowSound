@@ -1,28 +1,15 @@
 # NowSound
 Low latency audio library for Windows 10, targeted at Unity UWP and desktop apps.
 
-NowSound is a wrapper library around the Windows 10 [AudioGraph](https://docs.microsoft.com/en-us/windows/uwp/audio-video-camera/audio-graphs)
-API.  It exposes a P/Invoke C-style API, such that it can be invoked by Unity apps (on either
+NowSound is a wrapper library around the [JUCE audio library](https://juce.com).  It exposes a P/Invoke C-style API, such that it can be invoked by Unity apps (on either
 the .NET or Mono runtimes).
 
-**Status as of late March 2018: the library basically works and has a UWP demonstration
-mini-looper app, but some features remain to be completed such as device selection,
-track muting/deleting in the demo app, and most importantly VST support.  Pull requests
-welcome!**
+**Status as of August 2019: the library works and has VST2 plugin support, and the demo .NET looper app
+supports multiple tracks, input sound effects, track muting, and track deleting.**
 
 ## APIs
 
-NowSound provides the following APIs:
-
-- Initializing audio subsystem
-- Setting up audio graph with default input/output devices
-- Starting and stopping recording of an input to an in-memory audio track (quantized to a regular tempo)
-- Looping playback of in-memory audio tracks
-
-All of these APIs are asynchronous.  Currently NowSound makes no attempt to implement event or
-callback support; the only way to track the state of NowSound is by polling.  This actually works
-reasonably well for Unity applications which are based on a real-time event loop anyway.  Callback
-support will be added if particular applications require it.
+The P/Invokable C API is defined in [NowSoundLib.h](https://github.com/RobJellinghaus/NowSound/blob/master/NowSoundLib/NowSoundLib.h).  The C# wrapper around that API is in [NowSoundLib.cs](https://github.com/RobJellinghaus/NowSound/blob/master/NowSoundPInvokeLib/NowSoundLib.cs).
 
 ## Project structure
 
@@ -31,8 +18,9 @@ NowSound consists of the following subprojects:
 - NowSoundLibShared: the core C++ classes for streaming and buffering
 - NowSoundLib: a UWP C++ library sharing NowSoundLibShared and invoking AudioGraph,
   exposing a P/Invoke interface
-- NowSoundAppUWP: a C++ UWP demonstration app using NowSoundLib, showing how to start
-  recording and looping multiple tracks
+- NowSoundPInvokeLib: a .NET C# library that wraps the P/Invoke NowSoundLib interface
+- NowSoundWinFormsApp: a C# WinForms app (old school!) that uses the NowSoundPInvokeLib to
+  demonstrate multitrack looping
 - UnitTestsDesktop: a C++ TAEF testing library for the NowSoundLibShared code
 
 Note that any pull requests must ensure that all tests are passing.
@@ -42,19 +30,7 @@ version of the library.  (UWP security restrictions are not friendly to most cur
 
 ## Dependencies and Building
 
-NowSound is implemented using the amazing [cppwinnrt](https://github.com/Microsoft/cppwinrt)
-library, which makes Windows component-based programming more pleasant than I ever thought
-C++ could be.  I used Kenny Kerr's great [examples](https://github.com/kennykerr/cppwinrt) as a
-starting point.  The most impressive thing about C++/WinRT is its concurrency support -- using
-the co_await expression in C++ is literally as easy as the await expression in C#.
-
-*Note as of March 2018:* The cppwinrt libraries are present only in Windows Insider preview
-builds of Windows, so if you are not ready to install such a build, you will not be able to build
-this code.  This code currently targets the latest Windows 10 SDK version, namely [17061](https://blogs.windows.com/buildingapps/2017/12/19/windows-10-sdk-preview-build-17061-now-available/#ml17ACbvB2HZPo5J.97).
-
-The next major Windows 10 release in spring 2018 will come with an SDK that will
-support building this project; at that time, I'll remove this warning (and replace it with a
-warning stating that the latest Win10 version is required for building).
+The JUCE library is required for compiling this project; the existing build expects it to 
 
 ## Rationale
 
@@ -63,10 +39,10 @@ subsystems, and because I needed to ensure all audio processing was happening na
 low-latency audio deadlines, driving audio from C# (or any garbage-collected language) is sure to
 cause audible trouble at some point.
 
-The current performance is far better than I was ever able to get while driving AudioGraph from
-a C# app -- the current app runs the audio graph at the minimum available latency, which in the
-case of my Surface Book set to 48Khz sampling rate, gives a 96-sample buffer (200Hz audio frame
-rate) with no perceptible audio problems streaming multiple loops.
+JUCE is just a great audio system.  In particular the JUCE [AudioProcessorGraph](https://docs.juce.com/master/tutorial_audio_processor_graph.html) abstraction is
+critical to how NowSoundLib handles effects processing; each track has its own internal pipeline
+of AudioProcessor nodes, which it can manage purely internally without the rest of the system
+needing to be involved.
 
 If you are interested in NowSound, check out the project which motivated me to write it:
 [my gestural Kinect-and-mixed-reality live looper, Holofunk](http://holofunk.com).  You might also
