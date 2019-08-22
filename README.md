@@ -26,12 +26,20 @@ NowSound consists of the following subprojects:
 
 Note that any pull requests must ensure that all tests are passing.
 
-[VST](https://en.wikipedia.org/wiki/Virtual_Studio_Technology) support is planned, in the desktop
-version of the library.  (UWP security restrictions are not friendly to most current VST plugins.) 
-
 ## Dependencies and Building
 
-The JUCE library is required for compiling this project; the existing build expects it to 
+The JUCE library is required for compiling this project; the existing build expects it to be next to
+this repository in a directory named "JUCE".
+
+VST2 dependencies are a bit tricky to come by as Steinberg (the company which owns the standard) no
+longer wants new VST2 development to occur.  Unfortunately for them, very many plugins in the wild still
+use VST2, including the one I most wanted.  Fortunately for us, Steinberg still makes old versions of
+the VST2/3 SDK available.  This one contains the VST2 folders needed by this project:
+
+https://www.steinberg.net/sdk_downloads/vstsdk366_27_06_2016_build_61.zip
+
+I will soon write up exactly what to do with this zip file.  If you want to try building this before then,
+create an issue to encourage me to do so :-)
 
 ## Rationale
 
