@@ -85,4 +85,16 @@ namespace NowSound
         info.Pan = pan;
         return info;
     }
+
+    NowSoundPluginInstanceInfo CreateNowSoundPluginInstanceInfo(
+        PluginId pluginId,
+        ProgramId programId,
+        int32_t dryWet_0_100)
+    {
+        NowSoundPluginInstanceInfo info;
+        info.NowSoundPluginId = pluginId;
+        info.NowSoundProgramId = programId;
+        info.DryWet_0_100 = dryWet_0_100;
+        return info;
+    }
 }

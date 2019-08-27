@@ -189,13 +189,22 @@ namespace NowSound
             ProgramIdUndefined = 0
         };
 
-        // The index of an instantiated plugin.  Note that this is *not* a persistent identifier; it is the
-        // index of the plugin in the vector of plugins associated with the given input or track.
+        // The one-based index of an instantiated plugin.  (Zero is not a valid value, for catching P/Invoke bugs.)
+        // Note that this is *not* a persistent identifier; it is the index of the plugin in the vector of plugins
+        // associated with the given input or track.
         // TODO: revisit this if a persistent ID turns out to be more usable in the API.
         enum PluginInstanceIndex
         {
             PluginInstanceIndexUndefined = 0
         };
+
+        // The state of an instantiated plugin; eventually will include parameter settings.
+        typedef struct NowSoundPluginInstanceInfo
+        {
+            PluginId NowSoundPluginId;
+            ProgramId NowSoundProgramId;
+            int32_t DryWet_0_100;
+        } NowSoundPluginInstanceInfo;
 
         NowSoundGraphInfo CreateNowSoundGraphInfo(
             int32_t sampleRateHz,
@@ -233,19 +242,10 @@ namespace NowSound
             float localClockBeat,
             int64_t lastSampleTime,
             float pan);
+
+        NowSoundPluginInstanceInfo CreateNowSoundPluginInstanceInfo(
+            PluginId pluginId,
+            ProgramId programId,
+            int32_t dryWet_0_100);
     }
-
-    // Common implementation types *not* visible across the P/Invoke boundary.
-
-    // The state of an instantiated plugin; eventually will include parameter settings.
-    struct PluginInstanceState
-    {
-        const PluginId pluginId;
-        const ProgramId programId;
-        const int dryWet_0_100;
-
-        PluginInstanceState(PluginId pluginIdArg, ProgramId programIdArg, int dryWet_0_100_arg)
-            : pluginId{ pluginIdArg }, programId{ programIdArg }, dryWet_0_100{ dryWet_0_100_arg }
-        {}
-    };
 }

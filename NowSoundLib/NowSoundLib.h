@@ -103,19 +103,11 @@ namespace NowSound
         // Set the BPM. Only functions when there are no tracks at all.
         __declspec(dllexport) void NowSoundGraph_SetBeatsPerMinute(float bpm);
 
-        // Get the info for the specified input.
-        // Graph must be at least Created; time will not be running until the graph is Running.
-        __declspec(dllexport) NowSoundSpatialParameters NowSoundGraph_InputInfo(AudioInputId inputId);
-
         // Get the current input frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
         // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
         // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
         // "pass in StringBuilder", known to work well).
         __declspec(dllexport) void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int32_t floatBufferCapacity);
-
-        // Play a user-selected sound file.
-        // Graph must be Started.
-        __declspec(dllexport) void NowSoundGraph_PlayUserSelectedSoundFileAsync();
 
         // Create a new track and begin recording.
         __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
@@ -153,6 +145,10 @@ namespace NowSound
 
         // Add an instance of the given plugin on the given input.
         __declspec(dllexport) PluginInstanceIndex NowSoundGraph_AddInputPluginInstance(AudioInputId audioInputId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
+        // Get the number of plugin instances on this input.
+        __declspec(dllexport) int NowSoundGraph_GetInputPluginInstanceCount(AudioInputId audioInputId);
+        // Get info about a plugin instance on this input.
+        __declspec(dllexport) NowSoundPluginInstanceInfo NowSoundGraph_GetInputPluginInstanceInfo(AudioInputId audioInputId, PluginInstanceIndex index);
         // Set the dry/wet balance on the given plugin.
         __declspec(dllexport) void NowSoundGraph_SetInputPluginInstanceDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int32_t dryWet_0_100);
         // Delete the given plugin instance; note that this will effectively renumber all subsequent instances.
@@ -201,6 +197,10 @@ namespace NowSound
 
         // Add an instance of the given plugin on the given track.
         __declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
+        // Get the number of plugin instances on this track.
+        __declspec(dllexport) int NowSoundTrack_GetPluginInstanceCount(TrackId trackId);
+        // Get info about a plugin instance on this track.
+        __declspec(dllexport) NowSoundPluginInstanceInfo NowSoundTrack_GetPluginInstanceInfo(TrackId trackId, PluginInstanceIndex index);
         // Set the dry/wet balance on the given plugin. TODO: implement this!
         __declspec(dllexport) void NowSoundTrack_SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int32_t dryWet_0_100);
         // Delete the given plugin instance; note that this will effectively renumber all subsequent instances.

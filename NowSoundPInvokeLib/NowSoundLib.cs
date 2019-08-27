@@ -14,25 +14,6 @@ namespace NowSoundLib
         public Int32 LogMessageCount;
     }
 
-    // TODO: actually use this over P/Invoke via StringBuilder marshaling (avoiding all lifetime issues nicely)
-    public struct DeviceInfo
-    {
-        public readonly string Id;
-        public readonly string Name;
-        // Would be nice if this was IReadOnlyDictionary but C# 4 don't do that
-        public readonly Dictionary<string, object> Properties;
-
-        /// <summary>
-        /// Construct a DeviceInfo; it will directly reference the given dictionary (no copying).
-        /// </summary>
-        public DeviceInfo(string id, string name, Dictionary<string, object> properties)
-        {
-            Id = id;
-            Name = name;
-            Properties = properties;
-        }
-    }
-
     // Information about an audio graph.
     // This marshalable struct corresponds to the C++ P/Invokable type.
     // Since this has no fields that have particular units (e.g. no durations or times),
@@ -242,6 +223,13 @@ namespace NowSoundLib
     public enum PluginInstanceIndex
     {
         Undefined = 0
+    }
+
+    public struct PluginInstanceInfo
+    {
+        public readonly PluginId NowSoundPluginId;
+        public readonly ProgramId NowSoundProgramId;
+        public readonly Int32 DryWet_0_100;
     }
 
     /// <summary>
@@ -604,6 +592,31 @@ namespace NowSoundLib
             return NowSoundGraph_AddInputPluginInstance(audioInputId, pluginId, programId, dryWet_0_100);
         }
 
+        [DllImport("NowSoundLib")]
+        static extern int NowSoundGraph_GetInputPluginInstanceCount(AudioInputId audioInputId);
+
+
+        /// <summary>
+        /// Get the number of plugin instances on this input.
+        /// </summary>
+        public static int GetInputPluginInstanceCount(AudioInputId audioInputId)
+        {
+            return NowSoundGraph_GetInputPluginInstanceCount(audioInputId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern PluginInstanceInfo NowSoundGraph_GetInputPluginInstanceInfo(AudioInputId audioInputId, PluginInstanceIndex index);
+
+
+        /// <summary>
+        /// Get info about a plugin instance on an input.
+        /// </summary>
+        public static PluginInstanceInfo GetInputPluginInstanceInfo(AudioInputId audioInputId, PluginInstanceIndex index)
+        {
+            return NowSoundGraph_GetInputPluginInstanceInfo(audioInputId, index);
+        }
+
+
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_SetInputPluginInstanceDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100);
@@ -616,7 +629,9 @@ namespace NowSoundLib
         [DllImport("NowSoundLib")]
         static extern void NowSoundGraph_DeleteInputPluginInstance(AudioInputId audioInputId, PluginInstanceIndex index);
 
-        // Delete a plugin instance.
+        /// <summary>
+        /// Delete a plugin instance.
+        /// </summary>
         public static void DeleteInputPluginInstance(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex)
         {
             NowSoundGraph_DeleteInputPluginInstance(audioInputId, pluginInstanceIndex);
@@ -726,6 +741,31 @@ namespace NowSoundLib
         {
             return NowSoundTrack_AddPluginInstance(trackId, pluginId, programId, dryWet_0_100);
         }
+
+        [DllImport("NowSoundLib")]
+        static extern int NowSoundTrack_GetPluginInstanceCount(TrackId trackId);
+
+
+        /// <summary>
+        /// Get the number of plugin instances on this track.
+        /// </summary>
+        public static int GetPluginInstanceCount(TrackId trackId)
+        {
+            return NowSoundTrack_GetPluginInstanceCount(trackId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern PluginInstanceInfo NowSoundTrack_GetPluginInstanceInfo(TrackId trackId, PluginInstanceIndex index);
+
+
+        /// <summary>
+        /// Get info about a plugin instance on a track.
+        /// </summary>
+        public static PluginInstanceInfo GetInputPluginInstanceInfo(TrackId trackId, PluginInstanceIndex index)
+        {
+            return NowSoundTrack_GetPluginInstanceInfo(trackId, index);
+        }
+
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]

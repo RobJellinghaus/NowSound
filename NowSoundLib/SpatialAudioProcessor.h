@@ -25,10 +25,10 @@ namespace NowSound
         // if so, output audio is zeroed
         bool _isMuted;
 
-        // vector of PluginInstanceStates
-        std::vector<PluginInstanceState>  _pluginInstances;
+        // instantiated plugin instances
+        std::vector<NowSoundPluginInstanceInfo>  _pluginInstances;
 
-        // parallel vector of plugin nodeIds
+        // instantiated plugin node IDs
         std::vector<juce::AudioProcessorGraph::NodeID> _pluginNodeIds;
 
         // MeasurementAudioProcessor that carries the output of the effect chain.
@@ -80,6 +80,12 @@ namespace NowSound
         // (e.g. plugin instance IDs are really just indexes into the current sequence, not
         // persistent values.)
         void DeletePluginInstance(PluginInstanceIndex pluginInstanceIndex);
+
+        // Get the number of plugin instances on this input.
+        int GetPluginInstanceCount();
+
+        // Get info about a plugin instance.
+        NowSoundPluginInstanceInfo GetPluginInstanceInfo(PluginInstanceIndex pluginInstanceIndex);
 
     protected: 
         static std::wstring MakeName(const wchar_t* label, int id)
