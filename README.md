@@ -55,11 +55,7 @@ needing to be involved.
 
 If you are interested in NowSound, check out the project which motivated me to write it:
 [my gestural Kinect-and-mixed-reality live looper, Holofunk](http://holofunk.com).  You might also
-enjoy [my blog](http://robjsoftware.info) and in particular [this post about why I need
-this sound library for my Holofunk project](https://robjsoftware.info/2017/12/02/big-ol-2017-mega-update-progress-almost-entirely-invisible/).
-(Though it turns out that I was wrong about one thing there: AudioGraph is *not* managed
-only, and when I realized this, I realized AudioGraph was the path of least resistance
-for this library.)
+enjoy [my blog](http://robjsoftware.info).
 
 ## Code Patterns
 
