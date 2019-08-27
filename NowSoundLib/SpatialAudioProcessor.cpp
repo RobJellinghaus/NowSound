@@ -161,7 +161,7 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
         pluginInstanceIndex == _pluginNodeIds.size()
         ? OutputProcessor()->NodeId()
         : _pluginNodeIds[pluginInstanceIndex];
-    
+
     // drop the node and all connections 
     Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedNodeId));
 
@@ -171,6 +171,15 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
 
     // and clean up _pluginNodeIds
     _pluginNodeIds.erase(_pluginNodeIds.begin() + (pluginInstanceIndex - 1));
+
+    {
+        std::wstringstream wstr{};
+        wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedNodeId.uid
+            << L", connected prior node " << priorNodeId.uid
+            << L" to subsequent node " << subsequentNodeId.uid
+            << L"; remaining plugin node ID count " << _pluginNodeIds.size();
+        Graph()->Log(wstr.str());
+    }
 
     // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
     Graph()->JuceGraphChanged();

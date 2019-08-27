@@ -69,11 +69,6 @@ namespace NowSound
             std::wstringstream wstr{};
             wstr << getName() << L"::processBlock: count " << NextCounter();
             NowSoundGraph::Instance()->Log(wstr.str());
-                
-            if (_audioInputId == AudioInput1)
-            {
-                Graph()->LogConnections();
-            }
         }
 
         // HACK!!!  If this is the zeroth input, then update the audio graph time.

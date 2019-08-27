@@ -66,14 +66,6 @@ namespace NowSound
         // Graph must be at least Initialized.
         NowSoundGraphInfo Info();
 
-        // Information about the raw mono input signal.
-        // Graph must be at least Initialized.
-        NowSoundSignalInfo RawInputSignalInfo(AudioInputId audioInputId);
-
-        // Information about a post-effects input signal.
-        // Graph must be at least Initialized.
-        NowSoundSignalInfo InputSignalInfo(AudioInputId audioInputId);
-
         // Information about the final mixed output signal.
         // Graph must be at least Initialized.
         NowSoundSignalInfo OutputSignalInfo();
