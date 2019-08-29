@@ -478,14 +478,38 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_StartRecording(StringBuilder fileName);
+
+        /// <summary>
+        /// Start recording to the given file (WAV format); if already recording, this is ignored.
+        /// </summary>
+        public static void StartRecording(StringBuilder fileName)
+        {
+            NowSoundGraph_StartRecording(fileName);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_StopRecording();
+
+        /// <summary>
+        /// Stop recording and close the file; if not recording, this is ignored.
+        /// </summary>
+        public static void StopRecording()
+        {
+            NowSoundGraph_StopRecording();
+        }
+
+        [DllImport("NowSoundLib")]
         static extern TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId id);
 
         /// <summary>
         /// Create a new track and begin recording.
-        /// Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
+        /// </summary>
+        /// <remarks>
+        /// Graph must be Running.
         /// TrackId returned from native code is incremented for TrackId on this end, to ensure any default
         /// TrackId values are treated as uninitialized.
-        /// </summary>
+        /// </remarks>
         public static TrackId CreateRecordingTrackAsync(AudioInputId id)
         {
             return NowSoundGraph_CreateRecordingTrackAsync(id);

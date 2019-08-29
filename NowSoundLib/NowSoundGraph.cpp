@@ -837,6 +837,18 @@ namespace NowSound
         }
     }
 
+    // Start recording to the given filename (WAV format); if already recording, this is ignored.
+    void NowSoundGraph::StartRecording(LPWSTR fileName, int32_t fileNameLength)
+    {
+
+    }
+
+    // Stop recording and close the file; if not recording, this is ignored.
+    void NowSoundGraph::StopRecording()
+    {
+
+    }
+
     void NowSoundGraph::ShutdownInstance()
     {
         // SHUT. DOWN. EVERYTHING

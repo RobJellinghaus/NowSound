@@ -110,6 +110,12 @@ namespace NowSound
         // The JucePlugin_Build_Unity preprocessor flag affects this behavior, but I am not going to mess with that just yet.
         void MessageTick();
 
+        // Start recording to the given filename (WAV format); if already recording, this is ignored.
+        void StartRecording(LPWSTR fileName, int32_t fileNameLength);
+
+        // Stop recording and close the file; if not recording, this is ignored.
+        void StopRecording();
+
     public: // Plugin support
 
         // Plugin searching requires setting paths to search.

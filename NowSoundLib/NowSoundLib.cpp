@@ -208,6 +208,18 @@ namespace NowSound
         NowSoundGraph::Instance()->MessageTick();
     }
 
+    void NowSoundGraph_StartRecording(LPWSTR fileName, int32_t fileNameLength)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->StartRecording(fileName, fileNameLength);
+    }
+
+    void NowSoundGraph_StopRecording()
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->StopRecording();
+    }
+
     // Plugin searching requires setting paths to search.
     // TODO: make this use the idiom for passing in strings rather than StringBuilders.
     void NowSoundGraph_AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity)

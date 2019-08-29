@@ -119,6 +119,12 @@ namespace NowSound
         // Terrible hack to work around message pump issues.
         __declspec(dllexport) void NowSoundGraph_MessageTick();
 
+        // Start recording to the given file (WAV format); if already recording, this is ignored.
+        __declspec(dllexport) void NowSoundGraph_StartRecording(LPWSTR fileName, int32_t fileNameLength);
+
+        // Stop recording and close the file; if not recording, this is ignored.
+        __declspec(dllexport) void NowSoundGraph_StopRecording();
+
         // Plugin searching requires setting paths to search.
         // TODO: make this use the idiom for passing in strings rather than StringBuilders.
         __declspec(dllexport) void NowSoundGraph_AddPluginSearchPath(LPWSTR wcharBuffer, int32_t bufferCapacity);
