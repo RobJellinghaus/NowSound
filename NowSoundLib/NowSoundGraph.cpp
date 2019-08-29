@@ -840,13 +840,24 @@ namespace NowSound
     // Start recording to the given filename (WAV format); if already recording, this is ignored.
     void NowSoundGraph::StartRecording(LPWSTR fileName, int32_t fileNameLength)
     {
+        // pass this request along to the output node
+        Check(State() == NowSoundGraphState::GraphRunning);
 
+        // The output mix is what we want to record, and conveniently we already have a MeasurementAudioProcessor
+        // tracking the final mix.
+        MeasurementAudioProcessor* outputMixProcessor = dynamic_cast<MeasurementAudioProcessor*>(
+            _audioOutputMixNodePtr->getProcessor());
+
+        outputMixProcessor->StartRecording(fileName, fileNameLength);
     }
 
     // Stop recording and close the file; if not recording, this is ignored.
     void NowSoundGraph::StopRecording()
     {
+        MeasurementAudioProcessor* outputMixProcessor = dynamic_cast<MeasurementAudioProcessor*>(
+            _audioOutputMixNodePtr->getProcessor());
 
+        outputMixProcessor->StopRecording();
     }
 
     void NowSoundGraph::ShutdownInstance()
