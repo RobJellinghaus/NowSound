@@ -2,7 +2,9 @@
 // Licensed under the MIT license
 
 using NowSoundLib;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
@@ -20,6 +22,13 @@ namespace NowSoundWinFormsApp
         private List<TrackRow> _trackRows = new List<TrackRow>();
 
         private StringBuilder _logBuilder = new StringBuilder(1024);
+
+        /// <summary>
+        /// Are we currently recording output audio into a file?
+        /// </summary>
+        private bool _isRecordingToFile = false;
+
+        public bool IsRecordingToFile => _isRecordingToFile;
 
         private void _newTrackButton_Click(object sender, System.EventArgs e)
         {
@@ -59,6 +68,44 @@ namespace NowSoundWinFormsApp
             }
 
             WriteAllLogMessagesToDebugConsole();
+        }
+
+        public void StartRecording()
+        {
+            Contract.Requires(!IsRecordingToFile);
+
+            string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string recordingsPath = Path.Combine(myDocumentsPath, "HolofunkRecordings");
+            Directory.CreateDirectory(recordingsPath);
+
+            DateTime now = DateTime.Now;
+            string recordingFile = Path.Combine(recordingsPath, now.ToString("yyyyMMdd_HHmmss.wav"));
+            StringBuilder buffer = new StringBuilder(recordingFile);
+
+            _isRecordingToFile = true;
+            NowSoundGraphAPI.StartRecording(buffer);
+        }
+
+        public void StopRecording()
+        {
+            Contract.Requires(IsRecordingToFile);
+
+            _isRecordingToFile = false;
+            NowSoundGraphAPI.StopRecording();
+        }
+
+        private void RecordToFileButton_Click(object sender, EventArgs e)
+        {
+            if (IsRecordingToFile)
+            {
+                StopRecording();
+                recordToFileButton.Text = "Record audio to file";
+            }
+            else
+            {
+                StartRecording();
+                recordToFileButton.Text = "Stop recording to file";
+            }
         }
     }
 }

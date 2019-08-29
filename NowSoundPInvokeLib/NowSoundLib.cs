@@ -2,7 +2,6 @@
 // Licensed under the MIT license
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -789,7 +788,6 @@ namespace NowSoundLib
         {
             return NowSoundTrack_GetPluginInstanceInfo(trackId, index);
         }
-
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]

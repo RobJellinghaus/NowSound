@@ -149,6 +149,7 @@ namespace NowSoundWinFormsApp
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this._newTrackButton = new System.Windows.Forms.Button();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
+            this.recordToFileButton = new System.Windows.Forms.Button();
             this._tracksPanel.SuspendLayout();
             this.inputPanel0.SuspendLayout();
             this.inputPanel1.SuspendLayout();
@@ -160,6 +161,7 @@ namespace NowSoundWinFormsApp
             this._tracksPanel.Controls.Add(this.inputPanel0);
             this._tracksPanel.Controls.Add(this.inputPanel1);
             this._tracksPanel.Controls.Add(this._newTrackButton);
+            this._tracksPanel.Controls.Add(this.recordToFileButton);
             this._tracksPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this._tracksPanel.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this._tracksPanel.Location = new System.Drawing.Point(0, 0);
@@ -223,6 +225,16 @@ namespace NowSoundWinFormsApp
             this.timer1.Interval = 20;
             this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
+            // recordToFileButton
+            // 
+            this.recordToFileButton.Location = new System.Drawing.Point(3, 113);
+            this.recordToFileButton.Name = "recordToFileButton";
+            this.recordToFileButton.Size = new System.Drawing.Size(135, 23);
+            this.recordToFileButton.TabIndex = 5;
+            this.recordToFileButton.Text = "Record Audio To File";
+            this.recordToFileButton.UseVisualStyleBackColor = true;
+            this.recordToFileButton.Click += new System.EventHandler(this.RecordToFileButton_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -249,6 +261,7 @@ namespace NowSoundWinFormsApp
         private System.Windows.Forms.Panel inputPanel1;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel0;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
+        private System.Windows.Forms.Button recordToFileButton;
     }
 }
 

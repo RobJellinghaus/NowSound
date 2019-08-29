@@ -112,12 +112,7 @@ void MeasurementAudioProcessor::StartRecording(LPWSTR fileName, int32_t fileName
         return;
     }
 
-    auto parentDir = File::getSpecialLocation(File::userDocumentsDirectory);
-    auto childDir = parentDir.getChildFile(juce::String(L"HolofunkRecordings"));
-    childDir.createDirectory();
-
-    juce::String fileNameString{ fileName };
-    _recordingFile = childDir.getChildFile(fileNameString);
+    _recordingFile = File{ String{ fileName } };
 
     // TODO: test if this actually works... can we reuse threads across multiple ThreadedWriters?
     if (_recordingThread.get() == nullptr)
