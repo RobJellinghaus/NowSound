@@ -118,6 +118,7 @@ void MeasurementAudioProcessor::StartRecording(LPWSTR fileName, int32_t fileName
     if (_recordingThread.get() == nullptr)
     {
         _recordingThread.reset(new TimeSliceThread(L"MeasurementAudioProcessor::_recordingThread"));
+        _recordingThread->startThread();
     }
 
     if (auto fileStream = std::unique_ptr<FileOutputStream>(_recordingFile.createOutputStream()))
@@ -137,6 +138,7 @@ void MeasurementAudioProcessor::StartRecording(LPWSTR fileName, int32_t fileName
             std::lock_guard<std::mutex> recordingLock(_recordingMutex);
             // and update the rendezvous pointer field
             _recordingThreadedWriterPointer = _recordingThreadedWriter.get();
+            _recordingThreadedWriterPointer->setFlushInterval(Clock::Instance().SampleRateHz() / 4); // only lose 1/4 second at most between flushes
         }
     }
 }

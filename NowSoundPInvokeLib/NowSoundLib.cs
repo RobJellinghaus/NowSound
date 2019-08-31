@@ -477,7 +477,7 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_StartRecording(StringBuilder fileName);
+        static extern void NowSoundGraph_StartRecording([MarshalAs(UnmanagedType.LPWStr)] StringBuilder fileName);
 
         /// <summary>
         /// Start recording to the given file (WAV format); if already recording, this is ignored.

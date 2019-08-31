@@ -4,6 +4,7 @@
 using NowSoundLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -77,10 +78,12 @@ namespace NowSoundWinFormsApp
             string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             string recordingsPath = Path.Combine(myDocumentsPath, "HolofunkRecordings");
             Directory.CreateDirectory(recordingsPath);
+            Debug.WriteLine($"Form1.StartRecording(): Created directory {recordingsPath}");
 
             DateTime now = DateTime.Now;
             string recordingFile = Path.Combine(recordingsPath, now.ToString("yyyyMMdd_HHmmss.wav"));
             StringBuilder buffer = new StringBuilder(recordingFile);
+            Debug.WriteLine($"Form1.StartRecording(): Starting recording to file {recordingFile}");
 
             _isRecordingToFile = true;
             NowSoundGraphAPI.StartRecording(buffer);
