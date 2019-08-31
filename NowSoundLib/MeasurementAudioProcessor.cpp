@@ -133,12 +133,12 @@ void MeasurementAudioProcessor::StartRecording(LPWSTR fileName, int32_t fileName
             // Now we'll create one of these helper objects which will act as a FIFO buffer, and will
             // write the data to disk on our background thread.
             _recordingThreadedWriter.reset(new AudioFormatWriter::ThreadedWriter(writer, *_recordingThread, 32768));
+            _recordingThreadedWriter->setFlushInterval(Clock::Instance().SampleRateHz() / 4); // only lose 1/4 second at most between flushes
 
             // time to lock to prevent racing against the audio thread
             std::lock_guard<std::mutex> recordingLock(_recordingMutex);
             // and update the rendezvous pointer field
             _recordingThreadedWriterPointer = _recordingThreadedWriter.get();
-            _recordingThreadedWriterPointer->setFlushInterval(Clock::Instance().SampleRateHz() / 4); // only lose 1/4 second at most between flushes
         }
     }
 }
