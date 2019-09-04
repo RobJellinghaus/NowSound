@@ -477,12 +477,12 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_StartRecording([MarshalAs(UnmanagedType.LPWStr)] StringBuilder fileName);
+        static extern void NowSoundGraph_StartRecording([MarshalAs(UnmanagedType.LPWStr)] string fileName);
 
         /// <summary>
         /// Start recording to the given file (WAV format); if already recording, this is ignored.
         /// </summary>
-        public static void StartRecording(StringBuilder fileName)
+        public static void StartRecording(string fileName)
         {
             NowSoundGraph_StartRecording(fileName);
         }
@@ -527,15 +527,15 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
+        static extern void NowSoundGraph_AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] string buffer);
 
         /// <summary>
         /// Plugin searching requires setting paths to search.
         /// TODO: make this use the idiom for passing in strings rather than StringBuilders.
         /// </summary>
-        public static void AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        public static void AddPluginSearchPath(string buffer)
         {
-            NowSoundGraph_AddPluginSearchPath(buffer, bufferCapacity);
+            NowSoundGraph_AddPluginSearchPath(buffer);
         }
        
         [DllImport("NowSoundLib")]
@@ -568,18 +568,18 @@ namespace NowSoundLib
         /// <summary>
         /// Get the name of the Nth plugin. Note that IDs are 1-based.
         /// </summary>
-        public static void PluginName(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        public static void PluginName(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer)
         {
-            NowSoundGraph_PluginName(pluginId, buffer, bufferCapacity);
+            NowSoundGraph_PluginName(pluginId, buffer, buffer.Capacity);
         }
 
         [DllImport("NowSoundLib")]
-        static extern bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pathnameBuffer);
+        static extern bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string pathnameBuffer);
 
         /// <summary>
-        /// Get the name of the Nth plugin. Note that IDs are 1-based.
+        /// Load all the programs for the given plugin from the given directory.
         /// </summary>
-        public static bool LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pathnameBuffer)
+        public static bool LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string pathnameBuffer)
         {
             return NowSoundGraph_LoadPluginPrograms(pluginId, pathnameBuffer);
         }
@@ -601,9 +601,9 @@ namespace NowSoundLib
         /// <summary>
         /// Get the name of the specified plugin's program.  Note that IDs are 1-based.
         /// </summary>
-        public static void PluginProgramName(PluginId pluginId, ProgramId programId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity)
+        public static void PluginProgramName(PluginId pluginId, ProgramId programId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer)
         {
-            NowSoundGraph_PluginProgramName(pluginId, programId, buffer, bufferCapacity);
+            NowSoundGraph_PluginProgramName(pluginId, programId, buffer, buffer.Capacity);
         }
 
         // Add an instance of the given plugin on the given track.

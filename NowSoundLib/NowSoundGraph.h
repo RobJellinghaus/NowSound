@@ -127,6 +127,8 @@ namespace NowSound
         // Returns true if no errors in searching, or false if there were errors (printed to debug log, hopefully).
         bool SearchPluginsSynchronously();
 
+        void ScanPluginFormat(juce::AudioPluginFormat* vstFormat);
+
         // How many plugins?
         int PluginCount();
 

@@ -82,11 +82,10 @@ namespace NowSoundWinFormsApp
 
             DateTime now = DateTime.Now;
             string recordingFile = Path.Combine(recordingsPath, now.ToString("yyyyMMdd_HHmmss.wav"));
-            StringBuilder buffer = new StringBuilder(recordingFile);
             Debug.WriteLine($"Form1.StartRecording(): Starting recording to file {recordingFile}");
 
             _isRecordingToFile = true;
-            NowSoundGraphAPI.StartRecording(buffer);
+            NowSoundGraphAPI.StartRecording(recordingFile);
         }
 
         public void StopRecording()

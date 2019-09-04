@@ -569,12 +569,18 @@ namespace NowSound
         for (int i = 0; i < _audioPluginFormatManager.getNumFormats(); i++)
         {
             vstFormat = _audioPluginFormatManager.getFormat(i);
-            if (vstFormat->getName() == String(L"VST"))
+            if (vstFormat->getName().startsWith(String(L"VST")))
             {
-                break;
+                ScanPluginFormat(vstFormat);
             }
         }
 
+        // and that's it!
+        return true;
+    }
+
+    void NowSoundGraph::ScanPluginFormat(juce::AudioPluginFormat* vstFormat)
+    {
         Check(vstFormat != nullptr);
 
         FileSearchPath fileSearchPath{};
@@ -600,9 +606,6 @@ namespace NowSound
         {
             _loadedPluginPrograms.push_back(std::vector<PluginProgram>{});
         }
-
-        // and that's it!
-        return true;
     }
 
     int NowSoundGraph::PluginCount()

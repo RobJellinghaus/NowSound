@@ -44,14 +44,14 @@ namespace NowSoundWinFormsApp
         /// <summary>
         /// The list of programs (e.g. sound effects we can apply).
         /// </summary>
-        private readonly List<string> _programs;
+        private readonly List<(string, PluginId, ProgramId)> _programs;
 
         /// <summary>
         /// The list of program instances (e.g. active sound effects on this input); each value here is a 1-based index into _programs.
         /// </summary>
         private readonly List<int> _programInstances;
 
-        public InputRow(AudioInputId audioInputId, FlowLayoutPanel parent, List<string> programs)
+        public InputRow(AudioInputId audioInputId, FlowLayoutPanel parent, List<(string, PluginId, ProgramId)> programs)
         {
             _audioInputId = audioInputId;
             _fftBuffer = new float[MagicConstants.OutputBinCount];
@@ -73,7 +73,7 @@ namespace NowSoundWinFormsApp
                 MinimumSize = new Size(100, 20),
                 MaximumSize = new Size(100, 20)
             };
-            _effectCombo.Items.AddRange(programs.Cast<object>().ToArray());
+            _effectCombo.Items.AddRange(programs.Select(item => item.Item1).Cast<object>().ToArray());
             _effectCombo.SelectedIndexChanged += EffectComboSelectedIndexChanged;
 
             _trackRowPanel = new FlowLayoutPanel
@@ -93,12 +93,12 @@ namespace NowSoundWinFormsApp
             if (index >= 0)
             {
                 // a program was picked.  Apply it
-                NowSoundGraphAPI.AddInputPluginInstance(_audioInputId, (PluginId)1, (ProgramId)(index + 1), 100);
+                NowSoundGraphAPI.AddInputPluginInstance(_audioInputId, _programs[index].Item2, _programs[index].Item3, 100);
 
                 // and add a new label for it 
                 _trackRowPanel.Controls.Add(new Label
                 {
-                    Text = _programs[index],
+                    Text = _programs[index].Item1,
                     AutoSize = true,
                     MinimumSize = new Size(50, 20),
                     MaximumSize = new Size(50, 20),
@@ -112,6 +112,9 @@ namespace NowSoundWinFormsApp
                 };
                 deleteButton.Click += DeleteButton_Click;
                 _trackRowPanel.Controls.Add(deleteButton);
+
+                // and spam
+                NowSoundGraphAPI.LogConnections();
             }
         }
 
@@ -138,6 +141,9 @@ namespace NowSoundWinFormsApp
                     _trackRowPanel.Controls.RemoveAt(index - 1);
                     // and remove at index - 1 again, thereby removing the button itself
                     _trackRowPanel.Controls.RemoveAt(index - 1);
+
+                    // and spam
+                    NowSoundGraphAPI.LogConnections();
 
                     // and we're done
                     break;

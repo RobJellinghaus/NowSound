@@ -5,6 +5,7 @@ using NowSoundLib;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,8 +72,8 @@ namespace NowSoundWinFormsApp
             Console.WriteLine($"Pseudo-awaited; reachedState {reachedState}");
 
             // Now let's scan!
-            StringBuilder builder = new StringBuilder(@"C:\Program Files\Steinberg\VSTPlugins");
-            NowSoundGraphAPI.AddPluginSearchPath(builder, builder.Length);
+            NowSoundGraphAPI.AddPluginSearchPath(@"C:\Program Files\Steinberg\VSTPlugins");
+            NowSoundGraphAPI.AddPluginSearchPath(@"C:\Program Files\VSTPlugins");
 
             bool searched = NowSoundGraphAPI.SearchPluginsSynchronously();
             Contract.Assert(searched);
@@ -80,26 +81,27 @@ namespace NowSoundWinFormsApp
             int pluginCount = NowSoundGraphAPI.PluginCount();
             StringBuilder buffer = new StringBuilder(100);
 
-            List<string> programs = new List<string>();
-            for (int pluginIndex = 1; pluginIndex <= pluginCount; pluginIndex++)
-            {
-                NowSoundGraphAPI.PluginName((PluginId)pluginIndex, buffer, buffer.Capacity);
-                string pluginName = buffer.ToString();
-                Debug.WriteLine($"Plugin #{pluginIndex}: '{pluginName}'");
+            string presetDirectory = @"C:\git\holofunk2\presets";
 
-                if (pluginName == "Manipulator")
+            List<(string, PluginId, ProgramId)> programs = new List<(string, PluginId, ProgramId)>();
+            for (PluginId pluginIndex = (PluginId)1; pluginIndex <= (PluginId)pluginCount; pluginIndex++)
+            {
+                NowSoundGraphAPI.PluginName((PluginId)pluginIndex, buffer);
+                string pluginName = buffer.ToString();
+                Console.WriteLine($"Plugin #{pluginIndex}: '{pluginName}'");
+
+                string pluginPresetPath = Path.Combine(presetDirectory, pluginName);
+                if (Directory.Exists(pluginPresetPath))
                 {
-                    buffer.Clear();
-                    buffer.Append(@"C:\git\holofunk2\presets\Manipulator");
-                    NowSoundGraphAPI.LoadPluginPrograms((PluginId)pluginIndex, buffer);
+                    NowSoundGraphAPI.LoadPluginPrograms((PluginId)pluginIndex, pluginPresetPath);
 
                     int programCount = NowSoundGraphAPI.PluginProgramCount((PluginId)pluginIndex);
-                    for (int programIndex = 1; programIndex <= programCount; programIndex++)
+                    for (ProgramId programIndex = (ProgramId)1; programIndex <= (ProgramId)programCount; programIndex++)
                     {
-                        NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer, buffer.Capacity);
+                        NowSoundGraphAPI.PluginProgramName((PluginId)pluginIndex, (ProgramId)programIndex, buffer);
                         string programName = buffer.ToString();
-                        programs.Add(programName);
-                        Debug.WriteLine($"    Program #{programIndex}: '{programName}'");
+                        programs.Add(($"{pluginName[0]}: {programName}", pluginIndex, programIndex));
+                        Console.WriteLine($"    Program #{programIndex}: '{programName}'");
                     }
                 }
             }
