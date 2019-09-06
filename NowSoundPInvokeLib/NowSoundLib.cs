@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -231,6 +232,40 @@ namespace NowSoundLib
         public readonly Int32 DryWet_0_100;
     }
 
+    public class Id
+    {
+        public static void Check(int id)
+        {
+            Contract.Requires(id >= 1);
+        }
+
+        public static void Check(AudioInputId id)
+        {
+            // only up to stereo for now
+            Check((int)id);
+        }
+
+        public static void Check(TrackId id)
+        {
+            Check((int)id);
+        }
+
+        public static void Check(PluginId id)
+        {
+            Check((int)id);
+        }
+
+        public static void Check(ProgramId id)
+        {
+            Check((int)id);
+        }
+
+        public static void Check(PluginInstanceIndex index)
+        {
+            Check((int)index);
+        }
+    }
+
     /// <summary>
     /// Operations on the audio graph as a whole.
     /// </summary>
@@ -302,6 +337,14 @@ namespace NowSoundLib
             int centralBinIndex,
             int fftSize)
         {
+            Contract.Requires(outputBinCount > 0);
+            Contract.Requires(centralFrequency > 20); // hz
+            Contract.Requires(octaveDivisions > 0);
+            Contract.Requires(centralBinIndex > 0);
+            Contract.Requires(fftSize > 0);
+            // power of two (should check for just one 1-bit but oh well)
+            Contract.Requires((fftSize & 0xff) == 0);
+
             NowSoundGraph_InitializeInstance(
                 outputBinCount,
                 centralFrequency,
@@ -319,7 +362,13 @@ namespace NowSoundLib
         /// </summary>
         public static NowSoundGraphInfo Info()
         {
-            return NowSoundGraph_Info();
+            NowSoundGraphInfo info = NowSoundGraph_Info();
+            Contract.Assert(info.BitsPerSample == 32);
+            Contract.Assert(info.ChannelCount == 2);
+            Contract.Assert(info.LatencyInSamples > 0);
+            Contract.Assert(info.SampleRate > 0);
+            Contract.Assert(info.SamplesPerQuantum > 0);
+            return info;
         }
 
         [DllImport("NowSoundLib")]
@@ -338,11 +387,13 @@ namespace NowSoundLib
         static extern void NowSoundGraph_GetLogMessage(Int32 logMessageIndex, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer, Int32 bufferCapacity);
 
         /// <summary>
-        /// Get the current track frequency histogram.
-        /// Returns true if there was enough data to update the buffer, or false if there was not.
+        /// Get the log message with the given index.
         /// </summary>
         public static void GetLogMessage(int logMessageIndex, StringBuilder buffer)
         {
+            Contract.Requires(logMessageIndex >= 0);
+            Contract.Requires(buffer != null);
+
             NowSoundGraph_GetLogMessage(logMessageIndex, buffer, buffer.Capacity);
         }
 
@@ -350,12 +401,12 @@ namespace NowSoundLib
         static extern void NowSoundGraph_DropLogMessages(Int32 logMessageIndex);
 
         /// <summary>
-        /// Get the current track frequency histogram.
-        /// Returns true if there was enough data to update the buffer, or false if there was not.
+        /// Drop log messages up to (not including) the given index.
         /// </summary>
-        /// <param name="logMessageIndex"></param>
         public static void DropLogMessages(int logMessageIndex)
         {
+            Contract.Requires(logMessageIndex > 0);
+
             NowSoundGraph_DropLogMessages(logMessageIndex);
         }
 
@@ -409,21 +460,6 @@ namespace NowSoundLib
             return NowSoundGraph_OutputSignalInfo();
         }
 
-        // TODO: add query methods for device ID & name taking StringBuilder
-
-        [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_InitializeDeviceInputs(int deviceIndex);
-
-        /// <summary>
-        /// Initialize the given device, given its index (as passed to InputDeviceInfo); returns the AudioInputId of the
-        /// input device.  If the input device has multiple channels, multiple consecutive AudioInputIds will be allocated,
-        /// but only the first will be returned.
-        /// </summary>
-        public static void InitializeDeviceInputs(int deviceIndex)
-        {
-            NowSoundGraph_InitializeDeviceInputs(deviceIndex);
-        }
-
         [DllImport("NowSoundLib")]
         static extern NowSoundTimeInfo NowSoundGraph_TimeInfo();
 
@@ -434,7 +470,12 @@ namespace NowSoundLib
         /// <returns></returns>
         public static TimeInfo TimeInfo()
         {
-            return new TimeInfo(NowSoundGraph_TimeInfo());
+            TimeInfo result = new TimeInfo(NowSoundGraph_TimeInfo());
+            Contract.Assert(result.BeatInMeasure >= 0);
+            Contract.Assert(result.BeatsPerMinute > 0);
+            Contract.Assert((float)result.ExactBeat >= 0);
+            Contract.Assert((int)result.TimeInSamples >= 0);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -459,6 +500,8 @@ namespace NowSoundLib
         // Returns true if there was enough data to update the buffer, or false if there was not.
         public static bool GetInputFrequencies(AudioInputId audioInputId, float[] floatBuffer, int floatBufferCapacity)
         {
+            Id.Check(audioInputId);
+
             return NowSoundGraph_GetInputFrequencies(audioInputId, floatBuffer, floatBufferCapacity);
         }
 
@@ -484,6 +527,8 @@ namespace NowSoundLib
         /// </summary>
         public static void StartRecording(string fileName)
         {
+            Contract.Requires(!string.IsNullOrEmpty(fileName));
+
             NowSoundGraph_StartRecording(fileName);
         }
 
@@ -511,7 +556,11 @@ namespace NowSoundLib
         /// </remarks>
         public static TrackId CreateRecordingTrackAsync(AudioInputId id)
         {
-            return NowSoundGraph_CreateRecordingTrackAsync(id);
+            Id.Check(id);
+
+            TrackId result = NowSoundGraph_CreateRecordingTrackAsync(id);
+            Id.Check(result);
+            return result;
         }
 
 
@@ -523,19 +572,24 @@ namespace NowSoundLib
         /// </summary>
         public static void DeleteTrack(TrackId trackId)
         {
+            Id.Check(trackId);
+
             NowSoundGraph_DeleteTrack(trackId);
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] string buffer);
+        static extern void NowSoundGraph_AddPluginSearchPath([MarshalAs(UnmanagedType.LPWStr)] string path);
 
         /// <summary>
         /// Plugin searching requires setting paths to search.
         /// TODO: make this use the idiom for passing in strings rather than StringBuilders.
         /// </summary>
-        public static void AddPluginSearchPath(string buffer)
+        public static void AddPluginSearchPath(string path)
         {
-            NowSoundGraph_AddPluginSearchPath(buffer);
+            Contract.Requires(!string.IsNullOrEmpty(path));
+            Contract.Requires(Directory.Exists(path));
+
+            NowSoundGraph_AddPluginSearchPath(path);
         }
        
         [DllImport("NowSoundLib")]
@@ -559,7 +613,9 @@ namespace NowSoundLib
         /// </summary>
         public static int PluginCount()
         {
-            return NowSoundGraph_PluginCount();
+            int count = NowSoundGraph_PluginCount();
+            Contract.Assert(count >= 0);
+            return count;
         }
 
         [DllImport("NowSoundLib")]
@@ -570,18 +626,26 @@ namespace NowSoundLib
         /// </summary>
         public static void PluginName(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer)
         {
+            Id.Check(pluginId);
+            Contract.Requires(buffer != null);
+            Contract.Requires(buffer.Capacity > 0);
+
             NowSoundGraph_PluginName(pluginId, buffer, buffer.Capacity);
         }
 
         [DllImport("NowSoundLib")]
-        static extern bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string pathnameBuffer);
+        static extern bool NowSoundGraph_LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string path);
 
         /// <summary>
         /// Load all the programs for the given plugin from the given directory.
         /// </summary>
-        public static bool LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string pathnameBuffer)
+        public static bool LoadPluginPrograms(PluginId pluginId, [MarshalAs(UnmanagedType.LPWStr)] string path)
         {
-            return NowSoundGraph_LoadPluginPrograms(pluginId, pathnameBuffer);
+            Id.Check(pluginId);
+            Contract.Requires(!string.IsNullOrEmpty(path));
+            Contract.Requires(Directory.Exists(path));
+
+            return NowSoundGraph_LoadPluginPrograms(pluginId, path);
         }
 
         [DllImport("NowSoundLib")]
@@ -592,7 +656,11 @@ namespace NowSoundLib
         /// </summary>
         public static int PluginProgramCount(PluginId pluginId)
         {
-            return NowSoundGraph_PluginProgramCount(pluginId);
+            Id.Check(pluginId);
+
+            int result = NowSoundGraph_PluginProgramCount(pluginId);
+            Contract.Assert(result >= 0);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -603,6 +671,11 @@ namespace NowSoundLib
         /// </summary>
         public static void PluginProgramName(PluginId pluginId, ProgramId programId, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buffer)
         {
+            Id.Check(pluginId);
+            Id.Check(programId);
+            Contract.Requires(buffer != null);
+            Contract.Requires(buffer.Capacity > 0);
+
             NowSoundGraph_PluginProgramName(pluginId, programId, buffer, buffer.Capacity);
         }
 
@@ -612,7 +685,15 @@ namespace NowSoundLib
 
         public static PluginInstanceIndex AddInputPluginInstance(AudioInputId audioInputId, PluginId pluginId, ProgramId programId, int dryWet_0_100)
         {
-            return NowSoundGraph_AddInputPluginInstance(audioInputId, pluginId, programId, dryWet_0_100);
+            Id.Check(audioInputId);
+            Id.Check(pluginId);
+            Id.Check(programId);
+            Contract.Requires(dryWet_0_100 >= 0);
+            Contract.Requires(dryWet_0_100 <= 100);
+
+            PluginInstanceIndex result = NowSoundGraph_AddInputPluginInstance(audioInputId, pluginId, programId, dryWet_0_100);
+            Id.Check(result);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -624,7 +705,11 @@ namespace NowSoundLib
         /// </summary>
         public static int GetInputPluginInstanceCount(AudioInputId audioInputId)
         {
-            return NowSoundGraph_GetInputPluginInstanceCount(audioInputId);
+            Id.Check(audioInputId);
+
+            int result = NowSoundGraph_GetInputPluginInstanceCount(audioInputId);
+            Contract.Assert(result >= 0);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -636,6 +721,9 @@ namespace NowSoundLib
         /// </summary>
         public static PluginInstanceInfo GetInputPluginInstanceInfo(AudioInputId audioInputId, PluginInstanceIndex index)
         {
+            Id.Check(audioInputId);
+            Id.Check(index);
+
             return NowSoundGraph_GetInputPluginInstanceInfo(audioInputId, index);
         }
 
@@ -646,6 +734,11 @@ namespace NowSoundLib
 
         public static void SetInputPluginInstanceDryWet(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100)
         {
+            Id.Check(audioInputId);
+            Id.Check(pluginInstanceIndex);
+            Contract.Requires(dryWet_0_100 >= 0);
+            Contract.Requires(dryWet_0_100 <= 100);
+
             NowSoundGraph_SetInputPluginInstanceDryWet(audioInputId, pluginInstanceIndex, dryWet_0_100);
         }
 
@@ -657,6 +750,9 @@ namespace NowSoundLib
         /// </summary>
         public static void DeleteInputPluginInstance(AudioInputId audioInputId, PluginInstanceIndex pluginInstanceIndex)
         {
+            Id.Check(audioInputId);
+            Id.Check(pluginInstanceIndex);
+
             NowSoundGraph_DeleteInputPluginInstance(audioInputId, pluginInstanceIndex);
         }
 
@@ -692,7 +788,12 @@ namespace NowSoundLib
         // In what state is this track?
         public static NowSoundTrackState State(TrackId trackId)
         {
-            return NowSoundTrack_State(trackId);
+            Id.Check(trackId);
+
+            NowSoundTrackState result = NowSoundTrack_State(trackId);
+            Contract.Assert(result >= NowSoundTrackState.TrackUninitialized);
+            Contract.Assert(result <= NowSoundTrackState.TrackLooping);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -701,6 +802,8 @@ namespace NowSoundLib
         // The current timing information for this Track.
         public static TrackInfo Info(TrackId trackId)
         {
+            Id.Check(trackId);
+
             return new TrackInfo(NowSoundTrack_Info(trackId));
         }
 
@@ -710,6 +813,8 @@ namespace NowSoundLib
         // The current output signal information for this Track.
         public static NowSoundSignalInfo SignalInfo(TrackId trackId)
         {
+            Id.Check(trackId);
+
             return NowSoundTrack_SignalInfo(trackId);
         }
 
@@ -720,6 +825,8 @@ namespace NowSoundLib
         // Contractually requires State == NowSoundTrack_State.Recording.
         public static void FinishRecording(TrackId trackId)
         {
+            Id.Check(trackId);
+
             NowSoundTrack_FinishRecording(trackId);
         }
 
@@ -731,9 +838,12 @@ namespace NowSoundLib
         // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of
         // "pass in StringBuilder", known to work well).
         // Returns true if there was enough data to update the buffer, or false if there was not.
-        public static bool GetFrequencies(TrackId trackId, float[] floatBuffer, int floatBufferCapacity)
+        public static bool GetFrequencies(TrackId trackId, float[] floatBuffer)
         {
-            return NowSoundTrack_GetFrequencies(trackId, floatBuffer, floatBufferCapacity);
+            Id.Check(trackId);
+            Contract.Requires(floatBuffer != null);
+
+            return NowSoundTrack_GetFrequencies(trackId, floatBuffer, floatBuffer.Length);
         }
 
         [DllImport("NowSoundLib")]
@@ -745,6 +855,8 @@ namespace NowSoundLib
         // Hence this is a separate flag, not represented as a NowSoundTrack_State.
         public static bool IsMuted(TrackId trackId)
         {
+            Id.Check(trackId);
+
             return NowSoundTrack_IsMuted(trackId);
         }
 
@@ -753,6 +865,8 @@ namespace NowSoundLib
 
         public static void SetIsMuted(TrackId trackId, bool isMuted)
         {
+            Id.Check(trackId);
+
             NowSoundTrack_SetIsMuted(trackId, isMuted);
         }
 
@@ -762,7 +876,15 @@ namespace NowSoundLib
 
         public static PluginInstanceIndex AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int dryWet_0_100)
         {
-            return NowSoundTrack_AddPluginInstance(trackId, pluginId, programId, dryWet_0_100);
+            Id.Check(trackId);
+            Id.Check(pluginId);
+            Id.Check(programId);
+            Contract.Requires(dryWet_0_100 >= 0);
+            Contract.Requires(dryWet_0_100 <= 100);
+
+            PluginInstanceIndex result = NowSoundTrack_AddPluginInstance(trackId, pluginId, programId, dryWet_0_100);
+            Id.Check(result);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -774,7 +896,11 @@ namespace NowSoundLib
         /// </summary>
         public static int GetPluginInstanceCount(TrackId trackId)
         {
-            return NowSoundTrack_GetPluginInstanceCount(trackId);
+            Id.Check(trackId);
+
+            int result = NowSoundTrack_GetPluginInstanceCount(trackId);
+            Contract.Assert(result >= 0);
+            return result;
         }
 
         [DllImport("NowSoundLib")]
@@ -786,16 +912,23 @@ namespace NowSoundLib
         /// </summary>
         public static PluginInstanceInfo GetInputPluginInstanceInfo(TrackId trackId, PluginInstanceIndex index)
         {
+            Id.Check(trackId);
+
             return NowSoundTrack_GetPluginInstanceInfo(trackId, index);
         }
 
         // Set the dry/wet balance on the given plugin.
         [DllImport("NowSoundLib")]
-        static extern void NowSoundTrack_SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100);
+        static extern void NowSoundTrack_SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100);
 
-        public static void SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex PluginInstanceIndex, int dryWet_0_100)
+        public static void SetPluginInstanceDryWet(TrackId trackId, PluginInstanceIndex pluginInstanceIndex, int dryWet_0_100)
         {
-            NowSoundTrack_SetPluginInstanceDryWet(trackId, PluginInstanceIndex, dryWet_0_100);
+            Id.Check(trackId);
+            Id.Check(pluginInstanceIndex);
+            Contract.Requires(dryWet_0_100 >= 0);
+            Contract.Requires(dryWet_0_100 <= 100);
+
+            NowSoundTrack_SetPluginInstanceDryWet(trackId, pluginInstanceIndex, dryWet_0_100);
         }
 
         [DllImport("NowSoundLib")]
@@ -804,6 +937,9 @@ namespace NowSoundLib
         // Delete a plugin instance.
         public static void DeletePluginInstance(TrackId trackId, PluginInstanceIndex pluginInstanceIndex)
         {
+            Id.Check(trackId);
+            Id.Check(pluginInstanceIndex);
+
             NowSoundTrack_DeletePluginInstance(trackId, pluginInstanceIndex);
         }
     }

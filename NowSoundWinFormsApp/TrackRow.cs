@@ -125,7 +125,7 @@ namespace NowSoundWinFormsApp
             TrackInfo trackInfo = NowSoundTrackAPI.Info(_trackId);
             NowSoundSignalInfo signalInfo = NowSoundTrackAPI.SignalInfo(_trackId);
 
-            NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer, _fftBuffer.Length);
+            NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer);
             Utilities.RenderFrequencyBuffer(_fftBuffer, _builder);
 
             _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}, "
