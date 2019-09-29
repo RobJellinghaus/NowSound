@@ -325,6 +325,26 @@ namespace NowSound
                 Spam.Audio.WriteLine("BufferedSliceStream.Shut: next slice time " + timedSlice.InitialTime + ", slice " + timedSlice.Slice);
             }
 #endif
+
+            // and, do a microfade out at the end of the last slice, and in at the start of the first.
+            // this avoids clicking that was empirically otherwise present and annoying.
+            const int64_t microfadeDuration{ 20 };
+            TimedSlice<TTime, TValue>& firstSlice{ _data.at(0) };
+            TValue* firstSliceData{ firstSlice.NonConstValue().OffsetPointer() };
+            TimedSlice<TTime, TValue>& lastSlice{ _data.at(_data.size() - 1) };
+            int sliverCount = firstSlice.Value().SliverCount();
+            TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliverCount) };
+            const int64_t actualMicrofadeDuration{ std::min(firstSlice.Value().SliceDuration().Value(), std::min(lastSlice.Value().SliceDuration().Value(), microfadeDuration)) };
+
+            for (int64_t i = 0; i < actualMicrofadeDuration; i++)
+            {
+                float frac = (float)i / actualMicrofadeDuration;
+                for (int64_t j = 0; j < sliverCount; j++)
+                {
+                    firstSliceData[i * sliverCount + j] *= frac;
+                    lastSliceDataEnd[(-i - 1) * sliverCount + j] *= frac;
+                }
+            }
         }
 
         // Append the given amount of data.

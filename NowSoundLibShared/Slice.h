@@ -198,6 +198,9 @@ namespace NowSound
 
         const Slice<TTime, TValue>& Value() const { return _value; }
 
+        // Use with caution, and only in exceptional circumstances where modifying slice data is desirable.
+        Slice<TTime, TValue>& NonConstValue() { return _value; }
+
         TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : _time(startTime), _value(slice)
         {
         }
