@@ -478,13 +478,14 @@ namespace NowSound
         Time<AudioSample> now = Clock::Instance().Now();
         ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
         int64_t completeBeats = (int64_t)durationBeats.Value();
+        int32_t beatsPerMeasure = Clock::Instance().BeatsPerMeasure();
+        int64_t completeMeasures = completeBeats / beatsPerMeasure;
 
         NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
-            // JUCETODO: (int32_t)_audioInputs.size(),
             now.Value(),
             durationBeats.Value(),
             Clock::Instance().BeatsPerMinute(),
-            (float)(completeBeats % Clock::Instance().BeatsPerMeasure()));
+            durationBeats.Value() - (completeMeasures * beatsPerMeasure));
 
         return timeInfo;
     }
@@ -494,10 +495,21 @@ namespace NowSound
         if (_tracks.size() > 0)
         {
             // not gonna happen
+            {
+                std::wstringstream wstr{};
+                wstr << L"Could not set bpm to " << bpm << L" because _tracks.size is " << _tracks.size();
+                NowSoundGraph::Instance()->Log(wstr.str());
+            }
             return;
         }
 
         Clock::Instance().BeatsPerMinute(bpm);
+
+        {
+            std::wstringstream wstr{};
+            wstr << L"Set clock instance bpm to " << bpm << L"; clock instance bpm is now " << Clock::Instance().BeatsPerMinute();
+            NowSoundGraph::Instance()->Log(wstr.str());
+        }
     }
 
     AudioProcessorGraph::Node::Ptr NowSoundGraph::GetNodePtr(BaseAudioProcessor* audioProcessor)
@@ -540,16 +552,16 @@ namespace NowSound
 
     void NowSoundGraph::DeleteTrack(TrackId trackId)
     {
-        Check(trackId >= TrackId::TrackIdUndefined && trackId <= _tracks.size());
+        Check(trackId >= TrackId::TrackIdUndefined && _tracks.find(trackId) != _tracks.end());
 
         // remove the owning Node from the graph
         NowSoundTrackAudioProcessor* track = _tracks.at(trackId);
 
-        // call delete on it; this drops all nodes it manages from the JUCE graph
-        track->Delete();
+        // wipe the weak reference first (it will be destructed after the Delete() anyway)
+        _tracks.erase(trackId);
 
-        // wipe the weak reference before we drop the strong reference
-        _tracks[trackId] = nullptr;
+        // delete the track; this drops all nodes it manages from the JUCE graph, including the track object itself
+        track->Delete();
 
         // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
         JuceGraphChanged();

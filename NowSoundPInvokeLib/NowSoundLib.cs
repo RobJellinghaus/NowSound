@@ -34,7 +34,7 @@ namespace NowSoundLib
         public Int64 TimeInSamples;
         public float ExactBeat;
         public float BeatsPerMinute;
-        public Int32 BeatInMeasure;
+        public float BeatInMeasure;
     };
 
     // Information about an input in a created or running graph; all inputs are mono
@@ -57,8 +57,6 @@ namespace NowSoundLib
     // Information about the current graph time in NowSound terms.
     public struct TimeInfo
     {
-        // The number of AudioInputs defined in the graph.
-        //public readonly int AudioInputCount;
         // The number of samples elapsed since the audio graph started.
         public readonly Time<AudioSample> TimeInSamples;
         // The exact current beat (including fractional part; truncate to get integral beat count).
@@ -66,11 +64,10 @@ namespace NowSoundLib
         // The current BPM of the graph.
         public readonly float BeatsPerMinute;
         // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
-        public readonly Int32 BeatInMeasure;
+        public readonly float BeatInMeasure;
 
         internal TimeInfo(NowSoundTimeInfo pinvokeTimeInfo)
         {
-            //AudioInputCount = pinvokeTimeInfo.AudioInputCount;
             TimeInSamples = pinvokeTimeInfo.TimeInSamples;
             ExactBeat = pinvokeTimeInfo.ExactBeat;
             BeatsPerMinute = pinvokeTimeInfo.BeatsPerMinute;

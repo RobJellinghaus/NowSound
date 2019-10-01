@@ -51,8 +51,6 @@ namespace NowSound
         // Time information from a Created or Running graph.
         typedef struct NowSoundTimeInfo
         {
-            // The number of AudioInputs defined in the graph.
-            // int32_t AudioInputCount;
             // The number of samples elapsed since the audio graph started.
             int64_t TimeInSamples;
             // The exact current beat (including fractional part; truncate to get integral beat count).
