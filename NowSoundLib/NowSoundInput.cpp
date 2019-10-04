@@ -26,7 +26,7 @@ namespace NowSound
         AudioInputId inputId,
         BufferAllocator<float>* audioAllocator,
         int channel)
-        : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), 0.5),
+        : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), /*initialVolume*/1.0, /*initialPan*/0.5),
         _audioInputId{ inputId },
         _channel{ channel },
         _incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
@@ -45,7 +45,7 @@ namespace NowSound
 
     NowSoundTrackAudioProcessor* NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
     {
-        NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _audioInputId, _incomingAudioStream, Pan());
+        NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _audioInputId, _incomingAudioStream, Volume(), Pan());
 
         // Add the new track to the collection of tracks in NowSoundTrackAPI.
         Graph()->AddTrack(id, track);

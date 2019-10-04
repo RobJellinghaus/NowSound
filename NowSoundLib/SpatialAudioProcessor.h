@@ -21,6 +21,9 @@ namespace NowSound
         // current pan value; 0 = left, 0.5 = center, 1 = right
         float _pan;
 
+        // current volume; simple multiplier... use with caution, clipping can easily occur
+        float _volume;
+
         // is this currently muted?
         // if so, output audio is zeroed
         bool _isMuted;
@@ -36,9 +39,11 @@ namespace NowSound
         MeasurementAudioProcessor* _outputProcessor;
 
     public:
-        SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialPan);
+        SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialVolume, float initialPan);
 
         // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
+        // Will clamp output values in the range (-1.0, 1.0); volumes above 1.0 are not recommended unless the whole loop is quiet
+        // enough not to clip.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // Assign both input and output node IDs at once.
@@ -62,9 +67,13 @@ namespace NowSound
         bool IsMuted() const;
         void IsMuted(bool isMuted);
 
-        // Get and set the pan value for this track.
+        // Get and set the pan value for this track. Values range from 0 (left) to 1 (right).
         float Pan() const;
         void Pan(float pan);
+
+        // Get and set the volume of this track. 0 = mute; 1 = original input level. Use with caution; clipping can occur.
+        float Volume() const;
+        void Volume(float volume);
 
         // Delete this processor, by dropping all its nodes.
         void Delete();

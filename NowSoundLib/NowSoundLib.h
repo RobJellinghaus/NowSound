@@ -201,6 +201,11 @@ namespace NowSound
         __declspec(dllexport) bool NowSoundTrack_IsMuted(TrackId trackId);
         __declspec(dllexport) void NowSoundTrack_SetIsMuted(TrackId trackId, bool isMuted);
 
+        __declspec(dllexport) bool NowSoundTrack_Pan(float pan);
+        __declspec(dllexport) void NowSoundTrack_SetPan(float pan);
+        __declspec(dllexport) bool NowSoundTrack_Volume(float volume);
+        __declspec(dllexport) void NowSoundTrack_SetVolume(float volume);
+
         // Add an instance of the given plugin on the given track.
         __declspec(dllexport) PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100);
         // Get the number of plugin instances on this track.

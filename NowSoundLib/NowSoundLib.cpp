@@ -388,6 +388,30 @@ namespace NowSound
         NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
     }
 
+    bool NowSoundTrack_Pan(TrackId trackId)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        return NowSoundGraph::Instance()->Track(trackId)->Pan();
+    }
+
+    void NowSoundTrack_SetPan(TrackId trackId, float pan)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->Track(trackId)->Pan(pan);
+    }
+
+    bool NowSoundTrack_Volume(TrackId trackId)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        return NowSoundGraph::Instance()->Track(trackId)->Volume();
+    }
+
+    void NowSoundTrack_SetVolume(TrackId trackId, float volume)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->Track(trackId)->Volume(volume);
+    }
+
     PluginInstanceIndex NowSoundTrack_AddPluginInstance(TrackId trackId, PluginId pluginId, ProgramId programId, int32_t dryWet_0_100)
     {
         Check(NowSoundGraph::Instance() != nullptr);

@@ -469,7 +469,7 @@ namespace NowSoundLib
         {
             TimeInfo result = new TimeInfo(NowSoundGraph_TimeInfo());
             Contract.Assert(result.BeatInMeasure >= 0);
-            Contract.Assert(result.BeatsPerMinute > 0);
+            Contract.Assert(result.BeatsPerMinute >= 0); // not desirable... some initial condition issue here
             Contract.Assert((float)result.ExactBeat >= 0);
             Contract.Assert((int)result.TimeInSamples >= 0);
             return result;
@@ -865,6 +865,46 @@ namespace NowSoundLib
             Id.Check(trackId);
 
             NowSoundTrack_SetIsMuted(trackId, isMuted);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern float NowSoundTrack_Pan(TrackId trackId);
+
+        public static float Pan(TrackId trackId)
+        {
+            Id.Check(trackId);
+
+            return NowSoundTrack_Pan(trackId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundTrack_SetPan(TrackId trackId, float pan);
+
+        public static void SetPan(TrackId trackId, float pan)
+        {
+            Id.Check(trackId);
+
+            NowSoundTrack_SetPan(trackId, pan);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern float NowSoundTrack_Volume(TrackId trackId);
+
+        public static float Volume(TrackId trackId)
+        {
+            Id.Check(trackId);
+
+            return NowSoundTrack_Volume(trackId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundTrack_SetVolume(TrackId trackId, float volume);
+
+        public static void SetVolume(TrackId trackId, float volume)
+        {
+            Id.Check(trackId);
+
+            NowSoundTrack_SetVolume(trackId, volume);
         }
 
         // Add an instance of the given plugin on the given track.

@@ -10,9 +10,10 @@
 using namespace NowSound;
 using namespace std;
 
-SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialPan) 
+SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialVolume, float initialPan) 
     : BaseAudioProcessor(graph, name),
     _isMuted{ false },
+    _volume{ initialVolume },
     _pan{ initialPan },
     _outputProcessor{ new MeasurementAudioProcessor(graph, MakeName(name, L" Output")) },
     _pluginInstances{},
@@ -23,9 +24,36 @@ bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }
 void SpatialAudioProcessor::IsMuted(bool isMuted) { _isMuted = isMuted; }
 
 float SpatialAudioProcessor::Pan() const { return _pan; }
-void SpatialAudioProcessor::Pan(float pan) { _pan = pan; }
+void SpatialAudioProcessor::Pan(float pan)
+{
+    Check(pan >= 0);
+    Check(pan <= 1);
+
+    _pan = pan;
+}
+
+float SpatialAudioProcessor::Volume() const { return _volume; }
+void SpatialAudioProcessor::Volume(float volume)
+{
+    Check(volume >= 0);
+
+    _volume = volume;
+}
 
 const double Pi = std::atan(1) * 4;
+
+float clamp(float value, float absLimit)
+{
+    Check(absLimit > 0);
+    if (value < 0)
+    {
+        return value < -absLimit ? -absLimit : value;
+    }
+    else
+    {
+        return value > absLimit ? absLimit : value;
+    }
+}
 
 void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
 {
@@ -38,6 +66,7 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
     float* outputBufferChannel0 = audioBuffer.getWritePointer(0);
     float* outputBufferChannel1 = audioBuffer.getWritePointer(1);
 
+    // If only one input channel, then spatialize (and amplify) it.
     if (getTotalNumInputChannels() == 1)
     {
         // Coefficients for panning the mono data into the audio buffer.
@@ -50,18 +79,30 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
         for (int i = 0; i < numSamples; i++)
         {
             float value = _isMuted ? 0 : outputBufferChannel0[i];
-            outputBufferChannel0[i] = (float)(leftCoefficient * value);
-            outputBufferChannel1[i] = (float)(rightCoefficient * value);
+            outputBufferChannel0[i] = clamp((float)(leftCoefficient * _volume * value), 1.0f);
+            outputBufferChannel1[i] = clamp((float)(rightCoefficient * _volume * value), 1.0f);
         }
     }
     else
     {
+        // Passing through stereo channels does no new spatialization.
+
         // if we're muted, then mute
         if (_isMuted)
         {
             memset(outputBufferChannel0, 0, sizeof(float) * numSamples);
             memset(outputBufferChannel1, 0, sizeof(float) * numSamples);
-        }        
+        }
+        else
+        {
+            // otherwise multiply by volume
+            for (int i = 0; i < numSamples; i++)
+            {
+                float value = _isMuted ? 0 : outputBufferChannel0[i];
+                outputBufferChannel0[i] = _volume * value;
+                outputBufferChannel1[i] = _volume * value;
+            }
+        }
     }
 }
 

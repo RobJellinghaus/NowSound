@@ -61,6 +61,7 @@ namespace NowSound
             TrackId trackId,
             AudioInputId inputId,
             const BufferedSliceStream<AudioSample, float>& sourceStream,
+            float initialVolume,
             float initialPan);
 
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;

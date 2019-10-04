@@ -34,8 +34,9 @@ namespace NowSound
         TrackId trackId,
         AudioInputId inputId,
         const BufferedSliceStream<AudioSample, float>& sourceStream,
+        float initialVolume,
         float initialPan)
-        : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialPan),
+        : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialVolume, initialPan),
         _trackId{ trackId },
         _audioInputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
