@@ -61,7 +61,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Steinberg\vst2.x;$(SolutionDir)..\Steinberg\ASIOSDK2.3.2\common;$(SolutionDir)\NowSoundLib;$(SolutionDir)\NowSoundLib\JuceLibraryCode;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Steinberg\vst2.x;$(SolutionDir)..\Steinberg\vst3;$(SolutionDir)..\Steinberg\ASIOSDK2.3.2\common;$(SolutionDir)\NowSoundLib;$(SolutionDir)\NowSoundLib\JuceLibraryCode;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

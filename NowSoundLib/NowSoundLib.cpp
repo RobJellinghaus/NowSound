@@ -388,7 +388,7 @@ namespace NowSound
         NowSoundGraph::Instance()->Track(trackId)->IsMuted(isMuted);
     }
 
-    bool NowSoundTrack_Pan(TrackId trackId)
+    float NowSoundTrack_Pan(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->Pan();
@@ -400,7 +400,7 @@ namespace NowSound
         NowSoundGraph::Instance()->Track(trackId)->Pan(pan);
     }
 
-    bool NowSoundTrack_Volume(TrackId trackId)
+    float NowSoundTrack_Volume(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);
         return NowSoundGraph::Instance()->Track(trackId)->Volume();
