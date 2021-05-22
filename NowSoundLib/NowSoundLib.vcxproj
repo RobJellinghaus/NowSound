@@ -161,8 +161,10 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemDefinitionGroup>
-    <PostBuildEvent>
+    <PostBuildEvent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       <Command>copy $(SolutionDir)\NowSoundLib\x64\Debug\NowSoundLib.* $(SolutionDir)\NowSoundWinFormsApp\bin\Debug</Command>
+    </PostBuildEvent>
+    <PostBuildEvent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       <Command>copy $(SolutionDir)\NowSoundLib\x64\Release\NowSoundLib.* $(SolutionDir)\NowSoundWinFormsApp\bin\Release</Command>
     </PostBuildEvent>
     <ClCompile>

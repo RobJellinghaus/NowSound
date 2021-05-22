@@ -3,8 +3,6 @@
 // NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
-#include "stdafx.h"
-
 namespace NowSound
 {
     // Unconditional check that runs whether in debug mode or not.
