@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 
-using namespace concurrency; 
 using namespace std;
 
 #include "Clock.h"

@@ -205,7 +205,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
 int SpatialAudioProcessor::GetPluginInstanceCount()
 {
-    return _pluginInstances.size();
+    return (int)_pluginInstances.size();
 }
 
 NowSoundPluginInstanceInfo SpatialAudioProcessor::GetPluginInstanceInfo(PluginInstanceIndex index)

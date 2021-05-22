@@ -15,8 +15,8 @@
     <ProjectGuid>{C53B5361-EE7C-4963-B676-CD6A2E35D37F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>NowSoundLib</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
-    <PlatformToolset>v141</PlatformToolset>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
@@ -53,13 +53,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>JUCE_STRICT_REFCOUNTEDPOINTER=1;_DEBUG;NOWSOUNDLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Steinberg\vst2.x;$(SolutionDir)..\Steinberg\vst3;$(SolutionDir)..\Steinberg\ASIOSDK2.3.2\common;$(SolutionDir)\NowSoundLib;$(SolutionDir)\NowSoundLib\JuceLibraryCode;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
@@ -156,10 +156,6 @@
     <ClCompile Include="NowSoundLibTypes.cpp" />
     <ClCompile Include="NowSoundTrack.cpp" />
     <ClCompile Include="rosetta_fft.cpp" />
-    <ClCompile Include="stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -169,5 +165,11 @@
       <Command>copy $(SolutionDir)\NowSoundLib\x64\Debug\NowSoundLib.* $(SolutionDir)\NowSoundWinFormsApp\bin\Debug</Command>
       <Command>copy $(SolutionDir)\NowSoundLib\x64\Release\NowSoundLib.* $(SolutionDir)\NowSoundWinFormsApp\bin\Release</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    </ClCompile>
+    <ClCompile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    </ClCompile>
   </ItemDefinitionGroup>
 </Project>
