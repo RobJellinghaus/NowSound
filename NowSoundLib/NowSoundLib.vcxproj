@@ -71,7 +71,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -79,7 +79,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>JUCE_STRICT_REFCOUNTEDPOINTER=1;NDEBUG;NOWSOUNDLIB_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <CompileAsWinRT>false</CompileAsWinRT>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Steinberg\vst3;$(SolutionDir)..\Steinberg\vst2.x;$(SolutionDir)..\Steinberg\ASIOSDK2.3.2\common;$(SolutionDir)\NowSoundLib;$(SolutionDir)\NowSoundLib\JuceLibraryCode;$(SolutionDir)..\JUCE\modules;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
       <AdditionalOptions>/bigobj /Zc:twoPhase- %(AdditionalOptions)</AdditionalOptions>
@@ -172,6 +172,12 @@
     </ClCompile>
     <ClCompile>
       <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    </ClCompile>
+    <ClCompile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    </ClCompile>
+    <ClCompile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>
