@@ -24,6 +24,8 @@ namespace NowSound
 {
     // Represents a single looping track of recorded audio.
     // Currently a Track is backed by a mono BufferedSliceStream, but emits stereo output based on current Pan value.
+    // This allows Tracks to be panned around even after being recorded. In other words, the stereo balance is not
+    // baked into two channels.
     class NowSoundTrackAudioProcessor : public SpatialAudioProcessor
     {
     private:
@@ -42,9 +44,8 @@ namespace NowSound
         // TODO: relax this to permit non-quantized looping.
         Duration<Beat> _beatDuration;
 
-        // The streams containing this Track's data, one per channel.
-        BufferedSliceStream<AudioSample, float> _audioStream0;
-        BufferedSliceStream<AudioSample, float> _audioStream1;
+        // The stream containing this Track's mono data.
+        BufferedSliceStream<AudioSample, float> _audioStream;
 
         // Last sample time is based on the Now when the track started looping, and advances strictly
         // based on what the Track has pushed during looping; this variable should be unused except

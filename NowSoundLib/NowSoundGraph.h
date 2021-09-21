@@ -116,6 +116,12 @@ namespace NowSound
         // Stop recording and close the file; if not recording, this is ignored.
         void StopRecording();
 
+        // Get the pan value of this input (0 = left; 0.5 = center; 1 = right)
+        float InputPan(AudioInputId id);
+
+        // Set the pan value of this input (0 = left; 0.5 = center; 1 = right)
+        void InputPan(AudioInputId id, float pan);
+
     public: // Plugin support
 
         // Plugin searching requires setting paths to search.

@@ -83,6 +83,12 @@ namespace NowSound
         // Get the current info for the graph's final mixed output (channel 0 only, currently).
         __declspec(dllexport) NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
+        // Get the current info for the post-effects signal from the given input.
+        __declspec(dllexport) float NowSoundGraph_InputPan(AudioInputId audioInputId);
+
+        // Get the current info for the post-effects signal from the given input.
+        __declspec(dllexport) void NowSoundGraph_SetInputPan(AudioInputId audioInputId, float volume);
+
         // Get the ID of the given device.
         // Graph must be at least Initialized.
         // JUCETODO: __declspec(dllexport) void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity);

@@ -144,6 +144,18 @@ namespace NowSound
         }
     }
 
+    float NowSoundGraph_InputPan(AudioInputId audioInputId)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        return NowSoundGraph::Instance()->InputPan(audioInputId);
+    }
+
+    void NowSoundGraph_SetInputPan(AudioInputId audioInputId, float pan)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->InputPan(audioInputId, pan);
+    }
+
 #ifdef INPUT_DEVICE_SELECTION // JUCETODO
     void NowSoundGraph_InputDeviceId(int deviceIndex, LPWSTR wcharBuffer, int bufferCapacity)
     {

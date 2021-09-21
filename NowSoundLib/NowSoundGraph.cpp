@@ -533,6 +533,16 @@ namespace NowSound
         return _audioInputs[((int)audioInputId) - 1];
     }
 
+    float NowSoundGraph::InputPan(AudioInputId id)
+    {
+        return Input(id)->Pan();
+    }
+
+    void NowSoundGraph::InputPan(AudioInputId id, float pan)
+    {
+        Input(id)->Pan(pan);
+    }
+
     TrackId NowSoundGraph::CreateRecordingTrackAsync(AudioInputId audioInputId)
     {
         // TODO: verify not on audio graph thread

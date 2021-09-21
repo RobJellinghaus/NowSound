@@ -63,46 +63,21 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
 
     int numSamples = audioBuffer.getNumSamples();
 
+    // all input data comes in channel 0
     float* outputBufferChannel0 = audioBuffer.getWritePointer(0);
     float* outputBufferChannel1 = audioBuffer.getWritePointer(1);
 
-    // If only one input channel, then spatialize (and amplify) it.
-    if (getTotalNumInputChannels() == 1)
-    {
-        // Coefficients for panning the mono data into the audio buffer.
-        // Use cosine panner for volume preservation.
-        double angularPosition = _pan * Pi / 2;
-        double leftCoefficient = std::cos(angularPosition);
-        double rightCoefficient = std::sin(angularPosition);
+    // Use cosine panner for volume preservation.
+    double angularPosition = _pan * Pi / 2;
+    double leftCoefficient = std::cos(angularPosition);
+    double rightCoefficient = std::sin(angularPosition);
 
-        // Pan each mono sample, if we're not muted.
-        for (int i = 0; i < numSamples; i++)
-        {
-            float value = _isMuted ? 0 : outputBufferChannel0[i];
-            outputBufferChannel0[i] = clamp((float)(leftCoefficient * _volume * value), 1.0f);
-            outputBufferChannel1[i] = clamp((float)(rightCoefficient * _volume * value), 1.0f);
-        }
-    }
-    else
+    // Pan each mono sample, if we're not muted.
+    for (int i = 0; i < numSamples; i++)
     {
-        // Passing through stereo channels does no new spatialization.
-
-        // if we're muted, then mute
-        if (_isMuted)
-        {
-            memset(outputBufferChannel0, 0, sizeof(float) * numSamples);
-            memset(outputBufferChannel1, 0, sizeof(float) * numSamples);
-        }
-        else
-        {
-            // otherwise multiply by volume
-            for (int i = 0; i < numSamples; i++)
-            {
-                float value = _isMuted ? 0 : outputBufferChannel0[i];
-                outputBufferChannel0[i] = _volume * value;
-                outputBufferChannel1[i] = _volume * value;
-            }
-        }
+        float value = _isMuted ? 0 : outputBufferChannel0[i];
+        outputBufferChannel0[i] = clamp((float)(leftCoefficient * _volume * value), 1.0f);
+        outputBufferChannel1[i] = clamp((float)(rightCoefficient * _volume * value), 1.0f);
     }
 }
 

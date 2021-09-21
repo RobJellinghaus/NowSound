@@ -27,6 +27,8 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private readonly Button _muteButton;
 
+        private readonly ComboBox _panCombo;
+
         /// <summary>
         /// Text label
         /// </summary>
@@ -76,6 +78,14 @@ namespace NowSoundWinFormsApp
             };
             _muteButton.Click += _muteButton_Click;
 
+            _panCombo = new ComboBox
+            {
+                MinimumSize = new Size(100, 20),
+                MaximumSize = new Size(100, 20)
+            };
+            _panCombo.Items.AddRange(new[] { "Pan Left", "Pan Center", "Pan Right" });
+            _panCombo.SelectedIndexChanged += PanComboSelectedIndexChanged;
+
             _label = new Label
 
             {
@@ -92,6 +102,7 @@ namespace NowSoundWinFormsApp
             };
             _trackRowPanel.Controls.Add(_controlButton);
             _trackRowPanel.Controls.Add(_muteButton);
+            _trackRowPanel.Controls.Add(_panCombo);
             _trackRowPanel.Controls.Add(_label);
 
             parent.Controls.Add(_trackRowPanel);
@@ -102,6 +113,16 @@ namespace NowSoundWinFormsApp
             bool isMuted = NowSoundTrackAPI.IsMuted(_trackId);
             NowSoundTrackAPI.SetIsMuted(_trackId, !isMuted);
             _muteButton.Text = isMuted ? "Mute" : "Unmute";
+        }
+
+        private void PanComboSelectedIndexChanged(object sender, EventArgs e)
+        {
+            int index = _panCombo.SelectedIndex;
+            if (index >= 0)
+            {
+                float pan = (float)index / 2;
+                NowSoundTrackAPI.SetPan(_trackId, pan);
+            }
         }
 
         private void ControlButton_Click(object sender, System.EventArgs e)

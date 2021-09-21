@@ -24,6 +24,8 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private readonly Label _label;
 
+        private readonly ComboBox _panCombo;
+
         private readonly ComboBox _effectCombo;
 
         /// <summary>
@@ -68,6 +70,14 @@ namespace NowSoundWinFormsApp
                 AutoSize = true
             };
 
+            _panCombo = new ComboBox
+            {
+                MinimumSize = new Size(100, 20),
+                MaximumSize = new Size(100, 20)
+            };
+            _panCombo.Items.AddRange(new[] { "Pan Left", "Pan Center", "Pan Right" });
+            _panCombo.SelectedIndexChanged += PanComboSelectedIndexChanged;
+
             _effectCombo = new ComboBox
             {
                 MinimumSize = new Size(100, 20),
@@ -82,9 +92,20 @@ namespace NowSoundWinFormsApp
                 FlowDirection = FlowDirection.LeftToRight
             };
             _trackRowPanel.Controls.Add(_label);
+            _trackRowPanel.Controls.Add(_panCombo);
             _trackRowPanel.Controls.Add(_effectCombo);
 
             parent.Controls.Add(_trackRowPanel);
+        }
+
+        private void PanComboSelectedIndexChanged(object sender, EventArgs e)
+        {
+            int index = _panCombo.SelectedIndex;
+            if (index >= 0)
+            {
+                float pan = (float)index / 2;
+                NowSoundGraphAPI.SetInputPan(_audioInputId, pan);
+            }
         }
 
         private void EffectComboSelectedIndexChanged(object sender, EventArgs e)

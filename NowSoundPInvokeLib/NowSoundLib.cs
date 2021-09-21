@@ -1,6 +1,7 @@
 ﻿// NowSound library by Rob Jellinghaus, https://github.com/RobJellinghaus/NowSound
 // Licensed under the MIT license
 
+//using Holofunk.Core;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -73,6 +74,18 @@ namespace NowSoundLib
             BeatsPerMinute = pinvokeTimeInfo.BeatsPerMinute;
             BeatInMeasure = pinvokeTimeInfo.BeatInMeasure;
         }
+
+        internal TimeInfo(
+            float beatsInMeasure,
+            float beatsPerMinute,
+            ContinuousDuration<Beat> exactBeat,
+            Time<AudioSample> timeInSamples)
+        {
+            BeatInMeasure = beatsInMeasure;
+            BeatsPerMinute = beatsPerMinute;
+            ExactBeat = exactBeat;
+            TimeInSamples = timeInSamples;
+        }
     };
 
     // Information about a track's time in NowSound terms.
@@ -129,6 +142,31 @@ namespace NowSoundLib
             LocalClockBeat = pinvokeTrackInfo.LocalClockBeat;
             LastSampleTime = pinvokeTrackInfo.LastSampleTime;
             Pan = pinvokeTrackInfo.Pan;
+        }
+
+        public TrackInfo(
+            Duration<AudioSample> duration,
+            Duration<Beat> durationInBeats,
+            ContinuousDuration<Second> exactDuration,
+            bool isTrackLooping,
+            Time<AudioSample> lastSampleTime,
+            ContinuousDuration<Beat> localClockBeat,
+            Duration<AudioSample> localClockTime,
+            float pan,
+            Time<AudioSample> startTime,
+            ContinuousDuration<Beat> startTimeInBeats
+            )
+        {
+            Duration = duration;
+            DurationInBeats = durationInBeats;
+            ExactDuration = exactDuration;
+            IsTrackLooping = isTrackLooping;
+            LastSampleTime = lastSampleTime;
+            LocalClockBeat = localClockBeat;
+            LocalClockTime = localClockTime;
+            Pan = pan;
+            StartTime = startTime;
+            StartTimeInBeats = startTimeInBeats;
         }
     };
 
@@ -448,13 +486,35 @@ namespace NowSoundLib
         static extern NowSoundSignalInfo NowSoundGraph_OutputSignalInfo();
 
         /// <summary>
-        /// Get information about the post-mixing signal of the output channels.
+        /// Get information about the output signal.
         /// Graph must be Running.
         /// </summary>
         /// <returns></returns>
         public static NowSoundSignalInfo OutputSignalInfo()
         {
             return NowSoundGraph_OutputSignalInfo();
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern float NowSoundGraph_InputPan(AudioInputId audioInputId);
+
+        /// <summary>
+        /// Get the pan value of this input (0 = left, 0.5 = center, 1 = right).
+        /// </summary>
+        public static float InputPan(AudioInputId audioInputId)
+        {
+            return NowSoundGraph_InputPan(audioInputId);
+        }
+
+        [DllImport("NowSoundLib")]
+        static extern void NowSoundGraph_SetInputPan(AudioInputId audioInputId, float pan);
+
+        /// <summary>
+        /// Set the pan value of this input  (0 = left, 0.5 = center, 1 = right).
+        /// </summary>
+        public static void SetInputPan(AudioInputId audioInputId, float pan)
+        {
+            NowSoundGraph_SetInputPan(audioInputId, pan);
         }
 
         [DllImport("NowSoundLib")]
@@ -469,7 +529,7 @@ namespace NowSoundLib
         {
             TimeInfo result = new TimeInfo(NowSoundGraph_TimeInfo());
             Contract.Assert(result.BeatInMeasure >= 0);
-            Contract.Assert(result.BeatsPerMinute >= 0); // not desirable... some initial condition issue here
+            Contract.Assert(result.BeatsPerMinute >= 0);
             Contract.Assert((float)result.ExactBeat >= 0);
             Contract.Assert((int)result.TimeInSamples >= 0);
             return result;
@@ -588,7 +648,7 @@ namespace NowSoundLib
 
             NowSoundGraph_AddPluginSearchPath(path);
         }
-       
+
         [DllImport("NowSoundLib")]
         static extern bool NowSoundGraph_SearchPluginsSynchronously();
 
