@@ -50,7 +50,8 @@ namespace NowSound
         float centralFrequency,
         int octaveDivisions,
         int centralBinIndex,
-        int fftSize)
+        int fftSize,
+        float preRecordingDuration)
     {
         Check(NowSoundGraph_State() == NowSoundGraphState::GraphUninitialized);
         NowSoundGraph::InitializeInstance(
@@ -58,7 +59,8 @@ namespace NowSound
             centralFrequency,
             octaveDivisions,
             centralBinIndex,
-            fftSize);
+            fftSize,
+            preRecordingDuration);
     }
 
     NowSoundGraphInfo NowSoundGraph_Info()

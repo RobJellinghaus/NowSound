@@ -357,7 +357,8 @@ namespace NowSoundLib
             float centralFrequency,
             int octaveDivisions,
             int centralBinIndex,
-            int fftSize);
+            int fftSize,
+            float preRecordingDuration);
 
         /// <summary>
         /// Initialize the audio graph subsystem such that device information can be queried.
@@ -370,7 +371,8 @@ namespace NowSoundLib
             float centralFrequency,
             int octaveDivisions,
             int centralBinIndex,
-            int fftSize)
+            int fftSize,
+            float preRecordingDuration)
         {
             Contract.Requires(outputBinCount > 0);
             Contract.Requires(centralFrequency > 20); // hz
@@ -385,7 +387,8 @@ namespace NowSoundLib
                 centralFrequency,
                 octaveDivisions,
                 centralBinIndex,
-                fftSize);
+                fftSize,
+                preRecordingDuration);
         }
 
         [DllImport("NowSoundLib")]

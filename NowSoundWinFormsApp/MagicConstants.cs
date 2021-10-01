@@ -27,5 +27,9 @@ namespace NowSoundWinFormsApp
         /// The bin (out of OutputBinCount) in which the central frequency should be mapped; zero-indexed.
         /// </summary>
         internal const int CentralFrequencyBin = 10;
+        /// <summary>
+        /// Number of seconds to pre-record, as latency compensation.
+        /// </summary>
+        internal const float PreRecordingDuration = 0.5f;
     }
 }

@@ -42,7 +42,8 @@ namespace NowSound
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(
-            Clock::Instance().Now() - Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration),
+            // TODO: determine once and for all whether this time adjustment is a hack or a good idea
+            Clock::Instance().Now() /*- Clock::Instance().TimeToSamples(graph->PreRecordingDuration())*/,
             1,
             NowSoundGraph::Instance()->AudioAllocator(),
             /*maxBufferedDuration:*/ 0,
@@ -59,17 +60,16 @@ namespace NowSound
         // should only ever call this when graph is fully up and running
         Check(NowSoundGraph::Instance()->State() == NowSoundGraphState::GraphRunning);
 
-        /* HACK: try NOT pre-recording any data... just push the start time back
-        if (MagicConstants::PreRecordingDuration.Value() > 0)
+        ContinuousDuration<Second> preRecordingDuration = NowSoundGraph::Instance()->PreRecordingDuration();
+        if (preRecordingDuration.Value() > 0)
         {
-            // Prepend latencyCompensation's worth of previously buffered input audio, to prepopulate this track.
-            Duration<AudioSample> latencyCompensationDuration = Clock::Instance().TimeToSamples(MagicConstants::PreRecordingDuration);
+            // Prepend preRecordingDuration seconds of previously buffered input audio, to prepopulate this track.
+            Duration<AudioSample> preRecordingSampleDuration = Clock::Instance().TimeToSamples(preRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
-                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - latencyCompensationDuration,
-                latencyCompensationDuration);
+                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - preRecordingSampleDuration,
+                preRecordingSampleDuration);
             sourceStream.AppendTo(lastIntervalOfSourceStream, &_audioStream);
         }
-        */
 
         {
             std::wstringstream wstr{};

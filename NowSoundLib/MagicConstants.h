@@ -34,9 +34,6 @@ namespace NowSound
         // How many seconds long is each audio buffer?
         static const Duration<Second> AudioBufferSizeInSeconds;
 
-        // The amount of time by which to "pre-record" already-heard audio at the start of a new track.
-        static const ContinuousDuration<Second> PreRecordingDuration;
-
         // The number of strings to buffer in the per-track debug log.
         static const int DebugLogCapacity;
 

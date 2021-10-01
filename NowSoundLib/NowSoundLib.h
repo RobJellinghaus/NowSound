@@ -68,7 +68,9 @@ namespace NowSound
             // Which bin index should be centered on centralFrequency?
             int centralBinIndex,
             // How many samples as input to and output from the FFT?
-            int fftSize);
+            int fftSize,
+            // How many seconds to pre-record, as latency compensation?
+            float preRecordingDuration);
 
         // Get the info for the created graph.
         // Graph must be at least Created.

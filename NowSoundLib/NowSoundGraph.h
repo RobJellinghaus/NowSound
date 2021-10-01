@@ -52,7 +52,8 @@ namespace NowSound
             float centralFrequency,
             int octaveDivisions,
             int centralBinIndex,
-            int fftSize);
+            int fftSize,
+            float preRecordingDuration);
 
         // Get the current state of the audio graph; intended to be efficiently pollable by the client.
         // This is one of the only two methods that may be called in any state whatoever.
@@ -238,6 +239,9 @@ namespace NowSound
         // The FFT size.
         int _fftSize;
 
+        // The amount of time to "pre-record" as latency compensation.
+        ContinuousDuration<Second> _preRecordingDuration;
+
         // The audio inputs we have; currently unchanging after graph creation.
         // Note that this vector does not own the processors; the JUCE graph does.
         // TODO: vaguely consider supporting dynamically added/removed inputs.
@@ -301,7 +305,8 @@ namespace NowSound
             float centralFrequency,
             int octaveDivisions,
             int centralBinIndex,
-            int fftSize);
+            int fftSize,
+            float preRecordingDuration);
 
         // Record this log message.
         // These messages can be queried via the external NowSoundGraphAPI, for scenarios when native debugging is
@@ -320,6 +325,9 @@ namespace NowSound
 
         // Access to the FFT size.
         int FftSize() const;
+
+        // The amount of time to "pre-record" by, as latency compensation
+        ContinuousDuration<Second> PreRecordingDuration() const;
 
         // Access to the audio graph for node instantiation.
         juce::AudioProcessorGraph& JuceGraph();

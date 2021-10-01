@@ -26,10 +26,6 @@ const int MagicConstants::InitialAudioBufferCount{ 8 };
 // regardless of loop length.
 const Duration<Second> MagicConstants::AudioBufferSizeInSeconds{ 1 };
 
-// 1/5 sec seems fine for NowSound with TASCAM US2x2 :-P  -- this should probably be user-tunable or even autotunable...
-// TODO: make this be dynamically settable.
-const ContinuousDuration<Second> MagicConstants::PreRecordingDuration{ (float)0.0 };
-
 // This could easily be huge but 1000 is fine for getting at least a second's worth of per-track history at audio rate.
 const int MagicConstants::DebugLogCapacity{ 1000 };
 

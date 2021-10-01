@@ -49,7 +49,8 @@ namespace NowSound
         float centralFrequency,
         int octaveDivisions,
         int centralBinIndex,
-        int fftSize)
+        int fftSize,
+        float preRecordingDuration)
     {
         std::unique_ptr<NowSoundGraph> temp{ new NowSoundGraph() };
         s_instance = std::move(temp);
@@ -58,7 +59,8 @@ namespace NowSound
             centralFrequency,
             octaveDivisions,
             centralBinIndex,
-            fftSize);
+            fftSize,
+            preRecordingDuration);
     }
 
     NowSoundGraph::NowSoundGraph() :
@@ -80,7 +82,8 @@ namespace NowSound
         _juceGraphChangedMutex{},
         _audioPluginSearchPaths{},
         _knownPluginList{},
-        _audioPluginFormatManager{}
+        _audioPluginFormatManager{},
+        _preRecordingDuration{ 0 }
     {
         _logMessages.reserve(s_logMessageCapacity);
         Check(_logMessages.size() == 0);
@@ -253,9 +256,12 @@ namespace NowSound
         float centralFrequency,
         int octaveDivisions,
         int centralBinIndex,
-        int fftSize)
+        int fftSize,
+        float preRecordingDuration)
     {
         Log(L"Initialize(): start");
+
+        _preRecordingDuration = preRecordingDuration;
 
         PrepareToChangeState(NowSoundGraphState::GraphUninitialized);
 
@@ -454,6 +460,8 @@ namespace NowSound
     const std::vector<RosettaFFT::FrequencyBinBounds>* NowSoundGraph::BinBounds() const { return &_fftBinBounds; }
 
     int NowSoundGraph::FftSize() const { return _fftSize; }
+
+    ContinuousDuration<Second> NowSoundGraph::PreRecordingDuration() const { return _preRecordingDuration; }
 
     void NowSoundGraph::CreateNowSoundInputForChannel(int channel)
     {

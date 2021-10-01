@@ -29,7 +29,13 @@ namespace NowSound
         : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), /*initialVolume*/1.0, /*initialPan*/0.5),
         _audioInputId{ inputId },
         _channel{ channel },
-        _incomingAudioStream{ 0, Clock::Instance().ChannelCount(), audioAllocator, Clock::Instance().SampleRateHz(), /*useExactLoopingMapper:*/false },
+        _incomingAudioStream {
+            /*initialTime:*/0,
+            /*channelCount*/1,
+            audioAllocator,
+            /*maxBufferedLength*/(int)(Clock::Instance().SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2,
+            /*useExactLoopingMapper:*/false
+        },
         _rawInputHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
         _mutex{}
     {
@@ -90,7 +96,7 @@ namespace NowSound
             _rawInputHistogram->Add(std::abs(buffer[i]));
         }
 
-        // TODO: actually record into the bounded input stream!  if we decide that lookback is actually needed again.
+        _incomingAudioStream.Append(audioBuffer.getNumSamples(), buffer);
 
         // now process the input audio spatially so we hear it panned in the output
         SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
