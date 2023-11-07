@@ -92,6 +92,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DryWetAudio.h" />
+    <ClInclude Include="DryWetMixAudioProcessor.h" />
     <ClInclude Include="MeasurableAudio.h" />
     <ClInclude Include="MeasurementAudioProcessor.h" />
     <ClInclude Include="BaseAudioProcessor.h" />
@@ -113,6 +115,7 @@
   <ItemGroup>
     <ClCompile Include="BaseAudioProcessor.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="DryWetMixAudioProcessor.cpp" />
     <ClCompile Include="MeasurementAudioProcessor.cpp" />
     <ClCompile Include="SpatialAudioProcessor.cpp" />
     <ClCompile Include="JuceLibraryCode\include_juce_audio_basics.cpp">

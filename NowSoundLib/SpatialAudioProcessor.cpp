@@ -6,6 +6,8 @@
 #include "Clock.h"
 #include "MagicConstants.h"
 #include "SpatialAudioProcessor.h"
+#include "DryWetAudio.h"
+#include "DryWetMixAudioProcessor.h"
 
 using namespace NowSound;
 using namespace std;
@@ -17,7 +19,8 @@ SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring
     _pan{ initialPan },
     _outputProcessor{ new MeasurementAudioProcessor(graph, MakeName(name, L" Output")) },
     _pluginInstances{},
-    _pluginNodeIds{}
+    _pluginNodeIds{},
+    _dryWetNodeIds{}
 {}
 
 bool SpatialAudioProcessor::IsMuted() const { return _isMuted; }
@@ -125,7 +128,13 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
     AudioProcessor* newPluginInstance = Graph()->CreatePluginProcessor(pluginId, programId);
 
     // create a node for it
-    AudioProcessorGraph::Node::Ptr newNode = Graph()->JuceGraph().addNode(newPluginInstance);
+    AudioProcessorGraph::Node::Ptr newPluginNode = Graph()->JuceGraph().addNode(newPluginInstance);
+
+    // And create the mixer too
+    DryWetMixAudioProcessor* newDryWetMixInstance = new DryWetMixAudioProcessor(Graph(), L"DryWetMix");
+    // Four input channels and two output channels
+    newDryWetMixInstance->setPlayConfigDetails(4, 2, Graph()->Info().SampleRateHz, Graph()->Info().SamplesPerQuantum);
+    AudioProcessorGraph::Node::Ptr newDryWetMixNode = Graph()->JuceGraph().addNode(newDryWetMixInstance);
 
     // and connect it up!
     // what is the most recent (e.g. end) plugin?  If none, then we're hooking to the input.
@@ -144,14 +153,26 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     // add connections from inputNode to new plugin instance...
     {
-        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 0 }, { newNode->nodeID, 0 } }));
-        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { newNode->nodeID, 1 } }));
+        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 0 }, { newPluginNode->nodeID, 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { newPluginNode->nodeID, 1 } }));
     }
 
-    // ...and from new plugin instance to outputNode
+    // ...and from inputNode to dry side of new drywet instance...
     {
-        Check(Graph()->JuceGraph().addConnection({ { newNode->nodeID, 0 }, { outputNodeId, 0 } }));
-        Check(Graph()->JuceGraph().addConnection({ { newNode->nodeID, 1 }, { outputNodeId, 1 } }));
+        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 0 }, { newDryWetMixNode->nodeID, 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { newDryWetMixNode->nodeID, 1 } }));
+    }
+
+    // ...and from new plugin instance to wet side of new drywet instance...
+    {
+        Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 0 }, { newDryWetMixNode->nodeID, 2 } }));
+        Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 1 }, { newDryWetMixNode->nodeID, 3 } }));
+    }
+
+    // ...and from new drywet instance to output node
+    {
+        Check(Graph()->JuceGraph().addConnection({ { newDryWetMixNode->nodeID, 0 }, { outputNodeId, 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { newDryWetMixNode->nodeID, 1 }, { outputNodeId, 1 } }));
     }
 
     NowSoundPluginInstanceInfo info;
@@ -159,10 +180,11 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
     info.NowSoundProgramId = programId;
     info.DryWet_0_100 = dryWet_0_100;
 
-    // update our plugin instance tracking state
+    // update our node tracking state
     {
         _pluginInstances.push_back(info);
-        _pluginNodeIds.push_back(newNode->nodeID);
+        _pluginNodeIds.push_back(newPluginNode->nodeID);
+        _dryWetNodeIds.push_back(newDryWetMixNode->nodeID);
     }
 
     // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)
@@ -170,7 +192,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     {
         std::wstringstream wstr{};
-        wstr << L"SpatialAudioProcessor::AddPluginProgramInstance(): new node " << newNode->nodeID.uid;
+        wstr << L"SpatialAudioProcessor::AddPluginProgramInstance(): new plugin node " << newPluginNode->nodeID.uid << "; new drywet node " << newDryWetMixNode->nodeID.uid;
         Graph()->Log(wstr.str());
     }
 
@@ -191,9 +213,16 @@ NowSoundPluginInstanceInfo SpatialAudioProcessor::GetPluginInstanceInfo(PluginIn
     return _pluginInstances.at((int)index - 1);
 }
 
-void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex pluginInstanceIndex, int32_t dryWet_0_100)
+void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex index, int32_t dryWet_0_100)
 {
+    Check((int)index >= 1);
+    Check((int)index <= _pluginInstances.size());
+    Check(dryWet_0_100 >= 0);
+    Check(dryWet_0_100 <= 100);
 
+    auto dryWetNode = Graph()->JuceGraph().getNodeForId(_dryWetNodeIds[index]);
+    auto dryWetAudio = dynamic_cast<DryWetAudio*>(dryWetNode->getProcessor());
+    dryWetAudio->SetDryWetLevel(dryWet_0_100);
 }
 
 void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInstanceIndex)
@@ -204,38 +233,61 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
     AudioProcessorGraph::NodeID priorNodeId =
         pluginInstanceIndex == 1 
         ? NodeId()
-        : _pluginNodeIds[pluginInstanceIndex - 2];
+        : _dryWetNodeIds[pluginInstanceIndex - 2];
 
-    AudioProcessorGraph::NodeID deletedNodeId = _pluginNodeIds[pluginInstanceIndex - 1];
+    AudioProcessorGraph::NodeID deletedPluginNodeId = _pluginNodeIds[pluginInstanceIndex - 1];
+    AudioProcessorGraph::NodeID deletedDryWetNodeId = _dryWetNodeIds[pluginInstanceIndex - 1];
 
-    AudioProcessorGraph::NodeID subsequentNodeId =
-        pluginInstanceIndex == _pluginNodeIds.size()
-        ? OutputProcessor()->NodeId()
-        : _pluginNodeIds[pluginInstanceIndex];
+    bool wasLast = pluginInstanceIndex == _pluginNodeIds.size();
 
     // drop the node and all connections 
-    Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedNodeId));
+    Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedPluginNodeId));
+    Graph()->JuceGraph().removeNode(Graph()->JuceGraph().getNodeForId(deletedDryWetNodeId));
 
     // reconnect prior node to subsequent
+    if (wasLast)
     {
-        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { subsequentNodeId, 0 } }));
-        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { subsequentNodeId, 1 } }));
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { OutputProcessor()->NodeId(), 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { OutputProcessor()->NodeId(), 1 } }));
+
+        // and spam the log
+        {
+            std::wstringstream wstr{};
+            wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedPluginNodeId.uid
+                << L", connected prior node " << priorNodeId.uid
+                << L" to output node " << OutputProcessor()->NodeId().uid;
+            Graph()->Log(wstr.str());
+        }
+    }
+    else
+    {
+        // need to connect it to inputs of both subsequent plugin and subsequent drywet.
+        // they are already connected to each other and their subsequent outputs
+        AudioProcessorGraph::NodeID subsequentPluginNodeId = _pluginNodeIds[pluginInstanceIndex];
+        AudioProcessorGraph::NodeID subsequentDryWetNodeId = _dryWetNodeIds[pluginInstanceIndex];
+
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { subsequentPluginNodeId, 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { subsequentPluginNodeId, 1 } }));
+
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 0 }, { subsequentDryWetNodeId, 0 } }));
+        Check(Graph()->JuceGraph().addConnection({ { priorNodeId, 1 }, { subsequentDryWetNodeId, 1 } }));
+
+        // and spam the log
+        {
+            std::wstringstream wstr{};
+            wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedPluginNodeId.uid
+                << L", connected prior node " << priorNodeId.uid
+                << L" to subsequent plugin node " << subsequentPluginNodeId.uid
+                << L" and subsequent drywet node " << subsequentDryWetNodeId.uid;
+            Graph()->Log(wstr.str());
+        }
     }
 
     // and clean up state
     {
         _pluginInstances.erase(_pluginInstances.begin() + (pluginInstanceIndex - 1));
         _pluginNodeIds.erase(_pluginNodeIds.begin() + (pluginInstanceIndex - 1));
-    }
-
-    // and spam the log
-    {
-        std::wstringstream wstr{};
-        wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedNodeId.uid
-            << L", connected prior node " << priorNodeId.uid
-            << L" to subsequent node " << subsequentNodeId.uid
-            << L"; remaining plugin node ID count " << _pluginNodeIds.size();
-        Graph()->Log(wstr.str());
+        _dryWetNodeIds.erase(_dryWetNodeIds.begin() + (pluginInstanceIndex - 1));
     }
 
     // this is an async update (if we weren't running JUCE in such a hacky way, we wouldn't need to know this)

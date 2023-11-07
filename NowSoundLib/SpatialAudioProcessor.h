@@ -29,10 +29,13 @@ namespace NowSound
         bool _isMuted;
 
         // instantiated plugin instances
-        std::vector<NowSoundPluginInstanceInfo>  _pluginInstances;
+        std::vector<NowSoundPluginInstanceInfo> _pluginInstances;
 
         // instantiated plugin node IDs
         std::vector<juce::AudioProcessorGraph::NodeID> _pluginNodeIds;
+
+        // instantiated drywet node IDs, one-to-one with plugin nodes
+        std::vector<juce::AudioProcessorGraph::NodeID> _dryWetNodeIds;
 
         // MeasurementAudioProcessor that carries the output of the effect chain.
         // This is not an owning reference; the JUCE graph owns all processors.
