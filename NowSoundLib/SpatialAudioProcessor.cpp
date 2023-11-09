@@ -137,11 +137,12 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
     AudioProcessorGraph::Node::Ptr newDryWetMixNode = Graph()->JuceGraph().addNode(newDryWetMixInstance);
 
     // and connect it up!
-    // what is the most recent (e.g. end) plugin?  If none, then we're hooking to the input.
+    // what is the most recent (e.g. end) node?  If none, then we're hooking to the input; otherwise
+    // we're hooking to the tail DryWetMix node.
     AudioProcessorGraph::NodeID inputNodeId = NodeId();
-    if (_pluginNodeIds.size() > 0)
+    if (_dryWetNodeIds.size() > 0)
     {
-        inputNodeId = _pluginNodeIds[_pluginNodeIds.size() - 1];
+        inputNodeId = _dryWetNodeIds[_dryWetNodeIds.size() - 1];
     }
     AudioProcessorGraph::NodeID outputNodeId = OutputProcessor()->NodeId();
 
@@ -167,6 +168,17 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
     {
         Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 0 }, { newDryWetMixNode->nodeID, 2 } }));
         Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 1 }, { newDryWetMixNode->nodeID, 3 } }));
+    }
+
+    {
+        std::wstringstream obuf;
+        obuf << L"AddPluginInstance: adding connection from " << newDryWetMixNode->nodeID.uid << L" to " << outputNodeId.uid;
+        AudioProcessorGraph::Node::Ptr dryWetMixNode = Graph()->JuceGraph().getNode(newDryWetMixNode->nodeID.uid);
+        AudioProcessorGraph::Node::Ptr outputNode = Graph()->JuceGraph().getNode(outputNodeId.uid);
+        bool canConnect0to0 = Graph()->JuceGraph().canConnect(dryWetMixNode.get(), 0, outputNode.get(), 0);
+        bool canConnect1to1 = Graph()->JuceGraph().canConnect(dryWetMixNode.get(), 1, outputNode.get(), 1);
+        obuf << L"AddPluginInstance: canConnect0to0: " << canConnect0to0 << L"; canConnect1to1: " << canConnect1to1;
+        Graph()->Log(obuf.str());
     }
 
     // ...and from new drywet instance to output node
@@ -220,9 +232,11 @@ void SpatialAudioProcessor::SetPluginInstanceDryWet(PluginInstanceIndex index, i
     Check(dryWet_0_100 >= 0);
     Check(dryWet_0_100 <= 100);
 
-    auto dryWetNode = Graph()->JuceGraph().getNodeForId(_dryWetNodeIds[index]);
+    auto dryWetNode = Graph()->JuceGraph().getNodeForId(_dryWetNodeIds[index - 1]);
     auto dryWetAudio = dynamic_cast<DryWetAudio*>(dryWetNode->getProcessor());
     dryWetAudio->SetDryWetLevel(dryWet_0_100);
+
+    _pluginInstances[index - 1].DryWet_0_100 = dryWet_0_100;
 }
 
 void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInstanceIndex)
