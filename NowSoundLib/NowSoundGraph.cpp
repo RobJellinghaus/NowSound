@@ -727,9 +727,9 @@ namespace NowSound
     {
         AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, /*isRecording:*/ true);
 
-        // Input connections (one per output channel); consume the *post-effect* input
-        Check(JuceGraph().addConnection({ { Input(audioInputId)->OutputProcessor()->NodeId(), 0 }, { newNodeId, 0 } }));
-        Check(JuceGraph().addConnection({ { Input(audioInputId)->OutputProcessor()->NodeId(), 1 }, { newNodeId, 1 } }));
+        // Input connections (one per output channel); consume the *pre-effect* input
+        Check(JuceGraph().addConnection({ { Input(audioInputId)->NodeId(), 0 }, { newNodeId, 0 } }));
+        Check(JuceGraph().addConnection({ { Input(audioInputId)->NodeId(), 1 }, { newNodeId, 1 } }));
 
         {
             std::wstringstream wstr{};

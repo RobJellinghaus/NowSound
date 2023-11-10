@@ -207,6 +207,8 @@ namespace NowSound
         {
         case NowSoundTrackState::TrackRecording:
         {
+            // We are recording; save the input audio in our stream, and that's it (we never call processBlock here).
+
             // How many complete beats after we record this data?
             Time<AudioSample> durationAsTime((_audioStream.DiscreteDuration() + bufferDuration).Value());
             Duration<Beat> completeBeats = (Duration<Beat>)((int)Clock::Instance().TimeToBeats(durationAsTime).Value());
@@ -247,7 +249,9 @@ namespace NowSound
 
         case NowSoundTrackState::TrackFinishRecording:
         {
-            // we now need to be sample-accurate.  If we get too many samples, here is where we truncate.
+            // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
+
+            // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
 
             // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
@@ -298,6 +302,8 @@ namespace NowSound
 
         case NowSoundTrackState::TrackLooping:
         {
+            // Now we are replaying from our audio stream, and *now* we call processBlock.
+
             while (bufferDuration > 0)
             {
                 Slice<AudioSample, float> slice(
