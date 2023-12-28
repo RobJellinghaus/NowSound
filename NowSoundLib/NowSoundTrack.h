@@ -35,7 +35,7 @@ namespace NowSound
         // Identifier of the input we record from (for tracking input frequencies while recording).
         const AudioInputId _audioInputId;
 
-        // The current state of the track.
+        // The current state of the track (recording / finishing / looping).
         NowSoundTrackState _state;
 
         // The number of complete beats thaat measures the duration of this track.
@@ -45,7 +45,8 @@ namespace NowSound
         Duration<Beat> _beatDuration;
 
         // The stream containing this Track's mono data.
-        BufferedSliceStream<AudioSample, float> _audioStream;
+        // This may be shared with copied Tracks.
+        std::shared_ptr<BufferedSliceStream<AudioSample, float>> _audioStream;
 
         // Last sample time is based on the Now when the track started looping, and advances strictly
         // based on what the Track has pushed during looping; this variable should be unused except
@@ -57,6 +58,7 @@ namespace NowSound
 
     public: // Non-exported methods for internal use
 
+        // New constructor
         NowSoundTrackAudioProcessor(
             NowSoundGraph* graph,
             TrackId trackId,
@@ -65,6 +67,10 @@ namespace NowSound
             float initialVolume,
             float initialPan);
 
+        // Copy constructor; shares same stream. Only supported when other is looping.
+        NowSoundTrackAudioProcessor(TrackId trackId, NowSoundTrackAudioProcessor* other);
+
+        // JUCE processing method; this is called on the audio thread and may not make graph changes.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
 
         // Did this track stop recording since the last time this method was called?

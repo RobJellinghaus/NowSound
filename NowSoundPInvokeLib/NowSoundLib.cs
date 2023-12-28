@@ -104,6 +104,7 @@ namespace NowSoundLib
         internal float LocalClockBeat;
         internal Int64 LastSampleTime;
         internal float Pan;
+        internal float Volume;
     };
 
     // Information about a track's time in NowSound terms.
@@ -129,12 +130,12 @@ namespace NowSoundLib
         public readonly Time<AudioSample> LastSampleTime;
         // The current panning (0 = left, 1 = right).
         public readonly float Pan;
+        // The volume (0 to 1).
+        public readonly float Volume;
 
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
             IsTrackLooping = pinvokeTrackInfo.IsTrackLooping > 0;
-            StartTime = pinvokeTrackInfo.StartTimeInSamples;
-            StartTimeInBeats = pinvokeTrackInfo.StartTimeInBeats;
             Duration = pinvokeTrackInfo.DurationInSamples;
             DurationInBeats = pinvokeTrackInfo.DurationInBeats;
             ExactDuration = pinvokeTrackInfo.ExactDuration;
@@ -142,6 +143,9 @@ namespace NowSoundLib
             LocalClockBeat = pinvokeTrackInfo.LocalClockBeat;
             LastSampleTime = pinvokeTrackInfo.LastSampleTime;
             Pan = pinvokeTrackInfo.Pan;
+            StartTime = pinvokeTrackInfo.StartTimeInSamples;
+            StartTimeInBeats = pinvokeTrackInfo.StartTimeInBeats;
+            Volume = pinvokeTrackInfo.Volume;
         }
 
         public TrackInfo(
@@ -154,7 +158,8 @@ namespace NowSoundLib
             Duration<AudioSample> localClockTime,
             float pan,
             Time<AudioSample> startTime,
-            ContinuousDuration<Beat> startTimeInBeats
+            ContinuousDuration<Beat> startTimeInBeats,
+            float volume
             )
         {
             Duration = duration;
@@ -167,6 +172,7 @@ namespace NowSoundLib
             Pan = pan;
             StartTime = startTime;
             StartTimeInBeats = startTimeInBeats;
+            Volume = volume;
         }
     };
 
@@ -619,6 +625,25 @@ namespace NowSoundLib
             Id.Check(id);
 
             TrackId result = NowSoundGraph_CreateRecordingTrackAsync(id);
+            Id.Check(result);
+            return result;
+        }
+
+
+        [DllImport("NowSoundLib")]
+        static extern TrackId NowSoundGraph_CopyLoopingTrack(TrackId id);
+
+        /// <summary>
+        /// Copy a track that has already started looping.
+        /// </summary>
+        /// <remarks>
+        /// Graph must be Running.
+        /// </remarks>
+        public static TrackId CopyLoopingTrack(TrackId id)
+        {
+            Id.Check(id);
+
+            TrackId result = NowSoundGraph_CopyLoopingTrack(id);
             Id.Check(result);
             return result;
         }

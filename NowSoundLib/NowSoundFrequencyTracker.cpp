@@ -138,7 +138,7 @@ namespace NowSound
         RosettaFFT::optimized_fft(fftArray);
 
         // and rescale it!
-        RosettaFFT::RescaleFFT(*_binBounds, fftArray, _outputBuffer.get(), _binBounds->size());
+        RosettaFFT::RescaleFFT(*_binBounds, fftArray, _outputBuffer.get(), static_cast<int>(_binBounds->size()));
 
         // and now release our transforming buffer and update output buffer index!
         std::lock_guard<std::mutex> guard(_bufferMutex);

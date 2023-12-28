@@ -21,7 +21,7 @@ namespace NowSound
         // current pan value; 0 = left, 0.5 = center, 1 = right
         float _pan;
 
-        // current volume; simple multiplier... use with caution, clipping can easily occur
+        // current volume; 0 to 1
         float _volume;
 
         // is this currently muted?

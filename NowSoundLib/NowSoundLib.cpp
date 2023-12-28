@@ -210,6 +210,12 @@ namespace NowSound
         return NowSoundGraph::Instance()->CreateRecordingTrackAsync(audioInputId);
     }
 
+    TrackId NowSoundGraph_CopyLoopingTrack(TrackId trackId)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        return NowSoundGraph::Instance()->CopyLoopingTrack(trackId);
+    }
+
     void NowSoundGraph_DeleteTrack(TrackId trackId)
     {
         Check(NowSoundGraph::Instance() != nullptr);

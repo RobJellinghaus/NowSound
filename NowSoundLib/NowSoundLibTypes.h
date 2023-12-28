@@ -103,8 +103,10 @@ namespace NowSound
             float LocalClockBeat;
             // The time at which the track last delivered samples (depends on current audio frame size).
             int64_t LastSampleTime;
-            // The panning value of this track.
+            // The panning value of this track; from 0 (left) to 1 (right).
             float Pan;
+            // The current volume of this track; from 0 to 1.
+            float Volume;
         } NowSoundTrackInfo;
 
         // The states of a NowSound graph.

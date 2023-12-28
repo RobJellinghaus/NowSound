@@ -161,7 +161,7 @@ namespace NowSound
         // We don't actually need to synchronize with _logMutex in this method.
         // The only variable touched during log appending is the size of _logMessages, and it is inherently atomically updated. (WE THINK)
         NowSoundLogInfo info{};
-        info.LogMessageCount = _logMessages.size();
+        info.LogMessageCount = static_cast<int32_t>(_logMessages.size());
         return info;
     }
 
@@ -419,7 +419,7 @@ namespace NowSound
         auto availableBufferSizes = device->getAvailableBufferSizes();
 
         NowSoundGraphInfo graphInfo = CreateNowSoundGraphInfo(
-            device->getCurrentSampleRate(),
+            static_cast<int32_t>(device->getCurrentSampleRate()),
             maxInputChannels,
             device->getCurrentBitDepth(),
             device->getOutputLatencyInSamples(),
@@ -568,6 +568,23 @@ namespace NowSound
         return id;
     }
 
+    TrackId NowSoundGraph::CopyLoopingTrack(TrackId trackId)
+    {
+        // TODO: verify not on audio graph thread
+        Check(_audioGraphState == NowSoundGraphState::GraphRunning);
+        Check(trackId != TrackId::TrackIdUndefined);
+
+        // get new track id for this track
+        TrackId id = (TrackId)((int)_nextTrackId + 1);
+        _nextTrackId = id;
+
+        NowSoundTrackAudioProcessor* newTrack = new NowSoundTrackAudioProcessor(id, Track(trackId));
+
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newTrack, /*isRecording:*/ false);
+
+        return id;
+    }
+
     void NowSoundGraph::DeleteTrack(TrackId trackId)
     {
         Check(trackId >= TrackId::TrackIdUndefined && _tracks.find(trackId) != _tracks.end());
@@ -699,7 +716,7 @@ namespace NowSound
 
     int32_t NowSoundGraph::PluginProgramCount(PluginId pluginId)
     {
-        return _loadedPluginPrograms[(int)pluginId - 1].size();
+        return static_cast<int32_t>(_loadedPluginPrograms[(int)pluginId - 1].size());
     }
 
     void NowSoundGraph::PluginProgramName(PluginId pluginId, ProgramId programId, LPWSTR wcharBuffer, int32_t bufferCapacity)
@@ -762,7 +779,7 @@ namespace NowSound
 
     void NowSoundGraph::LogConnections()
     {
-        int maxConnNodeId = 0;
+        uint32 maxConnNodeId = 0;
         for (auto conn : JuceGraph().getConnections())
         {
             std::wstringstream wstr;
@@ -779,7 +796,7 @@ namespace NowSound
                 maxConnNodeId = conn.destination.nodeID.uid;
             }
         }
-        for (int i = 1; i <= maxConnNodeId; i++)
+        for (uint32 i = 1; i <= maxConnNodeId; i++)
         {
             LogNode((AudioProcessorGraph::NodeID)i);
         }
@@ -825,8 +842,8 @@ namespace NowSound
     void NowSoundGraph::JuceGraphChanged()
     {
         // This would seem to be unnecessary, but we need to ensure we do not lose a call to this method
-        // in the event that the message tick thread is calling WasAsyncUpdate() concurrently with this,
-        // resulting in the update here being lost (because WasAsyncUpdate() resets this flag).
+        // in the event that the message tick thread is calling WasJuceGraphChanged() concurrently with this,
+        // resulting in the update here being lost (because WasJuceGraphChanged() resets this flag).
         std::lock_guard<std::mutex> guard(_juceGraphChangedMutex);
         _juceGraphChanged = true;
     }
@@ -856,7 +873,7 @@ namespace NowSound
 
         // and set the state according to the requested program
         const MemoryBlock& state = _loadedPluginPrograms[((int)pluginId) - 1][((int)programId) - 1].State();
-        instance->setStateInformation(state.getData(), state.getSize());
+        instance->setStateInformation(state.getData(), static_cast<int>(state.getSize()));
 
         return instance;
     }

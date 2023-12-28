@@ -104,6 +104,10 @@ namespace NowSound
         // Graph may be in any state other than InError. On completion, graph becomes Uninitialized.
         TrackId CreateRecordingTrackAsync(AudioInputId inputIndex);
 
+        // Create a copy of a track that has finished recording and started looping; the copy will be at the
+        // exact same loop position.
+        TrackId CopyLoopingTrack(TrackId trackToCopy);
+
         // Call this regularly from the message thread.
         // This is a gross hack to work around the fact that running JUCE as a native plugin (not a Unity plugin)
         // under Unity breaks JUCE's built-in async message pumping, resulting in async graph structure changes not getting
@@ -173,7 +177,7 @@ namespace NowSound
         // Add the connections of a SpatialAudioProcessor node.
         // This returns the input node so that input connections can be set up.
         // If isRecording, the returned node will have two input connections; otherwise, it will have one.
-        // (If isRecording is false, the node is presumed to be handling mono input.)
+        // (If isRecording is false, the node is presumed to be an input node consuming mono input.)
         AudioProcessorGraph::NodeID AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, bool isRecording);
 
     private: // instance variables
