@@ -120,8 +120,11 @@ namespace NowSound
         // Create a new track and begin recording.
         __declspec(dllexport) TrackId NowSoundGraph_CreateRecordingTrackAsync(AudioInputId audioInputId);
 
+        // Copy a currently looping track to a new track.
+        __declspec(dllexport) TrackId NowSoundGraph_CopyLoopingTrack(TrackId copiedTrackId);
+
         // Delete this Track; after this, calling any methods with this TrackID will cause contract failure.
-        void __declspec(dllexport) NowSoundGraph_DeleteTrack(TrackId trackId);
+        __declspec(dllexport) void NowSoundGraph_DeleteTrack(TrackId trackId);
 
         // Call this regularly from the "message thread".
         // Terrible hack to work around message pump issues.

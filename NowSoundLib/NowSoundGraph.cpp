@@ -89,19 +89,16 @@ namespace NowSound
         Check(_logMessages.size() == 0);
     }
 
-    void NowSoundGraph::AddTrack(TrackId id, NowSoundTrackAudioProcessor* track)
-    {
-        // we want to insert the track by copy, since it's ref-counted
-        _tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, track});
-    }
-
     NowSoundTrackAudioProcessor* NowSoundGraph::Track(TrackId id)
     {
         // NOTE THAT THIS PATTERN DOES NOT LOCK THE _tracks COLLECTION IN ANY WAY.
         // The only way this will be correct is if all modifications to s_tracks happen only as a result of
         // non-concurrent, serialized external calls to NowSoundTrackAPI.
         Check(id > TrackId::TrackIdUndefined);
-        NowSoundTrackAudioProcessor* value = _tracks.at(id);
+        
+        auto track = _tracks.find(id);
+        Check(track != _tracks.end());
+        NowSoundTrackAudioProcessor* value = track->second;
         Check(value != nullptr); // TODO: don't fail on invalid client values; instead return standard error code or something
         return value;
     }
@@ -562,6 +559,8 @@ namespace NowSound
 
         NowSoundTrackAudioProcessor* newTrack = Input(audioInputId)->CreateRecordingTrack(id);
 
+        _tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, newTrack});
+
         // convert from audio input numbering (1-based) to channel id (0-based)
         AddRecordingNodeToJuceGraph(newTrack, audioInputId);
 
@@ -580,6 +579,9 @@ namespace NowSound
 
         NowSoundTrackAudioProcessor* newTrack = new NowSoundTrackAudioProcessor(id, Track(trackId));
 
+        _tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, newTrack});
+
+        // we only give this a variable name for debugging purposes
         AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newTrack, /*isRecording:*/ false);
 
         return id;

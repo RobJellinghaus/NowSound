@@ -53,9 +53,6 @@ namespace NowSound
     {
         NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _audioInputId, _incomingAudioStream, Volume(), Pan());
 
-        // Add the new track to the collection of tracks in NowSoundTrackAPI.
-        Graph()->AddTrack(id, track);
-
         return track;
     }
 

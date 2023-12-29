@@ -286,9 +286,6 @@ namespace NowSound
         std::vector<std::vector<PluginProgram>> _loadedPluginPrograms;
 
     public:
-        // non-exported methods for "internal" use
-        void AddTrack(TrackId id, NowSoundTrackAudioProcessor* track);
-
         // Accessor for track by ID.
         NowSoundTrackAudioProcessor* Track(TrackId id);
 
