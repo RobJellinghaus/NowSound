@@ -40,6 +40,21 @@ namespace NowSound
         {}
     };
 
+    /// <summary>
+    /// Types of nodes in our graph.
+    /// </summary>
+    enum class NodeType
+    {
+        // zero value is undefined, as usual
+        Undefined,
+        // input node; has one input channel and two output channels
+        Input,
+        // recording node; has two input channels and two output channels
+        Recording,
+        // looping node; has zero input channels and two output channels
+        Looping,
+    };
+
     // A single graph implementing the NowSoundGraphAPI operations.
     class NowSoundGraph
     {
@@ -175,10 +190,9 @@ namespace NowSound
         bool WasJuceGraphChanged();
 
         // Add the connections of a SpatialAudioProcessor node.
-        // This returns the input node so that input connections can be set up.
-        // If isRecording, the returned node will have two input connections; otherwise, it will have one.
-        // (If isRecording is false, the node is presumed to be an input node consuming mono input.)
-        AudioProcessorGraph::NodeID AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, bool isRecording);
+        // If this is an input node, this returns the input node ID so that input connections can be set up.
+        // The number of channels defiend for the node will depend on the nodeType.
+        AudioProcessorGraph::NodeID AddNodeToJuceGraph(SpatialAudioProcessor* newSpatialNode, NodeType nodeType);
 
     private: // instance variables
 

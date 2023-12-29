@@ -582,7 +582,9 @@ namespace NowSound
         _tracks.insert(std::pair<TrackId, NowSoundTrackAudioProcessor*>{id, newTrack});
 
         // we only give this a variable name for debugging purposes
-        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newTrack, /*isRecording:*/ false);
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newTrack, NodeType::Looping);
+
+        LogConnections();
 
         return id;
     }
@@ -730,7 +732,7 @@ namespace NowSound
 
     void NowSoundGraph::AddInputNodeToJuceGraph(SpatialAudioProcessor* newProcessor, int inputChannel)
     {
-        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, /*isRecording:*/ false);
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, NodeType::Input);
 
         // Input connection (only one, from designated channel to new processor's channel 0)
         Check(JuceGraph().addConnection({ { _audioInputNodePtr->nodeID, inputChannel }, { newNodeId, 0 } }));
@@ -744,7 +746,7 @@ namespace NowSound
 
     void NowSoundGraph::AddRecordingNodeToJuceGraph(SpatialAudioProcessor* newProcessor, AudioInputId audioInputId)
     {
-        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, /*isRecording:*/ true);
+        AudioProcessorGraph::NodeID newNodeId = AddNodeToJuceGraph(newProcessor, NodeType::Recording);
 
         // Input connections (one per output channel); consume the *pre-effect* input
         Check(JuceGraph().addConnection({ { Input(audioInputId)->NodeId(), 0 }, { newNodeId, 0 } }));
@@ -757,11 +759,20 @@ namespace NowSound
         }
     }
 
-    AudioProcessorGraph::NodeID NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, bool isRecording)
+    AudioProcessorGraph::NodeID NowSoundGraph::AddNodeToJuceGraph(SpatialAudioProcessor* newProcessor, NodeType nodeType)
     {
+        Check(nodeType != NodeType::Undefined);
+
         // set play config details BEFORE making connections to the graph
         // otherwise addConnection doesn't think the new node has any connections
-        newProcessor->setPlayConfigDetails(isRecording ? 2 : 1, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
+        int inputConnections;
+        switch (nodeType) {
+            case NodeType::Input: inputConnections = 1; break;
+            case NodeType::Recording: inputConnections = 2; break;
+            case NodeType::Looping: inputConnections = 0; break;
+        }
+
+        newProcessor->setPlayConfigDetails(inputConnections, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
         newProcessor->OutputProcessor()->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
         AudioProcessorGraph::Node::Ptr inputNode = JuceGraph().addNode(newProcessor);
@@ -785,8 +796,13 @@ namespace NowSound
         for (auto conn : JuceGraph().getConnections())
         {
             std::wstringstream wstr;
-            wstr << L"Connection: source " << conn.source.nodeID.uid << L"/" << conn.source.channelIndex
-                << ", destination " << conn.destination.nodeID.uid << L"/" << conn.destination.channelIndex;
+            auto sourceId = conn.source.nodeID;
+            auto destId = conn.destination.nodeID;
+            wstr << L"Connection: " << sourceId.uid << L"/" << conn.source.channelIndex
+                << " (" << JuceGraph().getNodeForId(sourceId)->getProcessor()->getName() << ")"
+                << " -> " << destId.uid << L"/" << conn.destination.channelIndex
+                << " (" << JuceGraph().getNodeForId(destId)->getProcessor()->getName() << ")"
+                ;
             Log(wstr.str());
 
             if (conn.source.nodeID.uid > maxConnNodeId)

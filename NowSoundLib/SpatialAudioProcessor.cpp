@@ -62,7 +62,7 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
 {
     Check(audioBuffer.getNumChannels() == 2);
     Check(getTotalNumOutputChannels() == 2);
-    Check(getTotalNumInputChannels() == 1 || getTotalNumInputChannels() == 2);
+    Check(getTotalNumInputChannels() == 0 || getTotalNumInputChannels() == 1 || getTotalNumInputChannels() == 2);
 
     int numSamples = audioBuffer.getNumSamples();
 
