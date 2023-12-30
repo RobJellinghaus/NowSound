@@ -26,7 +26,7 @@ namespace NowSound
         AudioInputId inputId,
         BufferAllocator<float>* audioAllocator,
         int channel)
-        : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), /*initialVolume*/1.0, /*initialPan*/0.5),
+        : SpatialAudioProcessor(nowSoundGraph, MakeName(L"Input ", (int)inputId), /*isMuted*/false, /*initialVolume*/1.0, /*initialPan*/0.5),
         _audioInputId{ inputId },
         _channel{ channel },
         _incomingAudioStream {

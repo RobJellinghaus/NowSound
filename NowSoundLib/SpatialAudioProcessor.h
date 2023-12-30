@@ -42,7 +42,7 @@ namespace NowSound
         MeasurementAudioProcessor* _outputProcessor;
 
     public:
-        SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, float initialVolume, float initialPan);
+        SpatialAudioProcessor(NowSoundGraph* graph, const std::wstring& name, bool isMuted, float initialVolume, float initialPan);
 
         // Expect channel 0 to have mono audio data; update all channels with FX-applied output.
         // Will clamp output values in the range (-1.0, 1.0); volumes above 1.0 are not recommended unless the whole loop is quiet

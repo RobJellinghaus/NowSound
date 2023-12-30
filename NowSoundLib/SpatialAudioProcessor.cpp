@@ -12,7 +12,7 @@
 using namespace NowSound;
 using namespace std;
 
-SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, float initialVolume, float initialPan) 
+SpatialAudioProcessor::SpatialAudioProcessor(NowSoundGraph* graph, const wstring& name, bool isMuted, float initialVolume, float initialPan) 
     : BaseAudioProcessor(graph, name),
     _isMuted{ false },
     _volume{ initialVolume },
@@ -76,11 +76,28 @@ void SpatialAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBu
     double rightCoefficient = std::sin(angularPosition);
 
     // Pan each mono sample, if we're not muted.
+    float valueAbsSum = 0;
+    float outputBufferChannel0AbsSum = 0;
+    float outputBufferChannel1AbsSum = 0;
     for (int i = 0; i < numSamples; i++)
     {
         float value = _isMuted ? 0 : outputBufferChannel0[i];
-        outputBufferChannel0[i] = clamp((float)(leftCoefficient * _volume * value), 1.0f);
-        outputBufferChannel1[i] = clamp((float)(rightCoefficient * _volume * value), 1.0f);
+        valueAbsSum += fabs(value);
+        outputBufferChannel0[i] = clamp((float)(leftCoefficient * _volume * value), 0.99f);
+        outputBufferChannel1[i] = clamp((float)(rightCoefficient * _volume * value), 0.99f);
+
+        outputBufferChannel0AbsSum += fabs(outputBufferChannel0[i]);
+        outputBufferChannel1AbsSum += fabs(outputBufferChannel1[i]);
+    }
+
+    if (getTotalNumInputChannels() == 0)
+    {
+        // we're a copied loop; spam like crazy
+        std::wstringstream wstr{};
+        wstr << L"SpatialAudioProcessor::processBlock: valueAbsSum " << valueAbsSum << ", _volume " << _volume
+            << ", leftCoefficient " << leftCoefficient << ", rightCoefficient " << rightCoefficient
+            << ", outputBufferChannel0AbsSum " << outputBufferChannel0AbsSum << ", outputBufferChannel1AbsSum " << outputBufferChannel1AbsSum;
+        NowSoundGraph::Instance()->Log(wstr.str());
     }
 }
 

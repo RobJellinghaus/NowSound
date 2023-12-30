@@ -36,7 +36,7 @@ namespace NowSound
         const BufferedSliceStream<AudioSample, float>& sourceStream,
         float initialVolume,
         float initialPan)
-        : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), initialVolume, initialPan),
+        : SpatialAudioProcessor(graph, MakeName(L"Track ", (int)trackId), /*isMuted:*/false, initialVolume, initialPan),
         _trackId{ trackId },
         _audioInputId{ inputId },
         _state{ NowSoundTrackState::TrackRecording },
@@ -79,7 +79,7 @@ namespace NowSound
     }
 
     NowSoundTrackAudioProcessor::NowSoundTrackAudioProcessor(TrackId trackId, NowSoundTrackAudioProcessor* other)
-        : SpatialAudioProcessor(other->Graph(), MakeName(L"Track ", (int)trackId), other->Info().Volume, other->Info().Pan),
+        : SpatialAudioProcessor(other->Graph(), MakeName(L"Track ", (int)trackId), other->IsMuted(), other->Volume(), other->Pan()),
         _trackId{ trackId },
         _audioInputId{ other->_audioInputId },
         _state{ NowSoundTrackState::TrackLooping },
@@ -88,7 +88,12 @@ namespace NowSound
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ other->_beatDuration },
         _lastSampleTime{ other->_lastSampleTime }
-    {}
+    {
+        // we're a copied loop; spam like crazy
+        std::wstringstream wstr{};
+        wstr << L"NowSoundTrackAudioProcessor copy ctor: other->Info().Volume " << other->Volume() << ", other->Pan() " << other->Pan();
+        NowSoundGraph::Instance()->Log(wstr.str());
+    }
         
     bool NowSoundTrackAudioProcessor::JustStoppedRecording()
     {
@@ -182,7 +187,8 @@ namespace NowSound
             localClockTime.Value(),
             TrackBeats(localClockTime, this->_beatDuration).Value(),
             (lastSampleTime - startTime).Value(),
-            Pan());
+            Pan(),
+            Volume());
     }
 
     void NowSoundTrackAudioProcessor::FinishRecording()
@@ -316,11 +322,20 @@ namespace NowSound
         {
             // Now we are replaying from our audio stream, and *now* we call processBlock.
 
+            if (getTotalNumInputChannels() == 0)
+            {
+                // we're a copied loop; spam like crazy
+                std::wstringstream wstr{};
+                wstr << L"NowSoundTrack::processBlock(trackId " << _trackId << "): bufferDuration " << bufferDuration.Value();
+                NowSoundGraph::Instance()->Log(wstr.str());
+            }
+
             while (bufferDuration > 0)
             {
                 Slice<AudioSample, float> slice(
                     _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_lastSampleTime, bufferDuration)));
 
+                // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
                 slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
                 slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
 

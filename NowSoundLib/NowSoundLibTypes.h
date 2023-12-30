@@ -241,7 +241,8 @@ namespace NowSound
             int64_t localClockTime,
             float localClockBeat,
             int64_t lastSampleTime,
-            float pan);
+            float pan,
+            float volume);
 
         NowSoundPluginInstanceInfo CreateNowSoundPluginInstanceInfo(
             PluginId pluginId,

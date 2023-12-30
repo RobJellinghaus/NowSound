@@ -70,7 +70,8 @@ namespace NowSound
         int64_t localClockTime,
         float localClockBeat,
         int64_t lastSampleTime,
-        float pan)
+        float pan,
+        float volume)
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
@@ -83,6 +84,7 @@ namespace NowSound
         info.LocalClockBeat = localClockBeat;
         info.LastSampleTime = lastSampleTime;
         info.Pan = pan;
+        info.Volume = volume;
         return info;
     }
 
