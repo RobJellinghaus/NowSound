@@ -320,16 +320,7 @@ namespace NowSound
 
         case NowSoundTrackState::TrackLooping:
         {
-            // Now we are replaying from our audio stream, and *now* we call processBlock.
-
-            if (getTotalNumInputChannels() == 0)
-            {
-                // we're a copied loop; spam like crazy
-                std::wstringstream wstr{};
-                wstr << L"NowSoundTrack::processBlock(trackId " << _trackId << "): bufferDuration " << bufferDuration.Value();
-                NowSoundGraph::Instance()->Log(wstr.str());
-            }
-
+            // Copy our audio stream data into audioBuffer, slice by slice.
             while (bufferDuration > 0)
             {
                 Slice<AudioSample, float> slice(
