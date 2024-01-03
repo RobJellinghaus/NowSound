@@ -28,12 +28,14 @@ namespace NowSound
         int64_t timeInSamples,
         float exactBeat,
         float beatsPerMinute,
+        int beatsPerMeasure,
         float beatInMeasure)
     {
         NowSoundTimeInfo info;
         info.TimeInSamples = timeInSamples;
         info.ExactBeat = exactBeat;
         info.BeatsPerMinute = beatsPerMinute;
+        info.BeatsPerMeasure = beatsPerMeasure;
         info.BeatInMeasure = beatInMeasure;
         return info;
     }
@@ -71,7 +73,9 @@ namespace NowSound
         float localClockBeat,
         int64_t lastSampleTime,
         float pan,
-        float volume)
+        float volume,
+        float beatsPerMinute,
+        int beatsPerMeasure)
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
@@ -85,6 +89,8 @@ namespace NowSound
         info.LastSampleTime = lastSampleTime;
         info.Pan = pan;
         info.Volume = volume;
+        info.BeatsPerMinute = beatsPerMinute;
+        info.BeatsPerMeasure = beatsPerMeasure;
         return info;
     }
 

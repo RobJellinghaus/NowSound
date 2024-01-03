@@ -30,7 +30,8 @@ namespace NowSound
             1,
             (float)2,
             (float)3,
-            (float)4);
+            (int)4,
+            (float)5);
     }
 
     NowSoundGraphState NowSoundGraph_State()
@@ -187,10 +188,10 @@ namespace NowSound
         }
     }
 
-    void NowSoundGraph_SetBeatsPerMinute(float bpm)
+    void NowSoundGraph_SetTempo(float beatsPerMinute, int beatsPerMeasure)
     {
         Check(NowSoundGraph::Instance() != nullptr);
-        NowSoundGraph::Instance()->SetBeatsPerMinute(bpm);
+        NowSoundGraph::Instance()->SetTempo(beatsPerMinute, beatsPerMeasure);
     }
 
     void NowSoundGraph_GetInputFrequencies(AudioInputId audioInputId, void* floatBuffer, int32_t floatBufferCapacity)
@@ -339,7 +340,9 @@ namespace NowSound
             (float)8,
             9,
             (float)10,
-            (float)11);
+            (float)11,
+            (float)12,
+            (int)13);
     }
 
     NowSoundTrackState NowSoundTrack_State(TrackId trackId)

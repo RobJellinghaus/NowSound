@@ -57,6 +57,8 @@ namespace NowSound
             float ExactBeat;
             // The current BPM of the graph.
             float BeatsPerMinute;
+            // The number of beats per measure (time signature).
+            int BeatsPerMeasure;
             // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
             float BeatInMeasure;
         } NowSoundTimeInfo;
@@ -107,6 +109,10 @@ namespace NowSound
             float Pan;
             // The current volume of this track; from 0 to 1.
             float Volume;
+            // The tempo of this track in beats per minute.
+            float BeatsPerMinute;
+            // The number of beats per measure (e.g. time signature).
+            int BeatsPerMeasure;
         } NowSoundTrackInfo;
 
         // The states of a NowSound graph.
@@ -220,6 +226,7 @@ namespace NowSound
             int64_t timeInSamples,
             float exactBeat,
             float beatsPerMinute,
+            int beatsPerMeasure,
             float beatInMeasure);
 
         NowSoundSpatialParameters CreateNowSoundInputInfo(
@@ -242,7 +249,9 @@ namespace NowSound
             float localClockBeat,
             int64_t lastSampleTime,
             float pan,
-            float volume);
+            float volume,
+            float beatsPerMinute,
+            int64_t beatsPerMeasure);
 
         NowSoundPluginInstanceInfo CreateNowSoundPluginInstanceInfo(
             PluginId pluginId,

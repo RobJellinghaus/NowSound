@@ -12,10 +12,12 @@
 
 #include "BufferAllocator.h"
 #include "Check.h"
+#include "Clock.h"
 #include "Histogram.h"
 #include "NowSoundLibTypes.h"
 #include "rosetta_fft.h"
 #include "SliceStream.h"
+#include "Tempo.h"
 
 #include "JuceHeader.h"
 
@@ -100,8 +102,8 @@ namespace NowSound
         // Graph must be Created or Running.
         NowSoundTimeInfo TimeInfo();
 
-        // Set the BPM of the graph; only effective when no tracks exist (does nothing if any tracks exist).
-        void SetBeatsPerMinute(float bpm);
+        // Set the tempo of the graph (really the tempo of currently recorded inputs).
+        void SetTempo(float beatsPerMinute, int beatsPerMeasure);
 
         // The current log info.
         NowSoundLogInfo LogInfo();
@@ -202,6 +204,12 @@ namespace NowSound
         // Fixed capacity for log messages (between calls to DropLogMessagesUpTo()).
         const int32_t s_logMessageCapacity = 10000;
 
+        // The singleton Clock. (This uses unique_ptr since it is owned but we want to be able to initialize it as null.)
+        std::unique_ptr<NowSound::Clock> _clock;
+
+        // The current Tempo.
+        std::unique_ptr<NowSound::Tempo> _tempo;
+
         // Log messages.
         // Note that this vector is always allocated to a fixed capacity so we don't get vector resizes while appending.
         std::vector<std::wstring> _logMessages;
@@ -300,6 +308,14 @@ namespace NowSound
         std::vector<std::vector<PluginProgram>> _loadedPluginPrograms;
 
     public:
+        // Internal accessors and helpers.
+
+        // The current graph-wide Tempo (for inputs)
+        Tempo* Tempo() const;
+
+        // The graph-wide Clock.
+        Clock* Clock() const;
+
         // Accessor for track by ID.
         NowSoundTrackAudioProcessor* Track(TrackId id);
 

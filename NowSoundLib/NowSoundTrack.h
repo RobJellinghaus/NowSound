@@ -16,6 +16,7 @@
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundLibTypes.h"
 #include "NowSoundTime.h"
+#include "Tempo.h"
 
 // set to 1 to reuse a static AudioFrame; 0 will allocate a new AudioFrame in each audio quantum event handler
 #define STATIC_AUDIO_FRAME 1
@@ -56,6 +57,10 @@ namespace NowSound
         // did this just stop recording? if so, message thread will remove its input connection on next poll
         bool _justStoppedRecording;
 
+        // What is the BPM (beats per minute) of this track?
+        // Tracks retain the BPM that existed at their creation (at least until we implement track duration/tempo change).
+        std::unique_ptr<Tempo> _tempo;
+
     public: // Non-exported methods for internal use
 
         // New constructor
@@ -65,7 +70,9 @@ namespace NowSound
             AudioInputId inputId,
             const BufferedSliceStream<AudioSample, float>& sourceStream,
             float initialVolume,
-            float initialPan);
+            float initialPan,
+            float beatsPerMinute,
+            int beatsPerMeasure);
 
         // Copy constructor; shares same stream. Only supported when other is looping.
         NowSoundTrackAudioProcessor(TrackId trackId, NowSoundTrackAudioProcessor* other);
@@ -87,8 +94,14 @@ namespace NowSound
 
         // In what state is this track?
         NowSoundTrackState State() const;
+        
+        // What is this track's tempo in beats per minute?
+        float BeatsPerMinute() const;
 
-        // Duration in beats of current Clock.
+        // What is this track's time signature?
+        int BeatsPerMeasure() const;
+
+        // Duration in beats of track's BeatsPerMinute.
         // Note that this is discrete (not fractional). This doesn't yet support non-beat-quantization.
         Duration<Beat> BeatDuration() const;
 
@@ -99,7 +112,7 @@ namespace NowSound
 
         // How long is this track, in samples?
         // This is increased during recording.  It may in general have fractional numbers of samples if 
-        // Clock::Instance().BeatsPerMinute does not evenly divide Clock::Instance().SampleRateHz.
+        // BeatsPerMinute() does not evenly divide Clock::Instance().SampleRateHz.
         ContinuousDuration<AudioSample> ExactDuration() const;
 
         // The starting moment at which this Track was created.

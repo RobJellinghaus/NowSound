@@ -14,6 +14,7 @@
 #include "NowSoundInput.h"
 #include "NowSoundTrack.h"
 #include "Option.h"
+#include "Tempo.h"
 
 using namespace concurrency;
 using namespace std;
@@ -67,6 +68,7 @@ namespace NowSound
         _audioGraphState{ NowSoundGraphState::GraphUninitialized },
         _audioDeviceManager{},
         _audioAllocator{ nullptr },
+        _clock{ nullptr },
         _nextTrackId{ TrackId::TrackIdUndefined },
         _nextAudioInputId{ AudioInputId::AudioInputUndefined },
         // JUCETODO: _inputDeviceIndicesToInitialize{},
@@ -83,7 +85,8 @@ namespace NowSound
         _audioPluginSearchPaths{},
         _knownPluginList{},
         _audioPluginFormatManager{},
-        _preRecordingDuration{ 0 }
+        _preRecordingDuration{ 0 },
+        _tempo{ nullptr }
     {
         _logMessages.reserve(s_logMessageCapacity);
         Check(_logMessages.size() == 0);
@@ -315,18 +318,19 @@ namespace NowSound
 
             // insist on stereo float samples.  TODO: generalize channel count
             // For right now let's just make absolutely sure these values are all precisely as we intend every time.
-            Check(!Clock::IsInitialized());
+            Check(_clock == nullptr);
             Check(info.ChannelCount == 2);
             Check(info.BitsPerSample == 32);
 
-            Clock::Initialize(
-                info.SampleRateHz,
-                info.ChannelCount,
+            _clock.reset(new NowSound::Clock(info.SampleRateHz,  info.ChannelCount));
+
+            _tempo.reset(new NowSound::Tempo(
                 MagicConstants::InitialBeatsPerMinute,
-                MagicConstants::BeatsPerMeasure);
+                MagicConstants::BeatsPerMeasure,
+                info.SampleRateHz));
 
             _audioAllocator = std::unique_ptr<BufferAllocator<float>>(new BufferAllocator<float>(
-                (int)(Clock::Instance().BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
+                (int)(_clock->BytesPerSecond() * MagicConstants::AudioBufferSizeInSeconds.Value()),
                 MagicConstants::InitialAudioBufferCount));
         }
 
@@ -344,7 +348,7 @@ namespace NowSound
                 octaveDivisions,
                 outputBinCount,
                 centralBinIndex,
-                Clock::Instance().SampleRateHz(),
+                _clock->SampleRateHz(),
                 fftSize);
         }
 
@@ -480,39 +484,39 @@ namespace NowSound
 
         Check(_audioGraphState > NowSoundGraphState::GraphInError);
 
-        Time<AudioSample> now = Clock::Instance().Now();
-        ContinuousDuration<Beat> durationBeats = Clock::Instance().TimeToBeats(now);
+        Time<AudioSample> now = _clock->Now();
+        ContinuousDuration<Beat> durationBeats = _tempo->TimeToBeats(now);
         int64_t completeBeats = (int64_t)durationBeats.Value();
-        int32_t beatsPerMeasure = Clock::Instance().BeatsPerMeasure();
+        int32_t beatsPerMeasure = _tempo->BeatsPerMeasure();
         int64_t completeMeasures = completeBeats / beatsPerMeasure;
 
         NowSoundTimeInfo timeInfo = CreateNowSoundTimeInfo(
             now.Value(),
             durationBeats.Value(),
-            Clock::Instance().BeatsPerMinute(),
+            _tempo->BeatsPerMinute(),
+            _tempo->BeatsPerMeasure(),
             durationBeats.Value() - (completeMeasures * beatsPerMeasure));
 
         return timeInfo;
     }
 
-    void NowSoundGraph::SetBeatsPerMinute(float bpm)
+    Tempo* NowSoundGraph::Tempo() const
     {
-        if (_tracks.size() > 0)
-        {
-            // not gonna happen
-            {
-                std::wstringstream wstr{};
-                wstr << L"Could not set bpm to " << bpm << L" because _tracks.size is " << _tracks.size();
-                NowSoundGraph::Instance()->Log(wstr.str());
-            }
-            return;
-        }
+        return _tempo.get();
+    }
 
-        Clock::Instance().BeatsPerMinute(bpm);
+    Clock* NowSoundGraph::Clock() const
+    {
+        return _clock.get();
+    }
+
+    void NowSoundGraph::SetTempo(float beatsPerMinute, int beatsPerMeasure)
+    {
+        _tempo.reset(new NowSound::Tempo(beatsPerMinute, beatsPerMeasure, _clock->SampleRateHz()));
 
         {
             std::wstringstream wstr{};
-            wstr << L"Set clock instance bpm to " << bpm << L"; clock instance bpm is now " << Clock::Instance().BeatsPerMinute();
+            wstr << L"Set tempo bpm to " << beatsPerMinute << L"; tempo bpm is now " << _tempo->BeatsPerMinute();
             NowSoundGraph::Instance()->Log(wstr.str());
         }
     }
@@ -935,12 +939,6 @@ namespace NowSound
 
         // and then destruct the singleton
         s_instance = nullptr;
-
-        // and destruct the clock
-        // TODO: make the clock a component of the graph
-        // (the clock has utility as a lower-level NowSoundLibShared-specific point of access to the sound data,
-        // but having two singletons already led to bugs and is generally a bad smell)
-        Clock::Shutdown();
     }
 
     // instance shutdown method for instance internal state

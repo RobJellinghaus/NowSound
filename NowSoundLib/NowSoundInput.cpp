@@ -33,10 +33,10 @@ namespace NowSound
             /*initialTime:*/0,
             /*channelCount*/1,
             audioAllocator,
-            /*maxBufferedLength*/(int)(Clock::Instance().SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2,
+            /*maxBufferedLength*/(int)(nowSoundGraph->Clock()->SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2,
             /*useExactLoopingMapper:*/false
         },
-        _rawInputHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
+        _rawInputHistogram{ new Histogram((int)nowSoundGraph->Clock()->TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
         _mutex{}
     {
     }
@@ -51,7 +51,15 @@ namespace NowSound
 
     NowSoundTrackAudioProcessor* NowSoundInputAudioProcessor::CreateRecordingTrack(TrackId id)
     {
-        NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(Graph(), id, _audioInputId, _incomingAudioStream, Volume(), Pan());
+        NowSoundTrackAudioProcessor* track = new NowSoundTrackAudioProcessor(
+            Graph(),
+            id,
+            _audioInputId,
+            _incomingAudioStream,
+            Volume(),
+            Pan(),
+            this->Graph()->Tempo()->BeatsPerMinute(),
+            this->Graph()->Tempo()->BeatsPerMeasure());
 
         return track;
     }
@@ -80,7 +88,7 @@ namespace NowSound
         // connected and always receiving data.)
         if (_audioInputId == AudioInput1)
         {
-            Clock::Instance().AdvanceFromAudioGraph(audioBuffer.getNumSamples());
+            Graph()->Clock()->AdvanceFromAudioGraph(audioBuffer.getNumSamples());
         }
 
         // Because the input channels get wired up separately to channel 0 of each NowSoundInput, this should always be 0 here

@@ -35,6 +35,7 @@ namespace NowSoundLib
         public Int64 TimeInSamples;
         public float ExactBeat;
         public float BeatsPerMinute;
+        public Int32 BeatsPerMeasure;
         public float BeatInMeasure;
     };
 
@@ -64,6 +65,8 @@ namespace NowSoundLib
         public readonly ContinuousDuration<Beat> ExactBeat;
         // The current BPM of the graph.
         public readonly float BeatsPerMinute;
+        // The time signature.
+        public readonly Duration<Beat> BeatsPerMeasure;
         // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
         public readonly float BeatInMeasure;
 
@@ -72,19 +75,22 @@ namespace NowSoundLib
             TimeInSamples = pinvokeTimeInfo.TimeInSamples;
             ExactBeat = pinvokeTimeInfo.ExactBeat;
             BeatsPerMinute = pinvokeTimeInfo.BeatsPerMinute;
+            BeatsPerMeasure = pinvokeTimeInfo.BeatsPerMeasure;
             BeatInMeasure = pinvokeTimeInfo.BeatInMeasure;
         }
 
         internal TimeInfo(
-            float beatsInMeasure,
+            Time<AudioSample> timeInSamples,
             float beatsPerMinute,
-            ContinuousDuration<Beat> exactBeat,
-            Time<AudioSample> timeInSamples)
+            Duration<Beat> beatsPerMeasure,
+            float beatInMeasure,
+            ContinuousDuration<Beat> exactBeat)
         {
-            BeatInMeasure = beatsInMeasure;
-            BeatsPerMinute = beatsPerMinute;
-            ExactBeat = exactBeat;
             TimeInSamples = timeInSamples;
+            BeatsPerMinute = beatsPerMinute;
+            BeatsPerMeasure = beatsPerMeasure;
+            BeatInMeasure = beatInMeasure;
+            ExactBeat = exactBeat;
         }
     };
 
@@ -105,6 +111,8 @@ namespace NowSoundLib
         internal Int64 LastSampleTime;
         internal float Pan;
         internal float Volume;
+        internal float BeatsPerMinute;
+        internal Int32 BeatsPerMeasure;
     };
 
     // Information about a track's time in NowSound terms.
@@ -132,6 +140,10 @@ namespace NowSoundLib
         public readonly float Pan;
         // The volume (0 to 1).
         public readonly float Volume;
+        // The tempo in beats per minute.
+        public readonly float BeatsPerMinute;
+        // The time signature.
+        public readonly Duration<Beat> BeatsPerMeasure;
 
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
@@ -146,6 +158,8 @@ namespace NowSoundLib
             StartTime = pinvokeTrackInfo.StartTimeInSamples;
             StartTimeInBeats = pinvokeTrackInfo.StartTimeInBeats;
             Volume = pinvokeTrackInfo.Volume;
+            BeatsPerMinute = pinvokeTrackInfo.BeatsPerMinute;
+            BeatsPerMeasure = pinvokeTrackInfo.BeatsPerMeasure;
         }
 
         public TrackInfo(
@@ -159,7 +173,9 @@ namespace NowSoundLib
             float pan,
             Time<AudioSample> startTime,
             ContinuousDuration<Beat> startTimeInBeats,
-            float volume
+            float volume,
+            float beatsPerMinute,
+            Duration<Beat> beatsPerMeasure
             )
         {
             Duration = duration;
@@ -173,6 +189,8 @@ namespace NowSoundLib
             StartTime = startTime;
             StartTimeInBeats = startTimeInBeats;
             Volume = volume;
+            BeatsPerMinute = beatsPerMinute;
+            BeatsPerMeasure = beatsPerMeasure;
         }
     };
 

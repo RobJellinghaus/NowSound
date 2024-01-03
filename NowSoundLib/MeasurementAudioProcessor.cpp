@@ -15,7 +15,7 @@ MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const
     : BaseAudioProcessor(graph, name),
     _frequencyDataMutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
-    _volumeHistogram{ new Histogram((int)Clock::Instance().TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
+    _volumeHistogram{ new Histogram((int)(graph->Clock()->TimeToSamples(MagicConstants::RecentVolumeDuration).Value())) },
     _frequencyTracker{ graph->FftSize() < 0
         ? ((NowSoundFrequencyTracker*)nullptr)
         : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) },
@@ -132,7 +132,7 @@ void MeasurementAudioProcessor::StartRecording(LPWSTR fileName, int32_t fileName
             // Now we'll create one of these helper objects which will act as a FIFO buffer, and will
             // write the data to disk on our background thread.
             _recordingThreadedWriter.reset(new AudioFormatWriter::ThreadedWriter(writer, *_recordingThread, 32768));
-            _recordingThreadedWriter->setFlushInterval(Clock::Instance().SampleRateHz() / 4); // only lose 1/4 second at most between flushes
+            _recordingThreadedWriter->setFlushInterval(this->Graph()->Clock()->SampleRateHz() / 4); // only lose 1/4 second at most between flushes
 
             // time to lock to prevent racing against the audio thread
             std::lock_guard<std::mutex> recordingLock(_recordingMutex);
