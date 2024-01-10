@@ -342,7 +342,7 @@ namespace NowSound
             (float)10,
             (float)11,
             (float)12,
-            (int)13);
+            13);
     }
 
     NowSoundTrackState NowSoundTrack_State(TrackId trackId)

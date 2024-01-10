@@ -45,7 +45,7 @@ namespace NowSound
         Time<AudioSample> Now() { return _now; }
 
         // TODO: is this correct for rounding up? Right now it doesn't, so does this drop fractional samples?
-        Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return SampleRateHz() * static_cast<int64_t>(seconds.Value()); }
+        Duration<AudioSample> TimeToSamples(ContinuousDuration<Second> seconds) { return static_cast<int64_t>(SampleRateHz() * seconds.Value()); }
 
         // empirically seen some Beats values come too close to this
         const double Epsilon = 0.0001; 

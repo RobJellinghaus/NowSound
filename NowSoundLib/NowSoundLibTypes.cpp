@@ -75,7 +75,7 @@ namespace NowSound
         float pan,
         float volume,
         float beatsPerMinute,
-        int beatsPerMeasure)
+        int64_t beatsPerMeasure)
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
@@ -90,7 +90,8 @@ namespace NowSound
         info.Pan = pan;
         info.Volume = volume;
         info.BeatsPerMinute = beatsPerMinute;
-        info.BeatsPerMeasure = beatsPerMeasure;
+        // definitely not exceeding 2^31 lol
+        info.BeatsPerMeasure = static_cast<int>(beatsPerMeasure);
         return info;
     }
 

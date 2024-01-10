@@ -947,5 +947,9 @@ namespace NowSound
         _audioDeviceManager.removeAllChangeListeners();
         _audioDeviceManager.closeAudioDevice();
         _audioDeviceManager.removeAudioCallback(&_audioProcessorPlayer);
+
+        // clear the graph before we destruct this object (which will kill the allocator, which will
+        // break stream teardown)
+        _audioProcessorGraph.clear();
     }
 }
