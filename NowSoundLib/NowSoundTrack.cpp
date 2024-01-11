@@ -168,9 +168,9 @@ namespace NowSound
 
     Time<AudioSample> NowSoundTrackAudioProcessor::StartTime() const { return _audioStream.get()->InitialTime(); }
 
-    ContinuousDuration<Beat> TrackBeats(NowSoundGraph* graph, Duration<AudioSample> localTime, Duration<Beat> beatDuration)
+    ContinuousDuration<Beat> NowSoundTrackAudioProcessor::TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration)
     {
-        ContinuousDuration<Beat> totalBeats = graph->Tempo()->TimeToBeats(localTime.Value());
+        ContinuousDuration<Beat> totalBeats = _tempo->TimeToBeats(localTime.Value());
         Duration<Beat> nonFractionalBeats((int)totalBeats.Value());
 
         return (ContinuousDuration<Beat>)(
@@ -252,11 +252,11 @@ namespace NowSound
                 }
                 else if (_beatDuration == 2)
                 {
-                    _beatDuration = 4;
+                    _beatDuration = _tempo->BeatsPerMeasure();
                 }
                 else
                 {
-                    _beatDuration = _beatDuration + Duration<Beat>(4);
+                    _beatDuration = _beatDuration + Duration<Beat>(_tempo->BeatsPerMeasure());
                 }
                 // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
                 Check(completeBeats < BeatDuration());

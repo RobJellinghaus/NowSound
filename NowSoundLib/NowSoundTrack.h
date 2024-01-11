@@ -90,6 +90,9 @@ namespace NowSound
         // If we are recording, monitor the input; otherwise, monitor the track itself.
         virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) override;
 
+        // How many beats into this track are we?
+        ContinuousDuration<Beat> TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration);
+
     public: // Exported methods via NowSoundTrackAPI
 
         // In what state is this track?
