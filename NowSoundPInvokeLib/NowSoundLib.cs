@@ -563,15 +563,15 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
-        static extern void NowSoundGraph_SetBeatsPerMinute(float bpm);
+        static extern void NowSoundGraph_SetTempo(float beatsPerMinute, int beatsPerMeasure);
 
         /// <summary>
         /// Set the BPM of the graph; only functions when no Tracks exist.
         /// Graph must be Running.
         /// </summary>
-        public static void SetBeatsPerMinute(float bpm)
+        public static void SetTempo(float beatsPerMinute, int beatsPerMeasure)
         {
-            NowSoundGraph_SetBeatsPerMinute(bpm);
+            NowSoundGraph_SetTempo(beatsPerMinute, beatsPerMeasure);
         }
 
         [DllImport("NowSoundLib")]

@@ -108,8 +108,8 @@ namespace NowSound
         // Graph must be at least Created; time will not be running until the graph is Running.
         __declspec(dllexport) NowSoundTimeInfo NowSoundGraph_TimeInfo();
 
-        // Set the BPM. Only functions when there are no tracks at all.
-        __declspec(dllexport) void NowSoundGraph_SetBeatsPerMinute(float bpm);
+        // Set the tempo. Affects any newly recorded tracks; current tracks keep their tempo. Buyer beware!
+        __declspec(dllexport) void NowSoundGraph_SetTempo(float beatsPerMinute, int beatsPerMeasure);
 
         // Get the current input frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
         // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
