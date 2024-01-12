@@ -193,7 +193,7 @@ namespace NowSound
             this->BeatDuration().Value(),
             this->_state == NowSoundTrackState::TrackLooping ? _audioStream.get()->ExactDuration().Value() : 0,
             localClockTime.Value(),
-            TrackBeats(Graph(), localClockTime, this->_beatDuration).Value(),
+            TrackBeats(localClockTime, this->_beatDuration).Value(),
             (lastSampleTime - startTime).Value(),
             Pan(),
             Volume(),

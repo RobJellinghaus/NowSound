@@ -48,7 +48,7 @@ namespace NowSound
         // This requires that Clock::Instance() exists.
         ContinuousDuration<AudioSample> BeatDuration() const
         {
-            return BeatsPerSecond() * _sampleRateHz;
+            return _sampleRateHz / BeatsPerSecond();
         }
 
         // Approximately how many beats?
