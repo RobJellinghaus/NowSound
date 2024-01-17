@@ -212,8 +212,7 @@ namespace NowSound
         BufferedSliceStream(
             int sliverCount,
             BufferAllocator<TValue>* allocator,
-            Duration<TTime> maxBufferedDuration,
-            bool useExactLoopingMapper)
+            Duration<TTime> maxBufferedDuration)
             : DenseSliceStream<TTime, TValue>(
                 sliverCount,
                 ContinuousDuration<TTime>{0},

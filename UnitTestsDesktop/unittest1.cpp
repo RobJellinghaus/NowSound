@@ -328,7 +328,7 @@ namespace UnitTestsDesktop
             int discreteDuration = (int)std::floor(continuousDuration + 1);
             float* buffer = AllocateSmall4FloatArray(discreteDuration);
             OwningBuf<float> owningBuf(0, discreteDuration * sliverCount, buffer);
-            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, 0, /*useExactLoopingMapper:*/true);
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, 0);
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
 
             // OK, time to get this fractional business right, to ensure we properly handle loops that are
@@ -366,7 +366,7 @@ namespace UnitTestsDesktop
             interval = interval.Suffix(slice.SliceDuration());
             Check(interval.IsEmpty());
 
-            BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator, 0, /*useContinuousLoopingMapper:*/ false);
+            BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator, 0);
             stream2.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
             stream2.Shut(continuousDuration);
             interval = Interval<AudioSample>(0, 10);
@@ -437,7 +437,7 @@ namespace UnitTestsDesktop
             float* tempBuffer = AllocateSmall4FloatArray(20);
             OwningBuf<float> owningBuf(0, 20 * sliverCount, tempBuffer);
 
-            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, /*maxBufferedDuration:*/ 5, /*useContinuousLoopingMapper:*/ false);
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, /*maxBufferedDuration:*/ 5);
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), 0, 11, sliverCount));
             Check(stream.DiscreteDuration() == 5);
             Slice<AudioSample, float> slice = stream.GetSliceContaining(stream.DiscreteInterval());

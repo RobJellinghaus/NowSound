@@ -44,12 +44,9 @@ namespace NowSound
         _state{ NowSoundTrackState::TrackRecording },
         // latency compensation effectively means the track started before it was constructed ;-)
         _audioStream(new BufferedSliceStream<AudioSample, float>(
-            // TODO: determine once and for all whether this time adjustment is a hack or a good idea
-            graph->Clock()->Now() /*- Clock::Instance().TimeToSamples(graph->PreRecordingDuration())*/,
             1,
             NowSoundGraph::Instance()->AudioAllocator(),
-            /*maxBufferedDuration:*/ 0,
-            /*useContinuousLoopingMapper*/ false)),
+            /*maxBufferedDuration:*/ 0)),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
         _localLoopTime{ 0 },
