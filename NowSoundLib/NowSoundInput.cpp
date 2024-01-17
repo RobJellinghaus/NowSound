@@ -30,7 +30,6 @@ namespace NowSound
         _audioInputId{ inputId },
         _channel{ channel },
         _incomingAudioStream {
-            /*initialTime:*/0,
             /*channelCount*/1,
             audioAllocator,
             /*maxBufferedLength*/(int)(nowSoundGraph->Clock()->SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2,

@@ -52,14 +52,22 @@ namespace NowSound
         typedef struct NowSoundTimeInfo
         {
             // The number of samples elapsed since the audio graph started.
+            // NOTE: THIS IS ONLY FOR DEBUGGING! Once upon a time this was tracked in loops,
+            // but it turns out absolute time is a terrible concept that brings only rigidity and
+            // lack of expression.
             int64_t TimeInSamples;
-            // The exact current beat (including fractional part; truncate to get integral beat count).
+            // The exact current beat (including fractional part; truncate to get integral beat count),
+            // according to the graph's current tempo.
+            // TODO: technically this should be player-specific....
             float ExactBeat;
             // The current BPM of the graph.
+            // TODO: technically this should be player-specific....
             float BeatsPerMinute;
             // The number of beats per measure (time signature).
+            // TODO: technically this should be player-specific....
             int BeatsPerMeasure;
             // The current position in the measure. (e.g. 4/4 time = this ranges from 0 to 3)
+            // TODO: technically this should be player-specific....
             float BeatInMeasure;
         } NowSoundTimeInfo;
 
@@ -84,27 +92,23 @@ namespace NowSound
         } NowSoundSignalInfo;
 
         // Information about a track's time in NowSound terms.
+        // Note that "exact" means "with floating point precision." Tracks have a duration
+        // measured in floating point samples, since a BPM tempo that is a prime number will
+        // have a duration that is a fractional number of samples.
         typedef struct NowSoundTrackInfo
         {
             // Is this track looping? If not, it is still recording. We use a wasteful int32_t to avoid
             // packing issues.
             int64_t IsTrackLooping;
-            // The start time of the track, in samples from the beginning of this session.
-            int64_t StartTimeInSamples;
-            // The start time of the track, in beats.
-            float StartTimeInBeats;
-            // The duration of the track in audio samples.
-            int64_t DurationInSamples;
-            // The duration of the track in beats.
+            // The duration of the track in beats; always an integer number.
+            // TODO: implement non-quantized loops BECAUSE WHY NOT
             int64_t DurationInBeats;
-            // The duration of the track in exact seconds; DurationInSamples is this, rounded up to the nearest sample.
-            float ExactDuration;
-            // The clock time, relative to the start of the track.
-            int64_t LocalClockTime;
+            // The exact duration of the track in samples.
+            float ExactDurationInSamples;
+            // The track's exact time in samples, relative to the start of the track.
+            float ExactTrackTimeInSamples;
             // The current beat of the track (e.g. a 12 beat track = this ranges from 0 to 11.999...).
-            float LocalClockBeat;
-            // The time at which the track last delivered samples (depends on current audio frame size).
-            int64_t LastSampleTime;
+            float ExactTrackBeat;
             // The panning value of this track; from 0 (left) to 1 (right).
             float Pan;
             // The current volume of this track; from 0 to 1.
@@ -240,14 +244,10 @@ namespace NowSound
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             bool isTrackLooping,
-            int64_t startTimeInSamples,
-            float startTimeInBeats,
-            int64_t durationInSamples,
             int64_t durationInBeats,
-            float exactDuration,
-            int64_t localClockTime,
-            float localClockBeat,
-            int64_t lastSampleTime,
+            float exactDurationInSamples,
+            float exactTrackTimeInSamples,
+            float exactTrackBeat,
             float pan,
             float volume,
             float beatsPerMinute,

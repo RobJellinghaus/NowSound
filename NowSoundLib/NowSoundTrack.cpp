@@ -52,11 +52,9 @@ namespace NowSound
             /*useContinuousLoopingMapper*/ false)),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ 1 },
-        _lastSampleTime{ graph->Clock()->Now() },
+        _localLoopTime{ 0 },
         _tempo{ new Tempo(beatsPerMinute, beatsPerMeasure, graph->Clock()->SampleRateHz()) }
     {
-        Check(_lastSampleTime.Value() >= 0);
-
         // Tracks should only be created from the UI thread (or at least not from the audio thread).
         // TODO: thread contracts.
 
@@ -67,9 +65,9 @@ namespace NowSound
         if (preRecordingDuration.Value() > 0)
         {
             // Prepend preRecordingDuration seconds of previously buffered input audio, to prepopulate this track.
-            Duration<AudioSample> preRecordingSampleDuration = graph->Clock()->TimeToSamples(preRecordingDuration);
+            Duration<AudioSample> preRecordingSampleDuration = graph->Clock()->TimeToRoundedUpSamples(preRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
-                sourceStream.InitialTime() + sourceStream.DiscreteDuration() - preRecordingSampleDuration,
+                Time<AudioSample>(0) + sourceStream.DiscreteDuration() - preRecordingSampleDuration,
                 preRecordingSampleDuration);
             sourceStream.AppendTo(lastIntervalOfSourceStream, _audioStream.get());
         }
@@ -90,7 +88,8 @@ namespace NowSound
         _audioStream(other->_audioStream),
         // one beat is the shortest any track ever is (TODO: allow optionally relaxing quantization)
         _beatDuration{ other->_beatDuration },
-        _lastSampleTime{ other->_lastSampleTime },
+        _localLoopTime{ other->_localLoopTime },
+        _justStoppedRecording{ false },
         _tempo{ new Tempo(other->_tempo->BeatsPerMinute(), other->_tempo->BeatsPerMeasure(), other->Graph()->Clock()->SampleRateHz()) }
     {
         // we're a copied loop; spam like crazy
@@ -150,13 +149,7 @@ namespace NowSound
 
     ContinuousDuration<Beat> NowSoundTrackAudioProcessor::BeatPositionUnityNow() const
     {
-        // TODO: determine whether we really need a time that only moves forward between Unity frames.
-        // For now, let time be determined solely by audio graph, and let Unity observe time increasing 
-        // during a single Unity frame.
-        Duration<AudioSample> sinceStart(Graph()->Clock()->Now() - _audioStream.get()->InitialTime());
-        Time<AudioSample> sinceStartTime(sinceStart.Value());
-
-        ContinuousDuration<Beat> beats = _tempo->TimeToBeats(sinceStartTime);
+        ContinuousDuration<Beat> beats = _tempo->TimeToBeats(_localLoopTime);
         int completeBeatsSinceStart = (int)beats.Value() % (int)BeatDuration().Value();
         return (ContinuousDuration<Beat>)(completeBeatsSinceStart + (beats.Value() - (int)beats.Value()));
     }
@@ -166,35 +159,15 @@ namespace NowSound
         return (int)BeatDuration().Value() * _tempo->BeatDuration().Value();
     }
 
-    Time<AudioSample> NowSoundTrackAudioProcessor::StartTime() const { return _audioStream.get()->InitialTime(); }
-
-    ContinuousDuration<Beat> NowSoundTrackAudioProcessor::TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration)
-    {
-        ContinuousDuration<Beat> totalBeats = _tempo->TimeToBeats(localTime.Value());
-        Duration<Beat> nonFractionalBeats((int)totalBeats.Value());
-
-        return (ContinuousDuration<Beat>)(
-            // total (non-fractional) beats modulo the beat duration of the track
-            (nonFractionalBeats.Value() % beatDuration.Value())
-            // fractional beats of the track
-            + (totalBeats.Value() - nonFractionalBeats.Value()));
-    }
-
     NowSoundTrackInfo NowSoundTrackAudioProcessor::Info() 
     {
-        Time<AudioSample> lastSampleTime = this->_lastSampleTime; // to prevent any drift from this being updated concurrently
-        Time<AudioSample> startTime = this->_audioStream.get()->InitialTime();
-        Duration<AudioSample> localClockTime = Graph()->Clock()->Now() - startTime;
+        Time<AudioSample> lastSampleTime = this->_localLoopTime.RoundedDown(); // to prevent any drift from this being updated concurrently
         return CreateNowSoundTrackInfo(
             _state == NowSoundTrackState::TrackLooping,
-            startTime.Value(),
-            _tempo->TimeToBeats(startTime).Value(),
-            this->_audioStream.get()->DiscreteDuration().Value(),
             this->BeatDuration().Value(),
-            this->_state == NowSoundTrackState::TrackLooping ? _audioStream.get()->ExactDuration().Value() : 0,
-            localClockTime.Value(),
-            TrackBeats(localClockTime, this->_beatDuration).Value(),
-            (lastSampleTime - startTime).Value(),
+            this->_audioStream.get()->ExactDuration().Value(),
+            this->_localLoopTime.Value(),
+            _tempo->TimeToBeats(this->_localLoopTime).Value(),
             Pan(),
             Volume(),
             BeatsPerMinute(),
@@ -227,7 +200,10 @@ namespace NowSound
 
         // Depending on the current state of this track, we either record, or we finish recording
         // and switch modes to looping, or we're straight looping.
+
+        // The number of samples in the outgoing buffer.
         Duration<AudioSample> bufferDuration{ audioBuffer.getNumSamples() };
+
         // The duration that's been copied to the input channel so far (used when looping).
         Duration<AudioSample> completedDuration{ 0 };
 
@@ -280,6 +256,8 @@ namespace NowSound
             // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
 
             // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.
+            // We will capture enough samples to play back an extra sample, during loops where the loopie
+            // local time fractionally wraps around.
             Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
 
             // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
@@ -308,7 +286,9 @@ namespace NowSound
                 // the input-channel-to-track routing.
                 _audioStream.get()->Append(captureDuration, audioBuffer.getReadPointer(0));
 
-                // now that we have done our final append, shut the stream at the current duration
+                // now that we have done our final append, shut the stream at the current duration.
+                // This requires that the stream has captured exactly roundedUpDuration samples in total,
+                // or an assertion will fire.
                 _audioStream.get()->Shut(ExactDuration());
             }
             else
@@ -334,7 +314,7 @@ namespace NowSound
             while (bufferDuration > 0)
             {
                 Slice<AudioSample, float> slice(
-                    _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_lastSampleTime, bufferDuration)));
+                    _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration)));
 
                 // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
                 slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
@@ -342,7 +322,7 @@ namespace NowSound
 
                 bufferDuration = bufferDuration - slice.SliceDuration();
                 completedDuration = completedDuration + slice.SliceDuration();
-                _lastSampleTime = _lastSampleTime + slice.SliceDuration();
+                _localLoopTime = _localLoopTime + slice.SliceDuration();
             }
 
             // Now process the whole block to the output.

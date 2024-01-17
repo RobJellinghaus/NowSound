@@ -64,14 +64,10 @@ namespace NowSound
 
     NowSoundTrackInfo CreateNowSoundTrackInfo(
         bool isTrackLooping,
-        int64_t startTimeInSamples,
-        float startTimeInBeats,
-        int64_t durationInSamples,
         int64_t durationInBeats,
-        float exactDuration,
-        int64_t localClockTime,
-        float localClockBeat,
-        int64_t lastSampleTime,
+        float exactDurationInSamples,
+        float exactTrackTimeInSamples,
+        float exactTrackBeat,
         float pan,
         float volume,
         float beatsPerMinute,
@@ -79,14 +75,10 @@ namespace NowSound
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
-        info.StartTimeInSamples = startTimeInSamples;
-        info.StartTimeInBeats = startTimeInBeats;
-        info.DurationInSamples = durationInSamples;
         info.DurationInBeats = durationInBeats;
-        info.ExactDuration = exactDuration;
-        info.LocalClockTime = localClockTime;
-        info.LocalClockBeat = localClockBeat;
-        info.LastSampleTime = lastSampleTime;
+        info.ExactDurationInSamples = exactDurationInSamples;
+        info.ExactTrackTimeInSamples = exactTrackTimeInSamples;
+        info.ExactTrackBeat = exactTrackBeat;
         info.Pan = pan;
         info.Volume = volume;
         info.BeatsPerMinute = beatsPerMinute;

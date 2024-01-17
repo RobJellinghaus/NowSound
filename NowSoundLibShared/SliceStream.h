@@ -9,7 +9,7 @@
 
 #include "BufferAllocator.h"
 #include "Check.h"
-#include "IntervalMapper.h"
+#include "IStream.h"
 #include "Slice.h"
 #include "NowSoundTime.h"
 
@@ -20,9 +20,6 @@ namespace NowSound
     // Streams may be Open (in which case more data may be appended to them), or Shut (in which case they will
     // not change again).
     // 
-    // Streams may have varying internal policies for mapping time to underlying data, and may form hierarchies
-    // internally.
-    // 
     // Streams have a SliverCount which denotes a larger granularity within the Stream's data.
     // A SliverCount of N represents that each element in the Stream logically consists of N contiguous
     // TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
@@ -30,15 +27,7 @@ namespace NowSound
     template<typename TTime, typename TValue>
     class SliceStream : public IStream<TTime>
     {
-        // The initial time of this Stream.
-        // 
-        // Note that this is discrete.  We don't consider a sub-sample's worth of error in the start time to be
-        // significant.  The loop duration, on the other hand, is iterated so often that error can and does
-        // accumulate; hence, ContinuousDuration, defined only once shut.
-        // </remarks>
     protected:
-        Time<TTime> _initialTime;
-
         // The floating-point duration of this stream in terms of samples; only valid once shut.
         // 
         // This allows streams to have lengths measured in fractional samples, which prevents roundoff error from
@@ -52,16 +41,13 @@ namespace NowSound
         // Is this stream shut?
         bool _isShut;
 
-        SliceStream(Time<TTime> initialTime, int sliverCount, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
-            : _initialTime{ initialTime }, _sliverCount{ sliverCount }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
+        SliceStream(int sliverCount, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
+            : _sliverCount{ sliverCount }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
         {
         }
 
     public:
         virtual bool IsShut() const { return _isShut; }
-
-        // The starting time of this Stream.
-        virtual Time<TTime> InitialTime() const { return _initialTime; }
 
         // The floating-point-accurate duration of this stream; only valid once shut.
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
@@ -91,38 +77,29 @@ namespace NowSound
     };
 
     // A stream of data, accessed through consecutive, densely sequenced Slices.
+    // This type is mostly an interface.
     template<typename TTime, typename TValue>
     class DenseSliceStream : public SliceStream<TTime, TValue>
     {
-        // The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices.
     protected:
+        // The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices,
+        // and also exactly equal to the rounded-up value of ExactDuration().
         Duration<TTime> _discreteDuration;
 
-        // The mapper that converts absolute time into relative time for this stream.
-        // This is held by a unique_ptr to allow for polymorphism.
-        std::unique_ptr<IntervalMapper<TTime>> _intervalMapper;
-
         DenseSliceStream(
-            Time<TTime> initialTime,
             int sliverCount,
             ContinuousDuration<TTime> exactDuration,
             bool isShut,
-            Duration<TTime> discreteDuration,
-            std::unique_ptr<IntervalMapper<TTime>>&& intervalMapper)
-            : SliceStream<TTime, TValue>(initialTime, sliverCount, exactDuration, isShut),
-            _discreteDuration{ discreteDuration },
-            // when appending, we always start out with identity mapping
-            _intervalMapper{ std::move(intervalMapper) }
+            Duration<TTime> discreteDuration)
+            : SliceStream<TTime, TValue>(sliverCount, exactDuration, isShut),
+            _discreteDuration{ discreteDuration }
         { }
 
     public:
-        // The discrete duration of this stream; always exactly equal to the number of timepoints appended.
+        // The discrete duration of this stream; always exactly equal to the number of samples appended.
         virtual Duration<TTime> DiscreteDuration() const { return _discreteDuration; }
 
-        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(this->InitialTime(), this->DiscreteDuration()); }
-
-        IntervalMapper<TTime>* Mapper() const { return _intervalMapper.get(); }
-        void Mapper(IntervalMapper<TTime>&& value) { _intervalMapper = std::move(value); }
+        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(0, this->DiscreteDuration()); }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -156,14 +133,10 @@ namespace NowSound
 
         // Copy the given interval of this stream to the destination.
         virtual void CopyTo(const Interval<TTime>& sourceInterval, TValue* destination) const = 0;
-
-        /*
-        // Copy the given interval of this stream to the destination.
-        virtual void CopyTo(Interval<TTime> sourceInterval, DenseSliceStream<TTime, TValue> destination) const = 0;
-        */
     };
 
     // A stream that buffers some amount of data in memory.
+    // This is an actual concrete implementation type.
     template<typename TTime, typename TValue>
     class BufferedSliceStream : public DenseSliceStream<TTime, TValue>
     {
@@ -188,8 +161,6 @@ namespace NowSound
 
         // This is the remaining not-yet-allocated portion of the current append buffer (the last in _buffers).
         Slice<TTime, TValue> _remainingFreeSlice;
-
-        bool _useExactLoopingMapper;
 
         void EnsureFreeSlice()
         {
@@ -217,13 +188,14 @@ namespace NowSound
 
             if (_data.size() == 0)
             {
-                _data.push_back(TimedSlice<TTime, TValue>(this->InitialTime(), source));
+                _data.push_back(TimedSlice<TTime, TValue>(0, source));
             }
             else
             {
                 TimedSlice<TTime, TValue> last = _data[_data.size() - 1];
                 if (last.Value().Precedes(source))
                 {
+                    // coalesce the slices
                     _data[_data.size() - 1] = TimedSlice<TTime, TValue>(last.InitialTime(), last.Value().UnionWith(source));
                 }
                 else
@@ -238,45 +210,37 @@ namespace NowSound
 
     public:
         BufferedSliceStream(
-            Time<TTime> initialTime,
             int sliverCount,
             BufferAllocator<TValue>* allocator,
             Duration<TTime> maxBufferedDuration,
             bool useExactLoopingMapper)
             : DenseSliceStream<TTime, TValue>(
-                initialTime,
                 sliverCount,
                 ContinuousDuration<TTime>{0},
                 false, // isShut
-                Duration<TTime>{},
-                std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>())),
+                Duration<TTime>{}),
             _allocator{ allocator },
             _buffers{ },
             _remainingFreeSlice{ },
-            _maxBufferedDuration{ maxBufferedDuration },
-            _useExactLoopingMapper{ useExactLoopingMapper }
+            _maxBufferedDuration{ maxBufferedDuration }
         { }
 
         BufferedSliceStream(
             int sliverCount,
             BufferAllocator<TValue>* allocator)
             : DenseSliceStream<TTime, TValue>(
-                Time<TTime>{},
                 sliverCount,
                 ContinuousDuration<TTime>{0},
                 false, // isShut
-                Duration<TTime>{},
-                std::unique_ptr<IntervalMapper<TTime>>(new IdentityIntervalMapper<TTime>())),
+                Duration<TTime>{}),
             _allocator{ allocator },
             _buffers{},
             _remainingFreeSlice{},
-            _maxBufferedDuration{ Duration<TTime>{} },
-            _useExactLoopingMapper{ false }
+            _maxBufferedDuration{ Duration<TTime>{} }
         { }
 
         BufferedSliceStream(BufferedSliceStream<TTime, TValue>&& other)
             : DenseSliceStream<TTime, TValue>(
-                other.InitialTime(),
                 other.SliverCount(),
                 other.ExactDuration(),
                 other.IsShut(),
@@ -285,13 +249,10 @@ namespace NowSound
             _allocator{ other._allocator },
             _buffers{ std::move(other._buffers) },
             _remainingFreeSlice{ other._remainingFreeSlice },
-            _maxBufferedDuration{ other._maxBufferedDuration },
-            _useExactLoopingMapper{ other._useExactLoopingMapper }
+            _maxBufferedDuration{ other._maxBufferedDuration }
         {
             Check(_allocator != nullptr);
-            Check(this->InitialTime() == other.InitialTime());
-            Time<TTime> finalTime = other.InitialTime() + other.DiscreteDuration();
-            Check(this->InitialTime() + this->DiscreteDuration() == finalTime);
+            Check(ExactDuration() == other.ExactDuration());
         }
 
         BufferedSliceStream(const BufferedSliceStream<TTime, TValue>& other) = delete;
@@ -310,15 +271,6 @@ namespace NowSound
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
         {
             this->DenseSliceStream<TTime, TValue>::Shut(finalDuration);
-            // swap out our mappers, we're looping now
-            if (_useExactLoopingMapper)
-            {
-                this->_intervalMapper.reset(new ExactLoopingIntervalMapper<TTime>());
-            }
-            else
-            {
-                this->_intervalMapper.reset(new SimpleLoopingIntervalMapper<TTime>());
-            }
 
 #if SPAMAUDIO
             foreach(TimedSlice<TTime, TValue> timedSlice in _data) {
@@ -328,17 +280,21 @@ namespace NowSound
 
             // and, do a microfade out at the end of the last slice, and in at the start of the first.
             // this avoids clicking that was empirically otherwise present and annoying.
-            const int64_t microfadeDuration{ 20 };
+            // TODO: this should be dynamically done whenever loopie local time changes noncontinuously!
+            const int64_t microFadeDuration{ 20 };
             TimedSlice<TTime, TValue>& firstSlice{ _data.at(0) };
             TValue* firstSliceData{ firstSlice.NonConstValue().OffsetPointer() };
             TimedSlice<TTime, TValue>& lastSlice{ _data.at(_data.size() - 1) };
             int sliverCount = firstSlice.Value().SliverCount();
+            int64_t firstSliceDuration = firstSlice.Value().SliceDuration().Value();
             TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliverCount) };
-            const int64_t actualMicrofadeDuration{ std::min(firstSlice.Value().SliceDuration().Value(), std::min(lastSlice.Value().SliceDuration().Value(), microfadeDuration)) };
+            int64_t lastSliceDuration = lastSlice.Value().SliceDuration().Value();
+            int64_t minSliceDuration = firstSliceDuration < lastSliceDuration ? firstSliceDuration : lastSliceDuration;
+            int64_t minDuration = minSliceDuration < microFadeDuration ? minSliceDuration : microFadeDuration;
 
-            for (int64_t i = 0; i < actualMicrofadeDuration; i++)
+            for (int64_t i = 0; i < minDuration; i++)
             {
-                float frac = (float)i / actualMicrofadeDuration;
+                float frac = (float)i / minDuration;
                 for (int64_t j = 0; j < sliverCount; j++)
                 {
                     firstSliceData[i * sliverCount + j] *= frac;
@@ -465,7 +421,6 @@ namespace NowSound
                     _allocator->Free(std::move(_buffers.at(0)));
                     _buffers.erase(_buffers.begin());
                     this->_discreteDuration = this->_discreteDuration - firstSlice.Value().SliceDuration();
-                    this->_initialTime = this->_initialTime + firstSlice.Value().SliceDuration();
                 }
                 else
                 {
@@ -479,7 +434,6 @@ namespace NowSound
                         newSlice);
                     _data[0] = newFirstSlice;
                     this->_discreteDuration = this->_discreteDuration - toTrim;
-                    this->_initialTime = this->_initialTime + toTrim;
                 }
             }
         }
@@ -493,7 +447,7 @@ namespace NowSound
             {
                 Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
                 source.CopyTo(p);
-                sourceInterval = sourceInterval.SubintervalStartingAt(source.SliceDuration());
+                sourceInterval = sourceInterval.Suffix(source.SliceDuration());
             }
         }
 
@@ -504,44 +458,39 @@ namespace NowSound
             {
                 Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
                 destinationStream->Append(source);
-                sourceInterval = sourceInterval.SubintervalStartingAt(source.SliceDuration());
+                sourceInterval = sourceInterval.Suffix(source.SliceDuration());
             }
         }
 
-        // Map the interval time to stream local time, and get the slice containing the start time of the interval
-        // (after the interval is mapped to stream time per the current mapping).
+        // Get the slice that starts at the interval's start time, and that is either
+        // the longest available slice, or a slice no longer than the interval.
         virtual Slice<TTime, TValue> GetSliceContaining(Interval<TTime> interval) const
         {
-            Interval<TTime> firstMappedInterval = this->Mapper()->MapNextSubInterval(this, interval);
-
-            if (firstMappedInterval.IsEmpty())
+            if (interval.IsEmpty())
             {
                 // default slice is empty (but has no backing buf at all)
                 return Slice<TTime, TValue>::Empty();
             }
 
-            Check(firstMappedInterval.InitialTime() >= this->InitialTime());
-            Check(firstMappedInterval.InitialTime() + firstMappedInterval.IntervalDuration() <= this->InitialTime() + this->DiscreteDuration());
-
-            const TimedSlice<TTime, TValue>& foundTimedSlice = GetInitialTimedSlice(firstMappedInterval);
-            Interval<TTime> intersection = foundTimedSlice.SliceInterval().Intersect(firstMappedInterval);
+            const TimedSlice<TTime, TValue>& foundTimedSlice = GetInitialTimedSlice(interval);
+            Interval<TTime> intersection = foundTimedSlice.SliceInterval().Intersect(interval);
             Check(!intersection.IsEmpty());
             Slice<TTime, TValue> ret(foundTimedSlice.Value().Subslice(
-                intersection.InitialTime() - foundTimedSlice.InitialTime(),
+                intersection.IntervalTime() - foundTimedSlice.InitialTime(),
                 intersection.IntervalDuration()));
 
             return ret;
         }
 
         // Get the slice that intersects the given interval's start time.
-        const TimedSlice<TTime, TValue>& GetInitialTimedSlice(Interval<TTime> firstMappedInterval) const
+        const TimedSlice<TTime, TValue>& GetInitialTimedSlice(Interval<TTime> interval) const
         {
             // we must overlap somewhere
-            Check(!firstMappedInterval.Intersect(this->DiscreteInterval()).IsEmpty());
+            Check(!interval.Intersect(this->DiscreteInterval()).IsEmpty());
 
-            // Get the biggest available slice at firstMappedInterval.InitialTime.
+            // Get the biggest available slice at interval.InitialTime.
             // First, get the index of the slice just after the one we want.
-            TimedSlice<TTime, TValue> target(firstMappedInterval.InitialTime(), Slice<TTime, TValue>());
+            TimedSlice<TTime, TValue> target(interval.IntervalTime(), Slice<TTime, TValue>());
             auto firstSliceNotLessThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
 
             if (firstSliceNotLessThanTarget == _data.end())
@@ -549,7 +498,7 @@ namespace NowSound
                 // If we reached the end, then the slice we want is the last slice.
                 return *(firstSliceNotLessThanTarget - 1);
             }
-            else if (firstSliceNotLessThanTarget->InitialTime() == firstMappedInterval.InitialTime())
+            else if (firstSliceNotLessThanTarget->InitialTime() == interval.IntervalTime())
             {
                 // If we found a slice starting at the exact right time, then return it.
                 return *firstSliceNotLessThanTarget;

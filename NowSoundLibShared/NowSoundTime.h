@@ -32,6 +32,12 @@ namespace NowSound
     // This type is actually never instantiated; it is used purely as a generic type parameter.
     class Frame {};
 
+    template<typename TTime>
+    class ContinuousTime;
+
+    template<typename TTime>
+    class ContinuousDuration;
+
     // Time parameterized on some underlying unit of measurement (such as those above).
     // This theoretically could also provide a timing base (e.g. number of units per other-unit),
     // but currently does not.
@@ -101,6 +107,8 @@ namespace NowSound
         }
 
         double Seconds() const { return ((double)_value.Value()) / Clock::SampleRateHz; }
+
+        ContinuousTime<TTime> AsContinuous() const { return new ContinuousTime<Time>(Value()); }
     };
 
     // A distance between two Times.
@@ -173,6 +181,8 @@ namespace NowSound
         {
             return _value != second.Value();
         }
+
+        ContinuousDuration<TTime> AsContinuous() const { return new ContinuousDuration<Time>(Value()); }
     };
 
     template<typename TTime>
@@ -211,83 +221,48 @@ namespace NowSound
         return Time<TTime>(first._duration + second.Value());
     }
 
-    // An interval, defined as a start time and a duration (aka length).
-    // 
-    // Empty intervals semantically have no InitialTime, and no distinction should be made between empty
-    // intervals based on InitialTime.
+
+    // A continous Time. The main use for this is to keep exact track of how many fractional
+    // samples have been played, modulo the length of a loop. This enables handling rounding
+    // properly when wrapping around a loop.
     template<typename TTime>
-    struct Interval
+    class ContinuousTime
     {
     private:
-        Time<TTime> _initialTime;
-        Duration<TTime> _duration;
+        float _value;
 
     public:
-        Interval() = delete;
+        ContinuousTime() = delete;
 
-        // Construct the given interval. duration must be non-negative, but initialTime may be any value.
-        Interval(Time<TTime> initialTime, Duration<TTime> duration)
-            : _initialTime(initialTime), _duration(duration)
+        ContinuousTime(float value) : _value(value)
         {
-            Check(duration >= 0);
+            Check(value >= 0);
         }
 
-        static Interval<TTime> Empty() { return Interval<TTime>(0, 0); }
-
-        Time<TTime> InitialTime() const { return _initialTime; }
-        Duration<TTime> IntervalDuration() const { return _duration; }
-
-        bool IsEmpty() const { return _duration.Value() == 0; }
-
-        Interval<TTime> SubintervalStartingAt(Duration<TTime> offset) const
+        ContinuousTime(const ContinuousTime<TTime>& other) : _value(other.Value())
         {
-            Check(offset <= _duration);
-            return Interval<TTime>(_initialTime + offset, _duration - offset);
         }
 
-        Interval<TTime> SubintervalOfDuration(Duration<TTime> duration) const
+        float Value() const { return _value; }
+
+        ContinuousTime<TTime>& operator =(const ContinuousTime<TTime>& other)
         {
-            Check(duration <= _duration);
-            return Interval<TTime>(_initialTime, duration);
-        }
-
-        Interval<TTime> Intersect(const Interval<TTime>& other) const
-        {
-            Time<TTime> intersectionStart = Time<TTime>::Max(_initialTime, other._initialTime);
-            Time<TTime> intersectionEnd = Time<TTime>::Min(_initialTime + _duration, other.InitialTime() + other.IntervalDuration());
-
-            if (intersectionEnd < intersectionStart)
-            {
-                return Interval<TTime>::Empty();
-            }
-            else
-            {
-                Interval<TTime> result(intersectionStart, intersectionEnd - intersectionStart);
-                return result;
-            }
-        }
-
-        bool Contains(Time<TTime> time) const
-        {
-            if (IsEmpty) 
-            {
-                return false;
-            }
-
-            return _initialTime <= time && (_initialTime + _duration) > time;
-        }
-
-        Interval<TTime>& operator=(const Interval<TTime>& other)
-        {
-            _initialTime = other._initialTime;
-            _duration = other._duration;
+            _value = other._value;
             return *this;
         }
+
+        ContinuousTime<TTime> operator *(float value) const
+        {
+            return new ContinuousTime<TTime>(value * _value);
+        }
+
+        // The integer part of this, as a (non-continuous) Time.
+        Time<TTime> RoundedDown() const { return new Time<TTime>((int)std::floorf(Value())); }
     };
 
     // A continous distance between two Times.
     template<typename TTime>
-    struct ContinuousDuration
+    class ContinuousDuration
     {
     private:
         float _value;
@@ -315,6 +290,92 @@ namespace NowSound
         ContinuousDuration<TTime> operator *(float value) const
         {
             return new ContinuousDuration<TTime>(value * _value);
+        }
+
+        // The integer part of this, as a (non-continuous) Duration.
+        Duration<TTime> RoundedDown() const { return new Duration<TTime>((int)std::floorf(Value())); }
+    };
+
+    // An interval, defined as a start time and a duration (aka length).
+    // 
+    // TODO: add the concept of direction, so intervals can either start (for forward intervals) or end (for
+    // backward intervals) at a given time. This will allow forward and backward iteration through a stream.
+    // 
+    // When the system was originally implemented, there was a notion of a global time which advanced monotonically
+    // towards infinity, and a concept of mapping from that global time to the local time of a loop. Turns out this
+    // massively complicated the goal of arbitrarily controlling a loop's local time (reversing it, restarting it
+    // etc.). So now Interval is intended to be a *bounded* interval only, and conceptually the initial time and
+    // the duration should always be within the bounds of some loop. If we had dependent typing we might actually
+    // carry the loop context around, but... no.
+    template<typename TTime>
+    class Interval
+    {
+    private:
+        Time<TTime> _time;
+        Duration<TTime> _duration;
+
+    public:
+        Interval() = delete;
+
+        // Construct the given interval. duration must be non-negative, but initialTime may be any value.
+        Interval(Time<TTime> time, Duration<TTime> duration)
+            : _time(time), _duration(duration)
+        {
+            Check(duration >= 0);
+        }
+
+        static Interval<TTime> Empty() { return Interval<TTime>(0, 0); }
+
+        Time<TTime> IntervalTime() const { return _time; }
+        Duration<TTime> IntervalDuration() const { return _duration; }
+
+        bool IsEmpty() const { return _duration.Value() == 0; }
+
+        // The rest of the interval after offset.
+        Interval<TTime> Suffix(Duration<TTime> offset) const
+        {
+            Check(offset <= _duration);
+            return Interval<TTime>(_time + offset, _duration - offset);
+        }
+
+        // The interval up to the given duration.
+        Interval<TTime> Prefix(Duration<TTime> duration) const
+        {
+            Check(duration <= _duration);
+            return Interval<TTime>(_time, duration);
+        }
+
+        Interval<TTime> Intersect(const Interval<TTime>& other) const
+        {
+            Time<TTime> intersectionStart = Time<TTime>::Max(_time, other._time);
+            Time<TTime> intersectionEnd = Time<TTime>::Min(_time + _duration, other.IntervalTime() + other.IntervalDuration());
+
+            if (intersectionEnd < intersectionStart)
+            {
+                return Interval<TTime>::Empty();
+            }
+            else
+            {
+                Interval<TTime> result(intersectionStart, intersectionEnd - intersectionStart);
+                return result;
+            }
+        }
+
+        bool Contains(Time<TTime> time) const
+        {
+            if (IsEmpty) 
+            {
+                return false;
+            }
+
+            return _time <= time && (_time + _duration) > time;
+        }
+
+        Interval<TTime>& operator=(const Interval<TTime>& other)
+        {
+            _time = other._time;
+            _duration = other._duration;
+            return *this;
         }
     };
 }

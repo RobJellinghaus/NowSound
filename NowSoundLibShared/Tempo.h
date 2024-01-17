@@ -51,17 +51,14 @@ namespace NowSound
             return _sampleRateHz / BeatsPerSecond();
         }
 
-        // Approximately how many beats?
-        ContinuousDuration<Beat> TimeToBeats(Time<AudioSample> time) const
+        // Exactly how many beats?
+        ContinuousDuration<Beat> TimeToBeats(ContinuousTime<AudioSample> time) const
         {
-            return ContinuousDuration<Beat>((float)time.Value() / BeatDuration().Value());
+            return ContinuousDuration<Beat>(time.Value() / BeatDuration().Value());
         }
 
-        // empirically seen some Beats values come too close to this
-        const double Epsilon = 0.0001;
-
         // What fraction of a beat?
-        ContinuousDuration<Beat> TimeToFractionalBeat(Time<AudioSample> time) const
+        ContinuousDuration<Beat> TimeToFractionalBeat(ContinuousTime<AudioSample> time) const
         {
             float beatValue = TimeToBeats(time).Value();
             return ContinuousDuration<Beat>(beatValue - std::floor(beatValue));

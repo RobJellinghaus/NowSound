@@ -42,17 +42,25 @@ namespace NowSound
         // The number of complete beats thaat measures the duration of this track.
         // Increases steadily while Recording; sets a time limit to further recording during FinishRecording;
         // remains constant while Looping.
-        // TODO: relax this to permit non-quantized looping.
+        // TODO: relax this to a ContinuousDuration to permit non-beat-quantized looping.
         Duration<Beat> _beatDuration;
 
         // The stream containing this Track's mono data.
         // This may be shared with copied Tracks.
+        // The number of samples in this track will exactly equal Math.Ceiling(ExactDuration())
+        // -- e.g. in the common case where _beatDuration equals a non-integer number of samples, this stream
+        // will contain as many samples as the rounded-up value of ExactDuration().
         std::shared_ptr<BufferedSliceStream<AudioSample, float>> _audioStream;
 
-        // Last sample time is based on the Now when the track started looping, and advances strictly
-        // based on what the Track has pushed during looping; this variable should be unused except
-        // in Looping state.
-        Time<AudioSample> _lastSampleTime;
+        // What fractional time are we currently at? This advances by ExactDuration() every time
+        // around the loop (and is then kept modulo to the loop length).
+        ContinuousTime<AudioSample> _localLoopTime;
+
+        // The number of audio samples that will be played in the current loop iteration.
+        // This is either Math.Floor(ExactDuration()) and Math.Ceiling(ExactDuration()),
+        // depending on whether _localLoopTime incremented fractionally when the loop
+        // last advanced.
+        Duration<AudioSample> _roundedCurrentLoopDuration;
 
         // did this just stop recording? if so, message thread will remove its input connection on next poll
         bool _justStoppedRecording;
@@ -91,7 +99,7 @@ namespace NowSound
         virtual void GetFrequencies(void* floatBuffer, int floatBufferCapacity) override;
 
         // How many beats into this track are we?
-        ContinuousDuration<Beat> TrackBeats(Duration<AudioSample> localTime, Duration<Beat> beatDuration);
+        ContinuousDuration<Beat> TrackBeats(ContinuousDuration<AudioSample> localTime, Duration<Beat> beatDuration);
 
     public: // Exported methods via NowSoundTrackAPI
 
@@ -117,9 +125,6 @@ namespace NowSound
         // This is increased during recording.  It may in general have fractional numbers of samples if 
         // BeatsPerMinute() does not evenly divide Clock::Instance().SampleRateHz.
         ContinuousDuration<AudioSample> ExactDuration() const;
-
-        // The starting moment at which this Track was created.
-        Time<AudioSample> StartTime() const;
 
         // The full time info for this track (to allow just one call per track for all this info).
         // Note that this is not const because it may recalculate histograms etc. when called.

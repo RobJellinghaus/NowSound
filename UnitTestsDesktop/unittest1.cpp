@@ -149,7 +149,6 @@ namespace UnitTestsDesktop
             stream.Append(tempSlice.SubsliceOfDuration(tempSlice.SliceDuration() / 2));
             stream.Append(tempSlice.SubsliceStartingAt(tempSlice.SliceDuration() / 2));
 
-            Check(stream.InitialTime() == 0);
             Check(stream.DiscreteDuration() == FloatNumSlices);
 
             Slice<AudioSample, float> theSlice = stream.GetSliceContaining(stream.DiscreteInterval());
@@ -170,7 +169,7 @@ namespace UnitTestsDesktop
                     Check(nextSlice.Get(i, 3) == f + 0.75f);
                     f++;
                 }
-                interval = interval.SubintervalStartingAt(nextSlice.SliceDuration());
+                interval = interval.Suffix(nextSlice.SliceDuration());
             }
             return f;
         }
@@ -293,7 +292,7 @@ namespace UnitTestsDesktop
             Check(beforeSplit.SliceDuration() == 4);
 
             // Now get [11, 15)
-            Interval<AudioSample> afterBufferSplitInterval = splitInterval.SubintervalStartingAt(beforeSplit.SliceDuration());
+            Interval<AudioSample> afterBufferSplitInterval = splitInterval.Suffix(beforeSplit.SliceDuration());
             Slice<AudioSample, float> afterSplit = stream.GetSliceContaining(afterBufferSplitInterval);
             Check(afterSplit.Offset() == 0);
             Check(afterSplit.SliceDuration() == beforeSplit.SliceDuration());
@@ -329,7 +328,7 @@ namespace UnitTestsDesktop
             int discreteDuration = (int)std::floor(continuousDuration + 1);
             float* buffer = AllocateSmall4FloatArray(discreteDuration);
             OwningBuf<float> owningBuf(0, discreteDuration * sliverCount, buffer);
-            BufferedSliceStream<AudioSample, float> stream(0, sliverCount, &bufferAllocator, 0, /*useExactLoopingMapper:*/true);
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, 0, /*useExactLoopingMapper:*/true);
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
 
             // OK, time to get this fractional business right, to ensure we properly handle loops that are
@@ -346,28 +345,28 @@ namespace UnitTestsDesktop
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 2);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(1, 0) == 1);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 2);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(1, 0) == 1);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             Check(interval.IsEmpty());
 
-            BufferedSliceStream<AudioSample, float> stream2(0, sliverCount, &bufferAllocator, 0, /*useContinuousLoopingMapper:*/ false);
+            BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator, 0, /*useContinuousLoopingMapper:*/ false);
             stream2.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
             stream2.Shut(continuousDuration);
             interval = Interval<AudioSample>(0, 10);
@@ -376,19 +375,19 @@ namespace UnitTestsDesktop
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream2.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(1, 0) == 1);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream2.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
 
-            interval = interval.SubintervalStartingAt(slice.SliceDuration());
+            interval = interval.Suffix(slice.SliceDuration());
             slice = stream2.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 1);
             Check(slice.Get(0, 0) == 0);
@@ -438,7 +437,7 @@ namespace UnitTestsDesktop
             float* tempBuffer = AllocateSmall4FloatArray(20);
             OwningBuf<float> owningBuf(0, 20 * sliverCount, tempBuffer);
 
-            BufferedSliceStream<AudioSample, float> stream(0, sliverCount, &bufferAllocator, /*maxBufferedDuration:*/ 5, /*useContinuousLoopingMapper:*/ false);
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, /*maxBufferedDuration:*/ 5, /*useContinuousLoopingMapper:*/ false);
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), 0, 11, sliverCount));
             Check(stream.DiscreteDuration() == 5);
             Slice<AudioSample, float> slice = stream.GetSliceContaining(stream.DiscreteInterval());
@@ -446,7 +445,6 @@ namespace UnitTestsDesktop
 
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), 11, 5, sliverCount));
             Check(stream.DiscreteDuration() == 5);
-            Check(stream.InitialTime() == 11);
             slice = stream.GetSliceContaining(stream.DiscreteInterval());
             Check(slice.Get(0, 0) == 11);
         }
