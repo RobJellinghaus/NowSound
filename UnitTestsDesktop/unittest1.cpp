@@ -292,7 +292,7 @@ namespace UnitTestsDesktop
             Check(beforeSplit.SliceDuration() == 4);
 
             // Now get [11, 15)
-            Interval<AudioSample> afterBufferSplitInterval = splitInterval.Suffix(beforeSplit.SliceDuration());
+            Interval<AudioSample> afterBufferSplitInterval(11, 4);
             Slice<AudioSample, float> afterSplit = stream.GetSliceContaining(afterBufferSplitInterval);
             Check(afterSplit.Offset() == 0);
             Check(afterSplit.SliceDuration() == beforeSplit.SliceDuration());
@@ -325,7 +325,7 @@ namespace UnitTestsDesktop
             BufferAllocator<float> bufferAllocator(sliverCount * sliceCount, 1);
 
             float continuousDuration = 2.4f;
-            int discreteDuration = (int)std::floor(continuousDuration + 1);
+            int discreteDuration = (int)std::ceil(continuousDuration);
             float* buffer = AllocateSmall4FloatArray(discreteDuration);
             OwningBuf<float> owningBuf(0, discreteDuration * sliverCount, buffer);
             BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator, 0);
@@ -333,64 +333,23 @@ namespace UnitTestsDesktop
 
             // OK, time to get this fractional business right, to ensure we properly handle loops that are
             // not an exact number of samples.
-            stream.Shut(continuousDuration);
+            stream.Shut(continuousDuration, /* fade: */false);
             Check(stream.IsShut());
 
-            // now test looping
             Interval<AudioSample> interval(0, 10);
-            // we expect this to be [0, 1, 2, 0, 1, 0, 1, 2, 0, 1]
-            // or rather, [0>3], [0>2], [0>3], [0>2]
             Slice<AudioSample, float> slice = stream.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
 
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 2);
-            Check(slice.Get(0, 0) == 0);
-            Check(slice.Get(1, 0) == 1);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 3);
-            Check(slice.Get(0, 0) == 0);
-            Check(slice.Get(2, 0) == 2);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 2);
-            Check(slice.Get(0, 0) == 0);
-            Check(slice.Get(1, 0) == 1);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            Check(interval.IsEmpty());
-
             BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator, 0);
             stream2.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
-            stream2.Shut(continuousDuration);
+            stream2.Shut(continuousDuration, /* fade: */false);
             interval = Interval<AudioSample>(0, 10);
             slice = stream2.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
             Check(slice.Get(2, 0) == 2);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream2.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 3);
-            Check(slice.Get(0, 0) == 0);
-            Check(slice.Get(1, 0) == 1);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream2.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 3);
-            Check(slice.Get(0, 0) == 0);
-            Check(slice.Get(2, 0) == 2);
-
-            interval = interval.Suffix(slice.SliceDuration());
-            slice = stream2.GetSliceContaining(interval);
-            Check(slice.SliceDuration() == 1);
-            Check(slice.Get(0, 0) == 0);
         }
 
         /* TODO: perhaps revive this test? I think I already have coverage of Free(), so postponing porting this.

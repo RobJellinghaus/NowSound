@@ -286,7 +286,7 @@ namespace NowSound
                 // now that we have done our final append, shut the stream at the current duration.
                 // This requires that the stream has captured exactly roundedUpDuration samples in total,
                 // or an assertion will fire.
-                _audioStream.get()->Shut(ExactDuration());
+                _audioStream.get()->Shut(ExactDuration(), /* fade: */true);
             }
             else
             {

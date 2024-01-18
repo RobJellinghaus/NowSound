@@ -201,6 +201,11 @@ namespace NowSound
         // Use with caution, and only in exceptional circumstances where modifying slice data is desirable.
         Slice<TTime, TValue>& NonConstValue() { return _value; }
 
+        void ChangeInitialTimeBy(Duration<TTime> delta)
+        {
+            _time = _time + delta;
+        }
+
         TimedSlice(Time<TTime> startTime, Slice<TTime, TValue> slice) : _time(startTime), _value(slice)
         {
         }

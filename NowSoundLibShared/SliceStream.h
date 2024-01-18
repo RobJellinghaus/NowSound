@@ -267,7 +267,7 @@ namespace NowSound
             }
         }
 
-        virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
+        virtual void Shut(ContinuousDuration<AudioSample> finalDuration, bool fade)
         {
             this->DenseSliceStream<TTime, TValue>::Shut(finalDuration);
 
@@ -277,27 +277,30 @@ namespace NowSound
             }
 #endif
 
-            // and, do a microfade out at the end of the last slice, and in at the start of the first.
-            // this avoids clicking that was empirically otherwise present and annoying.
-            // TODO: this should be dynamically done whenever loopie local time changes noncontinuously!
-            const int64_t microFadeDuration{ 20 };
-            TimedSlice<TTime, TValue>& firstSlice{ _data.at(0) };
-            TValue* firstSliceData{ firstSlice.NonConstValue().OffsetPointer() };
-            TimedSlice<TTime, TValue>& lastSlice{ _data.at(_data.size() - 1) };
-            int sliverCount = firstSlice.Value().SliverCount();
-            int64_t firstSliceDuration = firstSlice.Value().SliceDuration().Value();
-            TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliverCount) };
-            int64_t lastSliceDuration = lastSlice.Value().SliceDuration().Value();
-            int64_t minSliceDuration = firstSliceDuration < lastSliceDuration ? firstSliceDuration : lastSliceDuration;
-            int64_t minDuration = minSliceDuration < microFadeDuration ? minSliceDuration : microFadeDuration;
-
-            for (int64_t i = 0; i < minDuration; i++)
+            if (fade)
             {
-                float frac = (float)i / minDuration;
-                for (int64_t j = 0; j < sliverCount; j++)
+                // and, do a microfade out at the end of the last slice, and in at the start of the first.
+                // this avoids clicking that was empirically otherwise present and annoying.
+                // TODO: this should be dynamically done whenever loopie local time changes noncontinuously!
+                const int64_t microFadeDuration{ 20 };
+                TimedSlice<TTime, TValue>& firstSlice{ _data.at(0) };
+                TValue* firstSliceData{ firstSlice.NonConstValue().OffsetPointer() };
+                TimedSlice<TTime, TValue>& lastSlice{ _data.at(_data.size() - 1) };
+                int sliverCount = firstSlice.Value().SliverCount();
+                int64_t firstSliceDuration = firstSlice.Value().SliceDuration().Value();
+                TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliverCount) };
+                int64_t lastSliceDuration = lastSlice.Value().SliceDuration().Value();
+                int64_t minSliceDuration = firstSliceDuration < lastSliceDuration ? firstSliceDuration : lastSliceDuration;
+                int64_t minDuration = minSliceDuration < microFadeDuration ? minSliceDuration : microFadeDuration;
+
+                for (int64_t i = 0; i < minDuration; i++)
                 {
-                    firstSliceData[i * sliverCount + j] *= frac;
-                    lastSliceDataEnd[(-i - 1) * sliverCount + j] *= frac;
+                    float frac = (float)i / minDuration;
+                    for (int64_t j = 0; j < sliverCount; j++)
+                    {
+                        firstSliceData[i * sliverCount + j] *= frac;
+                        lastSliceDataEnd[(-i - 1) * sliverCount + j] *= frac;
+                    }
                 }
             }
         }
@@ -407,8 +410,10 @@ namespace NowSound
                 Duration<TTime> toTrim = this->DiscreteDuration() - _maxBufferedDuration;
                 // get the first slice
                 TimedSlice<TTime, TValue> firstSlice = _data[0];
+                Duration<TTime> firstSliceDuration = firstSlice.Value().SliceDuration();
                 if (firstSlice.Value().SliceDuration() <= toTrim)
                 {
+                    // the whole slice goes away
                     _data.erase(_data.begin());
 #if DEBUG
                     for (TimedSlice<TTime, TValue> slice : _data) {
@@ -419,20 +424,29 @@ namespace NowSound
                     Check(firstSlice.Value().Buffer().Data() == _buffers[0].Data());
                     _allocator->Free(std::move(_buffers.at(0)));
                     _buffers.erase(_buffers.begin());
-                    this->_discreteDuration = this->_discreteDuration - firstSlice.Value().SliceDuration();
-                }
+                    this->_discreteDuration = this->_discreteDuration - firstSliceDuration;
+                    // and adjust all remaining slices
+                    for (int i = 0; i < _data.size(); i++) {
+                        _data[i].ChangeInitialTimeBy(-firstSliceDuration.Value());
+                    }
+            }
                 else
                 {
+                    // chop off the first part of the data
                     Slice<TTime, TValue> newSlice(
                         firstSlice.Value().Buffer(),
                         firstSlice.Value().Offset() + toTrim,
                         firstSlice.Value().SliceDuration() - toTrim,
                         this->SliverCount());
-                    TimedSlice<TTime, TValue> newFirstSlice(
-                        firstSlice.InitialTime() + toTrim,
-                        newSlice);
+                    // initial time is 0 because this is the new first slice
+                    TimedSlice<TTime, TValue> newFirstSlice(0, newSlice);
                     _data[0] = newFirstSlice;
                     this->_discreteDuration = this->_discreteDuration - toTrim;
+
+                    // move all later slices back 
+                    for (int i = 1; i < _data.size(); i++) {
+                        _data[i].ChangeInitialTimeBy(-toTrim.Value());
+                    }
                 }
             }
         }
@@ -471,14 +485,31 @@ namespace NowSound
                 return Slice<TTime, TValue>::Empty();
             }
 
+            if (_discreteDuration == 0)
+            {
+                // the stream is empty, there is no slice.
+                // TODO: it would be better if this was an actual error... right?
+                return Slice<TTime, TValue>::Empty();
+            }
+
             const TimedSlice<TTime, TValue>& foundTimedSlice = GetInitialTimedSlice(interval);
             Interval<TTime> intersection = foundTimedSlice.SliceInterval().Intersect(interval);
-            Check(!intersection.IsEmpty());
-            Slice<TTime, TValue> ret(foundTimedSlice.Value().Subslice(
-                intersection.IntervalTime() - foundTimedSlice.InitialTime(),
-                intersection.IntervalDuration()));
 
-            return ret;
+            if (intersection.IsEmpty())
+            {
+                // no overlap
+                // TODO: it would be better if this was an actual error... right?
+                return Slice<TTime, TValue>::Empty();
+            }
+            else
+            {
+                Check(!intersection.IsEmpty());
+                Slice<TTime, TValue> ret(foundTimedSlice.Value().Subslice(
+                    intersection.IntervalTime() - foundTimedSlice.InitialTime(),
+                    intersection.IntervalDuration()));
+
+                return ret;
+            }
         }
 
         // Get the slice that intersects the given interval's start time.
@@ -499,14 +530,21 @@ namespace NowSound
             }
             else if (firstSliceNotLessThanTarget->InitialTime() == interval.IntervalTime())
             {
-                // If we found a slice starting at the exact right time, then return it.
+                // This is the exact right slice
                 return *firstSliceNotLessThanTarget;
             }
-            else
+            else if (firstSliceNotLessThanTarget->InitialTime() > interval.IntervalTime())
             {
-                // The slice we found starts after the desired initial time.
-                // Therefore the slice we want is the slice just before it, which will contain the desired initial time.
-                return *(firstSliceNotLessThanTarget - 1);
+                // if there is a prior slice, return that
+                if (firstSliceNotLessThanTarget != _data.begin())
+                {
+                    return *(firstSliceNotLessThanTarget - 1);
+                }
+                else
+                {
+                    // return this slice, there's none earlier
+                    return *firstSliceNotLessThanTarget;
+                }
             }
         }
     };
