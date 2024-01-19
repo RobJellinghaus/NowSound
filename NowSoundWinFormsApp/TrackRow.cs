@@ -149,7 +149,7 @@ namespace NowSoundWinFormsApp
             NowSoundTrackAPI.GetFrequencies(_trackId, _fftBuffer);
             Utilities.RenderFrequencyBuffer(_fftBuffer, _builder);
 
-            _label.Text = $"Track {_trackId}: start {trackInfo.StartTimeInBeats}, duration {trackInfo.DurationInBeats}, current {trackInfo.LocalClockBeat}, "
+            _label.Text = $"Track {_trackId}: beat duration {trackInfo.BeatDuration}, current beat {trackInfo.ExactTrackBeat}, "
                 + $"maxsignal {signalInfo.Max:F4}, avgsignal {signalInfo.Avg:F4}, fft {_builder.ToString()}";
 
             if (trackInfo.IsTrackLooping)

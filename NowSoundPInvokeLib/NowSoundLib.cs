@@ -101,14 +101,10 @@ namespace NowSoundLib
     {
         // Only need one bit for this, but to avoid padding weirdness (observed in practice), we make this an int64.
         internal Int64 IsTrackLooping;
-        internal Int64 StartTimeInSamples;
-        internal float StartTimeInBeats;
-        internal Int64 DurationInSamples;
-        internal Int64 DurationInBeats;
+        internal Int64 BeatDuration;
         internal float ExactDuration;
-        internal Int64 LocalClockTime;
-        internal float LocalClockBeat;
-        internal Int64 LastSampleTime;
+        internal float ExactTrackTime;
+        internal float ExactTrackBeat;
         internal float Pan;
         internal float Volume;
         internal float BeatsPerMinute;
@@ -120,22 +116,15 @@ namespace NowSoundLib
     {
         // Is the track currently looping? If not, it's still recording.
         public readonly bool IsTrackLooping;
-        // The start time of the track in audio samples from the beginning of the session.
-        public readonly Time<AudioSample> StartTime;
-        // The start time of the track in (fractional) beats. (TODO?: add ContinuousTime<TTime>)
-        public readonly ContinuousDuration<Beat> StartTimeInBeats;
-        // The duration of the track in audio samples.
-        public readonly Duration<AudioSample> Duration;
-        // The duration of the track in (discrete) beats. (TODO?: allow non-beat-alignment)
-        public readonly Duration<Beat> DurationInBeats;
-        // The duration of the track in exact seconds; DurationInSamples is this, rounded up to the nearest sample.
-        public readonly ContinuousDuration<Second> ExactDuration;
-        // The local clock time (relative to the start of the current track); expressed as a duration.
-        public readonly Duration<AudioSample> LocalClockTime;
-        // The local clock time, in terms of beats.
-        public readonly ContinuousDuration<Beat> LocalClockBeat;
-        // The time at which the track last delivered samples.
-        public readonly Time<AudioSample> LastSampleTime;
+        // The duration of the track in (discrete) beats.
+        // TODO: allow continuous track lengths.
+        public readonly Duration<Beat> BeatDuration;
+        // The exact duration of the track in audio samples.
+        public readonly ContinuousDuration<AudioSample> ExactDuration;
+        // The local track time (relative to the start of the current track); expressed as a duration.
+        public readonly ContinuousTime<AudioSample> ExactTrackTime;
+        // The local track time, in terms of beats.
+        public readonly ContinuousTime<Beat> ExactTrackBeat;
         // The current panning (0 = left, 1 = right).
         public readonly float Pan;
         // The volume (0 to 1).
@@ -148,27 +137,22 @@ namespace NowSoundLib
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
             IsTrackLooping = pinvokeTrackInfo.IsTrackLooping > 0;
-            Duration = pinvokeTrackInfo.DurationInSamples;
-            DurationInBeats = pinvokeTrackInfo.DurationInBeats;
+            BeatDuration = pinvokeTrackInfo.BeatDuration;
             ExactDuration = pinvokeTrackInfo.ExactDuration;
-            LocalClockTime = pinvokeTrackInfo.LocalClockTime;
-            LocalClockBeat = pinvokeTrackInfo.LocalClockBeat;
-            LastSampleTime = pinvokeTrackInfo.LastSampleTime;
+            ExactTrackTime = pinvokeTrackInfo.ExactTrackTime;
+            ExactTrackBeat = pinvokeTrackInfo.ExactTrackBeat;
             Pan = pinvokeTrackInfo.Pan;
-            StartTime = pinvokeTrackInfo.StartTimeInSamples;
-            StartTimeInBeats = pinvokeTrackInfo.StartTimeInBeats;
             Volume = pinvokeTrackInfo.Volume;
             BeatsPerMinute = pinvokeTrackInfo.BeatsPerMinute;
             BeatsPerMeasure = pinvokeTrackInfo.BeatsPerMeasure;
         }
 
         public TrackInfo(
-            Duration<AudioSample> duration,
-            Duration<Beat> durationInBeats,
-            ContinuousDuration<Second> exactDuration,
             bool isTrackLooping,
-            Time<AudioSample> lastSampleTime,
-            ContinuousDuration<Beat> localClockBeat,
+            Duration<Beat> beatDuration,
+            ContinuousDuration<AudioSample> exactDuration,
+            ContinuousTime<AudioSample> exactTrackTime,
+            ContinuousTime<Beat> exactTrackBeat,
             Duration<AudioSample> localClockTime,
             float pan,
             Time<AudioSample> startTime,
@@ -178,16 +162,12 @@ namespace NowSoundLib
             Duration<Beat> beatsPerMeasure
             )
         {
-            Duration = duration;
-            DurationInBeats = durationInBeats;
-            ExactDuration = exactDuration;
             IsTrackLooping = isTrackLooping;
-            LastSampleTime = lastSampleTime;
-            LocalClockBeat = localClockBeat;
-            LocalClockTime = localClockTime;
+            BeatDuration = beatDuration;
+            ExactDuration = exactDuration;
+            ExactTrackTime = exactTrackTime;
+            ExactTrackBeat = exactTrackBeat;
             Pan = pan;
-            StartTime = startTime;
-            StartTimeInBeats = startTimeInBeats;
             Volume = volume;
             BeatsPerMinute = beatsPerMinute;
             BeatsPerMeasure = beatsPerMeasure;

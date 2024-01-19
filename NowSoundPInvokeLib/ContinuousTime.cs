@@ -4,6 +4,35 @@
 namespace NowSoundLib
 {
     /// <summary>
+    /// A time, with float precision.
+    /// </summary>
+    /// <typeparam name="TTime"></typeparam>
+    public struct ContinuousTime<TTime>
+    {
+        readonly float _value;
+
+        public ContinuousTime(float duration)
+        {
+            _value = duration;
+        }
+
+        public override string ToString()
+        {
+            return $"CT[{_value:F2}]";
+        }
+
+        public static explicit operator float(ContinuousTime<TTime> time)
+        {
+            return time._value;
+        }
+
+        public static implicit operator ContinuousTime<TTime>(float value)
+        {
+            return new ContinuousTime<TTime>(value);
+        }
+    }
+
+    /// <summary>
     /// A continous distance between two Times.
     /// </summary>
     /// <typeparam name="TTime"></typeparam>
