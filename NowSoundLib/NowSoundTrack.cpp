@@ -212,7 +212,7 @@ namespace NowSound
 
             // How many complete beats after we record this data?
             Time<AudioSample> durationAsTime((_audioStream.get()->DiscreteDuration() + bufferDuration).Value());
-            Duration<Beat> completeBeats = (Duration<Beat>)((int)_tempo->TimeToBeats(durationAsTime).Value());
+            Duration<Beat> completeBeats = (Duration<Beat>)((int)_tempo->TimeToBeats(durationAsTime.AsContinuous()).Value());
 
             // If it's more than our _beatDuration, bump our _beatDuration
             // TODO: implement other quantization policies here
@@ -319,7 +319,7 @@ namespace NowSound
 
                 bufferDuration = bufferDuration - slice.SliceDuration();
                 completedDuration = completedDuration + slice.SliceDuration();
-                _localLoopTime = _localLoopTime + slice.SliceDuration();
+                _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
             }
 
             // Now process the whole block to the output.

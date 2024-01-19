@@ -15,7 +15,7 @@ MeasurementAudioProcessor::MeasurementAudioProcessor(NowSoundGraph* graph, const
     : BaseAudioProcessor(graph, name),
     _frequencyDataMutex{},
     // hardcoded to the clock's channel count, e.g. the overall output bus width.
-    _volumeHistogram{ new Histogram((int)(graph->Clock()->TimeToSamples(MagicConstants::RecentVolumeDuration).Value())) },
+    _volumeHistogram{ new Histogram((int)(graph->Clock()->TimeToRoundedUpSamples(MagicConstants::RecentVolumeDuration).Value())) },
     _frequencyTracker{ graph->FftSize() < 0
         ? ((NowSoundFrequencyTracker*)nullptr)
         : new NowSoundFrequencyTracker(graph->BinBounds(), graph->FftSize()) },

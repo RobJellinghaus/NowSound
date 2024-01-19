@@ -485,7 +485,7 @@ namespace NowSound
                 return Slice<TTime, TValue>::Empty();
             }
 
-            if (_discreteDuration == 0)
+            if (this->DiscreteDuration() == 0)
             {
                 // the stream is empty, there is no slice.
                 // TODO: it would be better if this was an actual error... right?
@@ -521,30 +521,28 @@ namespace NowSound
             // Get the biggest available slice at interval.InitialTime.
             // First, get the index of the slice just after the one we want.
             TimedSlice<TTime, TValue> target(interval.IntervalTime(), Slice<TTime, TValue>());
-            auto firstSliceNotLessThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
+            auto firstSliceEqualOrGreaterThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
 
-            if (firstSliceNotLessThanTarget == _data.end())
+            if (firstSliceEqualOrGreaterThanTarget == _data.end())
             {
-                // If we reached the end, then the slice we want is the last slice.
-                return *(firstSliceNotLessThanTarget - 1);
+                // If we reached the end, then the slice we want is the last slice; it's less than the
+                // start time of target, and it overlaps.
+                return *(firstSliceEqualOrGreaterThanTarget - 1);
             }
-            else if (firstSliceNotLessThanTarget->InitialTime() == interval.IntervalTime())
+            else if (firstSliceEqualOrGreaterThanTarget->InitialTime() == interval.IntervalTime())
             {
                 // This is the exact right slice
-                return *firstSliceNotLessThanTarget;
+                return *firstSliceEqualOrGreaterThanTarget;
             }
-            else if (firstSliceNotLessThanTarget->InitialTime() > interval.IntervalTime())
+            else if (firstSliceEqualOrGreaterThanTarget != _data.begin())
             {
                 // if there is a prior slice, return that
-                if (firstSliceNotLessThanTarget != _data.begin())
-                {
-                    return *(firstSliceNotLessThanTarget - 1);
-                }
-                else
-                {
-                    // return this slice, there's none earlier
-                    return *firstSliceNotLessThanTarget;
-                }
+                return *(firstSliceEqualOrGreaterThanTarget - 1);
+            }
+            else
+            {
+                // return this slice, there's none earlier
+                return *firstSliceEqualOrGreaterThanTarget;
             }
         }
     };

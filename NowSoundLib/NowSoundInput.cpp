@@ -32,10 +32,9 @@ namespace NowSound
         _incomingAudioStream {
             /*channelCount*/1,
             audioAllocator,
-            /*maxBufferedLength*/(int)(nowSoundGraph->Clock()->SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2,
-            /*useExactLoopingMapper:*/false
+            /*maxBufferedLength*/(int)(nowSoundGraph->Clock()->SampleRateHz() * nowSoundGraph->PreRecordingDuration().Value()) * 2
         },
-        _rawInputHistogram{ new Histogram((int)nowSoundGraph->Clock()->TimeToSamples(MagicConstants::RecentVolumeDuration).Value()) },
+        _rawInputHistogram{ new Histogram((int)nowSoundGraph->Clock()->TimeToRoundedUpSamples(MagicConstants::RecentVolumeDuration).Value()) },
         _mutex{}
     {
     }

@@ -106,9 +106,7 @@ namespace NowSound
             return _value >= second.Value();
         }
 
-        double Seconds() const { return ((double)_value.Value()) / Clock::SampleRateHz; }
-
-        ContinuousTime<TTime> AsContinuous() const { return new ContinuousTime<Time>(Value()); }
+        ContinuousTime<TTime> AsContinuous() const { return ContinuousTime<TTime>(static_cast<float>(Value())); }
     };
 
     // A distance between two Times.
@@ -182,7 +180,7 @@ namespace NowSound
             return _value != second.Value();
         }
 
-        ContinuousDuration<TTime> AsContinuous() const { return new ContinuousDuration<Time>(Value()); }
+        ContinuousDuration<TTime> AsContinuous() const { return ContinuousDuration<TTime>(static_cast<float>(Value())); }
     };
 
     template<typename TTime>
@@ -257,7 +255,7 @@ namespace NowSound
         }
 
         // The integer part of this, as a (non-continuous) Time.
-        Time<TTime> RoundedDown() const { return new Time<TTime>((int)std::floorf(Value())); }
+        Time<TTime> RoundedDown() const { return Time<TTime>((int)std::floorf(Value())); }
     };
 
     // A continous distance between two Times.
@@ -295,6 +293,18 @@ namespace NowSound
         // The integer part of this, as a (non-continuous) Duration.
         Duration<TTime> RoundedDown() const { return new Duration<TTime>((int)std::floorf(Value())); }
     };
+
+    template<typename TTime>
+    ContinuousTime<TTime> operator +(ContinuousTime<TTime> first, ContinuousDuration<TTime> second)
+    {
+        return ContinuousTime<TTime>(first.Value() + second.Value());
+    }
+
+    template<typename TTime>
+    ContinuousDuration<TTime> operator +(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
+    {
+        return ContinuousDuration<TTime>(first.Value() + second.Value());
+    }
 
     // An interval, defined as a start time and a duration (aka length).
     // 

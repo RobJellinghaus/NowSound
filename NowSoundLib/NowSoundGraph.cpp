@@ -485,7 +485,7 @@ namespace NowSound
         Check(_audioGraphState > NowSoundGraphState::GraphInError);
 
         Time<AudioSample> now = _clock->Now();
-        ContinuousDuration<Beat> durationBeats = _tempo->TimeToBeats(now);
+        ContinuousDuration<Beat> durationBeats = _tempo->TimeToBeats(now.AsContinuous());
         int64_t completeBeats = (int64_t)durationBeats.Value();
         int32_t beatsPerMeasure = _tempo->BeatsPerMeasure();
         int64_t completeMeasures = completeBeats / beatsPerMeasure;
