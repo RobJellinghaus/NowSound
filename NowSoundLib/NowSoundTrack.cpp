@@ -206,129 +206,166 @@ namespace NowSound
 
         switch (_state)
         {
-        case NowSoundTrackState::TrackRecording:
-        {
-            // We are recording; save the input audio in our stream, and that's it (we never call processBlock here).
-
-            // How many complete beats after we record this data?
-            Time<AudioSample> durationAsTime((_audioStream.get()->DiscreteDuration() + bufferDuration).Value());
-            Duration<Beat> completeBeats = (Duration<Beat>)((int)_tempo->TimeToBeats(durationAsTime.AsContinuous()).Value());
-
-            // If it's more than our _beatDuration, bump our _beatDuration
-            // TODO: implement other quantization policies here
-            if (completeBeats >= _beatDuration)
+            case NowSoundTrackState::TrackRecording:
             {
-                // 1/2/4* quantization, like old times. TODO: make this selectable
-                if (_beatDuration == 1)
+                // We are recording; save the input audio in our stream, and that's it (we never call processBlock here).
+
+                // How many complete beats after we record this data?
+                Time<AudioSample> durationAsTime((_audioStream.get()->DiscreteDuration() + bufferDuration).Value());
+                Duration<Beat> completeBeats = (Duration<Beat>)((int)_tempo->TimeToBeats(durationAsTime.AsContinuous()).Value());
+
+                // If it's more than our _beatDuration, bump our _beatDuration
+                // TODO: implement other quantization policies here
+                if (completeBeats >= _beatDuration)
                 {
-                    _beatDuration = 2;
+                    // 1/2/4* quantization, like old times. TODO: make this selectable
+                    if (_beatDuration == 1)
+                    {
+                        _beatDuration = 2;
+                    }
+                    else if (_beatDuration == 2)
+                    {
+                        _beatDuration = _tempo->BeatsPerMeasure();
+                    }
+                    else
+                    {
+                        _beatDuration = _beatDuration + Duration<Beat>(_tempo->BeatsPerMeasure());
+                    }
+                    // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
+                    Check(completeBeats < BeatDuration());
                 }
-                else if (_beatDuration == 2)
+
+                // and actually record the full amount of available data.
+                // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
+                // input channel goes to which track.
+                _audioStream.get()->Append(bufferDuration, audioBuffer.getReadPointer(0));
+
+                // and step on all output channels
+                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
                 {
-                    _beatDuration = _tempo->BeatsPerMeasure();
+                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+                }
+                break;
+            }
+
+            case NowSoundTrackState::TrackFinishRecording:
+            {
+                // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
+
+                // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.
+                // We will capture enough samples to play back an extra sample, during loops where the loopie
+                // local time fractionally wraps around.
+                Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
+
+                // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
+                Duration<AudioSample> originalDiscreteDuration = _audioStream.get()->DiscreteDuration();
+                Check(originalDiscreteDuration <= roundedUpDuration);
+
+                if (originalDiscreteDuration + bufferDuration >= roundedUpDuration)
+                {
+                    // reduce duration so we only capture the exact right number of samples
+                    Duration<AudioSample> captureDuration = roundedUpDuration - originalDiscreteDuration;
+
+                    // we are done recording altogether
+                    _state = NowSoundTrackState::TrackLooping;
+
+                    // This is the only time this variable is ever set to true.
+                    // The message thread polls tracks and checks this variable; any that have it set to true will
+                    // get their input connection removed (by the message thread, naturally, as only it can change
+                    // graph connections), and this will be set back to false, never to change again.  (Tracks can
+                    // only be in recording state when initially created.)
+                    // Hence there is no need for interlocking or other synchronization on this variable even though it
+                    // is being used for inter-thread communication.
+                    // TODONEXT: actually remove input connections by polling! (NYI atm)
+                    _justStoppedRecording = true;
+
+                    // Getting data for channel 0 is always correct, because the JUCE per-channel connections handle
+                    // the input-channel-to-track routing.
+                    _audioStream.get()->Append(captureDuration, audioBuffer.getReadPointer(0));
+
+                    // now that we have done our final append, shut the stream at the current duration.
+                    // This requires that the stream has captured exactly roundedUpDuration samples in total,
+                    // or an assertion will fire.
+                    _audioStream.get()->Shut(ExactDuration(), /* fade: */true);
                 }
                 else
                 {
-                    _beatDuration = _beatDuration + Duration<Beat>(_tempo->BeatsPerMeasure());
+                    // capture the full duration
+                    _audioStream.get()->Append(bufferDuration, audioBuffer.getReadPointer(0));
                 }
-                // blow up if we happen somehow to be recording more than one beat's worth (should never happen given low latency expectation)
-                Check(completeBeats < BeatDuration());
+
+                // zero the output audio altogether.
+                // we will start looping on the next block.
+                for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+                {
+                    zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+                }
+
+                // and break
+                break;
             }
 
-            // and actually record the full amount of available data.
-            // Getting data for channel 0 is always correct because the JUCE per-channel connections handle which
-            // input channel goes to which track.
-            _audioStream.get()->Append(bufferDuration, audioBuffer.getReadPointer(0));
-
-            // and step on all output channels
-            for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
+            case NowSoundTrackState::TrackLooping:
             {
-                zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
+                // Copy our audio stream data into audioBuffer, slice by slice.
+                while (bufferDuration > 0)
+                {
+                    Slice<AudioSample, float> slice(
+                        _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration)));
+
+                    // Is this the last slice in the stream?
+                    // If so, then its final offset will be equal to the stream's DiscreteDuration.
+                    Duration<AudioSample> sliceEnd = slice.Offset() + slice.SliceDuration();
+                    bool isLastSlice = sliceEnd == _audioStream.get()->DiscreteDuration();
+
+                    // If this is the last slice, then we are about to wrap around.
+                    // When doing this, we need to decide whether to pick up an extra rounded sample.
+                    // Since the DiscreteDuration is equal to the rounded-up ContinuousDuration,
+                    // we by default *will* get a rounded-up extra sample.
+                    // So now is when we decide to possibly *not* do that.
+                    if (isLastSlice)
+                    {
+                        // Advance the loop time by the stream's continuous duration.
+                        ContinuousTime<AudioSample> nextLocalLoopTime = _localLoopTime + _audioStream.get()->ExactDuration();
+
+                        // If the fractional part of nextLocalLoopTime is more than the fractional part
+                        // of _localLoopTime, then we did not round up, and we should drop the extra
+                        // sample now.
+                        float fractionalLocalLoopTime = _localLoopTime.Value() - std::floor(_localLoopTime.Value());
+                        float fractionalNextLocalLoopTime = nextLocalLoopTime.Value() - std::floor(nextLocalLoopTime.Value());
+
+                        if (fractionalNextLocalLoopTime > fractionalLocalLoopTime)
+                        {
+                            // drop the extra sample from the slice
+                            slice = slice.SubsliceOfDuration(slice.SliceDuration() - Duration<AudioSample>(1));
+                        }
+
+                        // because we wrapped around, we keep the fractional part only but go back to
+                        // the start of the stream
+                        _localLoopTime = fractionalNextLocalLoopTime;
+                    }
+                    else
+                    {
+                        // we can just use the slice as is.
+                        // increase the local loop time by this whole slice
+                        _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
+                    }
+
+                    // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
+                    slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
+                    slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
+
+                    bufferDuration = bufferDuration - slice.SliceDuration();
+                    completedDuration = completedDuration + slice.SliceDuration();
+                }
+
+                // Now process the whole block to the output.
+                // Note that this is the right thing to do even if we are looping over only a partial block;
+                // the portion of the block when we were still recording will be zeroed out properly.
+                SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
+
+                break;
             }
-            break;
-        }
-
-        case NowSoundTrackState::TrackFinishRecording:
-        {
-            // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
-
-            // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.
-            // We will capture enough samples to play back an extra sample, during loops where the loopie
-            // local time fractionally wraps around.
-            Duration<AudioSample> roundedUpDuration((long)std::ceil(ExactDuration().Value()));
-
-            // we should not have advanced beyond roundedUpDuration yet, or something went wrong at end of recording
-            Duration<AudioSample> originalDiscreteDuration = _audioStream.get()->DiscreteDuration();
-            Check(originalDiscreteDuration <= roundedUpDuration);
-
-            if (originalDiscreteDuration + bufferDuration >= roundedUpDuration)
-            {
-                // reduce duration so we only capture the exact right number of samples
-                Duration<AudioSample> captureDuration = roundedUpDuration - originalDiscreteDuration;
-
-                // we are done recording altogether
-                _state = NowSoundTrackState::TrackLooping;
-
-                // This is the only time this variable is ever set to true.
-                // The message thread polls tracks and checks this variable; any that have it set to true will
-                // get their input connection removed (by the message thread, naturally, as only it can change
-                // graph connections), and this will be set back to false, never to change again.  (Tracks can
-                // only be in recording state when initially created.)
-                // Hence there is no need for interlocking or other synchronization on this variable even though it
-                // is being used for inter-thread communication.
-                // TODONEXT: actually remove input connections by polling! (NYI atm)
-                _justStoppedRecording = true;
-
-                // Getting data for channel 0 is always correct, because the JUCE per-channel connections handle
-                // the input-channel-to-track routing.
-                _audioStream.get()->Append(captureDuration, audioBuffer.getReadPointer(0));
-
-                // now that we have done our final append, shut the stream at the current duration.
-                // This requires that the stream has captured exactly roundedUpDuration samples in total,
-                // or an assertion will fire.
-                _audioStream.get()->Shut(ExactDuration(), /* fade: */true);
-            }
-            else
-            {
-                // capture the full duration
-                _audioStream.get()->Append(bufferDuration, audioBuffer.getReadPointer(0));
-            }
-
-            // zero the output audio altogether.
-            // we will start looping on the next block.
-            for (int i = 0; i < this->getTotalNumOutputChannels(); i++)
-            {
-                zeromem(audioBuffer.getWritePointer(i), sizeof(float) * bufferDuration.Value());
-            }
-
-            // and break
-            break;
-        }
-
-        case NowSoundTrackState::TrackLooping:
-        {
-            // Copy our audio stream data into audioBuffer, slice by slice.
-            while (bufferDuration > 0)
-            {
-                Slice<AudioSample, float> slice(
-                    _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration)));
-
-                // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
-                slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
-                slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
-
-                bufferDuration = bufferDuration - slice.SliceDuration();
-                completedDuration = completedDuration + slice.SliceDuration();
-                _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
-            }
-
-            // Now process the whole block to the output.
-            // Note that this is the right thing to do even if we are looping over only a partial block;
-            // the portion of the block when we were still recording will be zeroed out properly.
-            SpatialAudioProcessor::processBlock(audioBuffer, midiBuffer);
-
-            break;
-        }
         }
     }
 }
