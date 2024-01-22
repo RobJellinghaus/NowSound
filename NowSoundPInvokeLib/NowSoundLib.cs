@@ -108,7 +108,7 @@ namespace NowSoundLib
         internal float Pan;
         internal float Volume;
         internal float BeatsPerMinute;
-        internal Int32 BeatsPerMeasure;
+        internal Int64 BeatsPerMeasure;
     };
 
     // Information about a track's time in NowSound terms.
@@ -153,10 +153,7 @@ namespace NowSoundLib
             ContinuousDuration<AudioSample> exactDuration,
             ContinuousTime<AudioSample> exactTrackTime,
             ContinuousTime<Beat> exactTrackBeat,
-            Duration<AudioSample> localClockTime,
             float pan,
-            Time<AudioSample> startTime,
-            ContinuousDuration<Beat> startTimeInBeats,
             float volume,
             float beatsPerMinute,
             Duration<Beat> beatsPerMeasure

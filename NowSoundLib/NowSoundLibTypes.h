@@ -116,7 +116,7 @@ namespace NowSound
             // The tempo of this track in beats per minute.
             float BeatsPerMinute;
             // The number of beats per measure (e.g. time signature).
-            int BeatsPerMeasure;
+            int64_t BeatsPerMeasure;
         } NowSoundTrackInfo;
 
         // The states of a NowSound graph.
