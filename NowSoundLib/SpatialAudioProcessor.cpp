@@ -136,6 +136,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
     DryWetMixAudioProcessor* newDryWetMixInstance = new DryWetMixAudioProcessor(Graph(), L"DryWetMix");
     // Four input channels and two output channels
     newDryWetMixInstance->setPlayConfigDetails(4, 2, Graph()->Info().SampleRateHz, Graph()->Info().SamplesPerQuantum);
+    newDryWetMixInstance->SetDryWetLevel(dryWet_0_100);
     AudioProcessorGraph::Node::Ptr newDryWetMixNode = Graph()->JuceGraph().addNode(newDryWetMixInstance);
 
     // and connect it up!
