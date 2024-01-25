@@ -122,7 +122,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     {
         std::wstringstream obuf;
-        obuf << L"AddPluginInstance pluginId " << (int)pluginId << L" programId " << (int)programId;
+        obuf << L"AddPluginInstance pluginId " << (int)pluginId << L" programId " << (int)programId << L"\n";
         Graph()->Log(obuf.str());
     }
 
@@ -167,7 +167,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
         Check(Graph()->JuceGraph().addConnection({ { inputNodeId, 1 }, { newDryWetMixNode->nodeID, 1 } }));
     }
 
-    // ...and from new plugin instance to wet side of new drywet instance...
+    // ...and from new plugin instance to wet side of new drywet instance.
     {
         Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 0 }, { newDryWetMixNode->nodeID, 2 } }));
         Check(Graph()->JuceGraph().addConnection({ { newPluginNode->nodeID, 1 }, { newDryWetMixNode->nodeID, 3 } }));
@@ -175,12 +175,12 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     {
         std::wstringstream obuf;
-        obuf << L"AddPluginInstance: adding connection from " << newDryWetMixNode->nodeID.uid << L" to " << outputNodeId.uid;
+        obuf << L"AddPluginInstance: adding connection from " << newDryWetMixNode->nodeID.uid << L" to " << outputNodeId.uid << L"\n";
         AudioProcessorGraph::Node::Ptr dryWetMixNode = Graph()->JuceGraph().getNode(newDryWetMixNode->nodeID.uid);
         AudioProcessorGraph::Node::Ptr outputNode = Graph()->JuceGraph().getNode(outputNodeId.uid);
         bool canConnect0to0 = Graph()->JuceGraph().canConnect(dryWetMixNode.get(), 0, outputNode.get(), 0);
         bool canConnect1to1 = Graph()->JuceGraph().canConnect(dryWetMixNode.get(), 1, outputNode.get(), 1);
-        obuf << L"AddPluginInstance: canConnect0to0: " << canConnect0to0 << L"; canConnect1to1: " << canConnect1to1;
+        obuf << L"AddPluginInstance: canConnect0to0: " << canConnect0to0 << L"; canConnect1to1: " << canConnect1to1 << L"\n";
         Graph()->Log(obuf.str());
     }
 
@@ -207,7 +207,7 @@ PluginInstanceIndex SpatialAudioProcessor::AddPluginInstance(PluginId pluginId, 
 
     {
         std::wstringstream wstr{};
-        wstr << L"SpatialAudioProcessor::AddPluginProgramInstance(): new plugin node " << newPluginNode->nodeID.uid << "; new drywet node " << newDryWetMixNode->nodeID.uid;
+        wstr << L"SpatialAudioProcessor::AddPluginProgramInstance(): new plugin node " << newPluginNode->nodeID.uid << "; new drywet node " << newDryWetMixNode->nodeID.uid << L"\n";
         Graph()->Log(wstr.str());
     }
 
@@ -272,7 +272,7 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
             std::wstringstream wstr{};
             wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedPluginNodeId.uid
                 << L", connected prior node " << priorNodeId.uid
-                << L" to output node " << OutputProcessor()->NodeId().uid;
+                << L" to output node " << OutputProcessor()->NodeId().uid << L"\n";
             Graph()->Log(wstr.str());
         }
     }
@@ -295,7 +295,7 @@ void SpatialAudioProcessor::DeletePluginInstance(PluginInstanceIndex pluginInsta
             wstr << L"SpatialAudioProcessor::DeletePluginInstance(): deleted node " << deletedPluginNodeId.uid
                 << L", connected prior node " << priorNodeId.uid
                 << L" to subsequent plugin node " << subsequentPluginNodeId.uid
-                << L" and subsequent drywet node " << subsequentDryWetNodeId.uid;
+                << L" and subsequent drywet node " << subsequentDryWetNodeId.uid << L"\n";
             Graph()->Log(wstr.str());
         }
     }

@@ -159,12 +159,22 @@ namespace NowSound
     NowSoundTrackInfo NowSoundTrackAudioProcessor::Info() 
     {
         Time<AudioSample> lastSampleTime = this->_localLoopTime.RoundedDown(); // to prevent any drift from this being updated concurrently
+
+        bool isLooping = _state == NowSoundTrackState::TrackLooping;
+
+        // While looping, the current track time is _localLoopTime.
+        // If not looping, we are recording, and the current track time is how much we've recorded.
+        ContinuousTime<AudioSample> localLoopTime =
+            isLooping
+            ? this->_localLoopTime
+            : ContinuousTime<AudioSample>(this->_audioStream.get()->DiscreteDuration().AsContinuous().Value());
+
         return CreateNowSoundTrackInfo(
-            _state == NowSoundTrackState::TrackLooping,
+            isLooping,
             this->BeatDuration().Value(),
             this->_audioStream.get()->ExactDuration().Value(),
-            this->_localLoopTime.Value(),
-            _tempo->TimeToBeats(this->_localLoopTime).Value(),
+            localLoopTime.Value(),
+            _tempo->TimeToBeats(localLoopTime).Value(),
             Pan(),
             Volume(),
             BeatsPerMinute(),
