@@ -86,6 +86,7 @@ namespace NowSound
         _knownPluginList{},
         _audioPluginFormatManager{},
         _preRecordingDuration{ 0 },
+        _audioProcessorGraph{ new AudioProcessorGraph() },
         _tempo{ nullptr }
     {
         _logMessages.reserve(s_logMessageCapacity);
@@ -206,7 +207,7 @@ namespace NowSound
 
     AudioProcessorGraph& NowSoundGraph::JuceGraph()
     {
-        return _audioProcessorGraph;
+        return *(_audioProcessorGraph.get());
     }
 
     void NowSoundGraph::setBufferSize()
@@ -354,7 +355,7 @@ namespace NowSound
 
         // Set up the audio processor graph and its related components.
         {
-            _audioProcessorPlayer.setProcessor(&_audioProcessorGraph);
+            _audioProcessorPlayer.setProcessor(_audioProcessorGraph.get());
             _audioDeviceManager.addAudioCallback(&_audioProcessorPlayer);
 
             AudioProcessorGraph::AudioGraphIOProcessor* inputAudioProcessor =
@@ -368,7 +369,7 @@ namespace NowSound
             outputMixAudioProcessor->setPlayConfigDetails(2, 2, Info().SampleRateHz, Info().SamplesPerQuantum);
 
             // thank you to https://docs.juce.com/master/tutorial_audio_processor_graph.html
-            _audioProcessorGraph.setPlayConfigDetails(
+            _audioProcessorGraph.get()->setPlayConfigDetails(
                 info.ChannelCount,
                 info.ChannelCount,
                 // call the JUCE method because it returns a higher precision than NowSoundInfo.SampleRate
@@ -377,15 +378,15 @@ namespace NowSound
                 info.SamplesPerQuantum);
 
             // TBD: is double better?  Single (e.g. float32) definitely best for starters though
-            _audioProcessorGraph.setProcessingPrecision(AudioProcessor::singlePrecision);
+            _audioProcessorGraph.get()->setProcessingPrecision(AudioProcessor::singlePrecision);
 
-            _audioProcessorGraph.prepareToPlay(
+            _audioProcessorGraph.get()->prepareToPlay(
                 _audioDeviceManager.getCurrentAudioDevice()->getCurrentSampleRate(),
                 info.SamplesPerQuantum);
 
-            _audioInputNodePtr = _audioProcessorGraph.addNode(inputAudioProcessor);
-            _audioOutputNodePtr = _audioProcessorGraph.addNode(outputAudioProcessor);
-            _audioOutputMixNodePtr = _audioProcessorGraph.addNode(outputMixAudioProcessor);
+            _audioInputNodePtr = _audioProcessorGraph.get()->addNode(inputAudioProcessor);
+            _audioOutputNodePtr = _audioProcessorGraph.get()->addNode(outputAudioProcessor);
+            _audioOutputMixNodePtr = _audioProcessorGraph.get()->addNode(outputMixAudioProcessor);
 
             for (int i = 0; i < info.ChannelCount; i++)
             {
@@ -905,7 +906,7 @@ namespace NowSound
         if (WasJuceGraphChanged())
         {
             // call the JUCE graph's handleAsyncUpdate() method directly.
-            _audioProcessorGraph.handleAsyncUpdate();
+            _audioProcessorGraph.get()->handleAsyncUpdate();
         }
     }
 
@@ -950,6 +951,9 @@ namespace NowSound
 
         // clear the graph before we destruct this object (which will kill the allocator, which will
         // break stream teardown)
-        _audioProcessorGraph.clear();
+        _audioProcessorGraph.get()->clear();
+
+        // and in fact, drop it now, so by the time we get to destructor, it has completed its shutdown
+        _audioProcessorGraph.release();
     }
 }

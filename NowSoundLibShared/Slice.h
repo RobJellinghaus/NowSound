@@ -12,11 +12,16 @@
 
 namespace NowSound
 {
-    // A Slice is reference to a sub-segment of an underlying buffer
+    // A Slice is reference to a sub-segment of an underlying buffer.
+    //
     // A Slice is a contiguous segment of "slivers"; think of each sliver as a stereo pair of audio samples,
     // or a video frame, etc., with a Slice being a logically and physically contiguous sequence thereof.
+    // 
     // Slices do not own their data and are freely copyable, but can become dangling if their underlying
     // stream is trimmed or freed.
+    //
+    // Slices are always forwards in time. The GetSliceIntersecting(Interval) method accepts backwards
+    // Intervals, but returns slices that are always forwards in time.
     template<typename TTime, typename TValue>
     class Slice
     {

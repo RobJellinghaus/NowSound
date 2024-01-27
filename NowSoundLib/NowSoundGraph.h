@@ -224,8 +224,8 @@ namespace NowSound
         // Callback object which couples the device manager to the audio processor graph.
         juce::AudioProcessorPlayer _audioProcessorPlayer;
 
-        // The audio processor graph.
-        juce::AudioProcessorGraph _audioProcessorGraph;
+        // The audio processor graph. Held via unique ptr so it can be dropped explicitly.
+        std::unique_ptr<juce::AudioProcessorGraph> _audioProcessorGraph;
 
         // Ptr to the input node.
         juce::AudioProcessorGraph::Node::Ptr _audioInputNodePtr;

@@ -71,6 +71,7 @@ namespace NowSound
         Interval<TTime> Suffix(Duration<TTime> offset) const
         {
             Check(offset <= _duration);
+
             return Interval<TTime>(_time + offset, _duration - offset, _direction);
         }
 
@@ -79,15 +80,26 @@ namespace NowSound
         Interval<TTime> Prefix(Duration<TTime> duration) const
         {
             Check(duration <= _duration);
+
             return Interval<TTime>(_time, duration, _direction);
         }
 
         // Intersection of two intervals (e.g. the interval at which they overlap).
-        // Undefined (assertion error) if the intervals have different directions.
-        // Empty if the intervals have the same direction but no overlap.
-        Interval<TTime> Intersect(const Interval<TTime>& other) const
+        // This interval must be forwards.
+        // If other is backwards, the resulting interval will be forwards.
+        Interval<TTime> Intersect(Interval<TTime>& other) const
         {
-            Check(_direction == other._direction);
+            Check(_direction == Direction::Forwards);
+
+            // convert other into a forwards interval
+            if (other._direction == Direction::Backwards)
+            {
+                Interval<TTime> otherAsForwards(
+                    other.IntervalTime() - other.IntervalDuration(),
+                    other.IntervalDuration(),
+                    Direction::Forwards);
+                other = otherAsForwards;
+            }
 
             Time<TTime> intersectionStart = Time<TTime>::Max(_time, other._time);
             Time<TTime> intersectionEnd = Time<TTime>::Min(_time + _duration, other.IntervalTime() + other.IntervalDuration());
@@ -98,14 +110,24 @@ namespace NowSound
             }
             else
             {
-                Interval<TTime> result(intersectionStart, intersectionEnd - intersectionStart, _direction);
+                Interval<TTime> result(
+                    intersectionStart,
+                    intersectionEnd - intersectionStart,
+                    Direction::Forwards);
+
                 return result;
             }
         }
 
+        // Does this interval contain the given time?
+        // Intervals are semantically closed-open, that is, they contain their IntervalTime but do
+        // not contain the IntervalTime just beyond their duration. So an Interval with initial time 1
+        // and duration 3 does not contain time 4. (It is the first time after time 1 that the Interval
+        // does not contain.)
         bool Contains(Time<TTime> time) const
         {
-            if (IsEmpty)
+            // empty intervals contain no times
+            if (IsEmpty())
             {
                 return false;
             }

@@ -482,6 +482,8 @@ namespace NowSound
         // the longest available slice, or a slice no longer than the interval.
         virtual Slice<TTime, TValue> GetSliceIntersecting(Interval<TTime> interval) const
         {
+            // What is the intersection
+
             if (interval.IsEmpty())
             {
                 // default slice is empty (but has no backing buf at all)
@@ -495,7 +497,10 @@ namespace NowSound
                 return Slice<TTime, TValue>::Empty();
             }
 
-            const TimedSlice<TTime, TValue>& foundTimedSlice = GetInitialTimedSlice(interval);
+            const TimedSlice<TTime, TValue>& foundTimedSlice = GetFirstSliceIntersecting(interval);
+
+            // TODO: make this handle backwards intervals (right now, will blow up here because intersecting
+            // backwards interval with forwards interval, which results in interval with undefined direction)
             Interval<TTime> intersection = foundTimedSlice.SliceInterval().Intersect(interval);
 
             if (intersection.IsEmpty())
@@ -515,14 +520,15 @@ namespace NowSound
             }
         }
 
-        // Get the slice that intersects the given interval's start time.
-        const TimedSlice<TTime, TValue>& GetInitialTimedSlice(Interval<TTime> interval) const
+        // Get the first timed slice that contains data from this interval.
+        const TimedSlice<TTime, TValue>& GetFirstSliceIntersecting(Interval<TTime> interval) const
         {
-            // we must overlap somewhere
-            Check(!interval.Intersect(this->DiscreteInterval()).IsEmpty());
+            // We must overlap somewhere; check for non-empty intersection.
+            Interval<TTime> thisInterval = this->DiscreteInterval();
+            Check(!interval.Intersect(thisInterval).IsEmpty());
 
-            // Get the biggest available slice at interval.InitialTime.
-            // First, get the index of the slice just after the one we want.
+            // Get the biggest available slice at or after interval.InitialTime.
+            // First, get the index of the slice with start time that is at or after the interval's start time.
             TimedSlice<TTime, TValue> target(interval.IntervalTime(), Slice<TTime, TValue>());
             auto firstSliceEqualOrGreaterThanTarget = std::lower_bound(_data.begin(), _data.end(), target);
 
