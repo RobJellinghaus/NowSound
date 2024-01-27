@@ -199,6 +199,10 @@ namespace NowSound
         // Contractually requires State == NowSoundTrack_State.Recording.
         __declspec(dllexport) void NowSoundTrack_FinishRecording(TrackId trackId);
 
+        // Set the playback direction of this track.
+        // Contractually requires State == NowSoundTrack_State.Looping.
+        __declspec(dllexport) void NowSoundTrack_SetPlaybackDirection(TrackId trackId, bool isPlaybackBackwards);
+
         // Get the current track frequency histogram (post-effects); LPWSTR must actually reference a float buffer of the
         // same length as the outputBinCount argument passed to InitializeFFT, but must be typed as LPWSTR
         // and must have a capacity represented in two-byte wide characters (to match the P/Invoke style of

@@ -385,6 +385,12 @@ namespace NowSound
         NowSoundGraph::Instance()->Track(trackId)->FinishRecording();
     }
 
+    void NowSoundTrack_SetPlaybackDirection(TrackId trackId, bool isPlaybackBackwards)
+    {
+        Check(NowSoundGraph::Instance() != nullptr);
+        NowSoundGraph::Instance()->Track(trackId)->SetPlaybackDirection(isPlaybackBackwards);
+    }
+
     void NowSoundTrack_GetFrequencies(TrackId trackId, void* floatBuffer, int32_t floatBufferCapacity)
     {
         Check(NowSoundGraph::Instance() != nullptr);

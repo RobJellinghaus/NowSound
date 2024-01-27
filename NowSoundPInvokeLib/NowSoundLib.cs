@@ -917,6 +917,18 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern void NowSoundTrack_SetPlaybackDirection(TrackId trackId, bool isPlaybackBackwards);
+
+        // Set the playback direction (forwards = false).
+        // Contractually requires State == NowSoundTrack_State.Looping.
+        public static void SetPlaybackDirection(TrackId trackId, bool isPlaybackBackwards)
+        {
+            Id.Check(trackId);
+
+            NowSoundTrack_SetPlaybackDirection(trackId, isPlaybackBackwards);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern bool NowSoundTrack_GetFrequencies(TrackId trackId, float[] floatBuffer, int floatBufferCapacity);
 
         // Get the current track frequency histogram; LPWSTR must actually reference a float buffer of the

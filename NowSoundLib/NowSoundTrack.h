@@ -135,7 +135,7 @@ namespace NowSound
 
         // Flip the direction of playback.
         // Can only be called once the track has finished recording and started looping.
-        void FlipPlaybackDirection();
+        void SetPlaybackDirection(bool isPlaybackBackwards);
 
         // The full time info for this track (to allow just one call per track for all this info).
         // Note that this is not const because it may recalculate histograms etc. when called.

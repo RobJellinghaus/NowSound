@@ -192,6 +192,17 @@ namespace NowSound
         _state = NowSoundTrackState::TrackFinishRecording;
     }
 
+    Direction NowSoundTrackAudioProcessor::PlaybackDirection() const
+    {
+        return _direction;
+    }
+
+    void NowSoundTrackAudioProcessor::SetPlaybackDirection(bool isPlaybackBackwards)
+    {
+        // just poke it in there, it's thread-safe to do so
+        _direction = isPlaybackBackwards ? Direction::Backwards : Direction::Forwards;
+    }
+
     const int maxCounter = 1000;
 
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)

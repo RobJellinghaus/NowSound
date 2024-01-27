@@ -27,6 +27,11 @@ namespace NowSoundWinFormsApp
         /// </summary>
         private readonly Button _muteButton;
 
+        /// <summary>
+        /// Forward / Backward button
+        /// </summary>
+        private readonly Button _directionButton;
+
         private readonly ComboBox _panCombo;
 
         /// <summary>
@@ -78,6 +83,14 @@ namespace NowSoundWinFormsApp
             };
             _muteButton.Click += _muteButton_Click;
 
+            _directionButton = new Button
+            {
+                Text = "Forward",
+                AutoSize = true,
+                Enabled = false
+            };
+            _directionButton.Click += _directionButton_Click;
+
             _panCombo = new ComboBox
             {
                 MinimumSize = new Size(100, 20),
@@ -102,10 +115,21 @@ namespace NowSoundWinFormsApp
             };
             _trackRowPanel.Controls.Add(_controlButton);
             _trackRowPanel.Controls.Add(_muteButton);
+            _trackRowPanel.Controls.Add(_directionButton);
             _trackRowPanel.Controls.Add(_panCombo);
             _trackRowPanel.Controls.Add(_label);
 
             parent.Controls.Add(_trackRowPanel);
+        }
+
+        private void _directionButton_Click(object sender, EventArgs e)
+        {
+            // if button says we're currently Forwards, then clicking it means "start playing Backwards"
+            bool isPlaybackBackwards = _directionButton.Text == "Forward";
+            // we don't actually ever check the track's actual playback direction; we are the only ones who could change it,
+            // so we just use this button's text as the authoritative state
+            NowSoundTrackAPI.SetPlaybackDirection(_trackId, isPlaybackBackwards);
+            _directionButton.Text = isPlaybackBackwards ? "Backward" : "Forward";
         }
 
         private void _muteButton_Click(object sender, EventArgs e)
@@ -132,6 +156,7 @@ namespace NowSoundWinFormsApp
             {
                 NowSoundTrackAPI.FinishRecording(_trackId);
                 _muteButton.Enabled = true;
+                _directionButton.Enabled = true;
             }
             else
             {
