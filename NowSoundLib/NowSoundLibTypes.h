@@ -100,6 +100,8 @@ namespace NowSound
             // Is this track looping? If not, it is still recording. We use a wasteful int32_t to avoid
             // packing issues.
             int64_t IsTrackLooping;
+            // Is this track playing backwards? (forwards = default = false)
+            int64_t IsPlaybackBackwards;
             // The duration of the track in beats; always an integer number.
             // TODO: implement non-quantized loops BECAUSE WHY NOT
             int64_t DurationInBeats;
@@ -244,6 +246,7 @@ namespace NowSound
 
         NowSoundTrackInfo CreateNowSoundTrackInfo(
             bool isTrackLooping,
+            bool isPlaybackBackwards,
             int64_t durationInBeats,
             float exactDurationInSamples,
             float exactTrackTimeInSamples,

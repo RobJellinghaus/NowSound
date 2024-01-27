@@ -13,6 +13,7 @@
 #include "SpatialAudioProcessor.h"
 #include "Clock.h"
 #include "Histogram.h"
+#include "Interval.h"
 #include "NowSoundFrequencyTracker.h"
 #include "NowSoundLibTypes.h"
 #include "NowSoundTime.h"
@@ -68,6 +69,9 @@ namespace NowSound
         // What is the BPM (beats per minute) of this track?
         // Tracks retain the BPM that existed at their creation (at least until we implement track duration/tempo change).
         std::unique_ptr<Tempo> _tempo;
+
+        // Playback direction.
+        Direction _direction;
 
     public: // Non-exported methods for internal use
 
@@ -125,6 +129,13 @@ namespace NowSound
         // This is increased during recording.  It may in general have fractional numbers of samples if 
         // BeatsPerMinute() does not evenly divide Clock::Instance().SampleRateHz.
         ContinuousDuration<AudioSample> ExactDuration() const;
+
+        // The current playback direction.
+        Direction PlaybackDirection() const;
+
+        // Flip the direction of playback.
+        // Can only be called once the track has finished recording and started looping.
+        void FlipPlaybackDirection();
 
         // The full time info for this track (to allow just one call per track for all this info).
         // Note that this is not const because it may recalculate histograms etc. when called.

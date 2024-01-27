@@ -172,6 +172,7 @@ namespace NowSound
 
         return CreateNowSoundTrackInfo(
             isLooping,
+            _direction == Direction::Backwards,
             this->BeatDuration().Value(),
             this->_audioStream.get()->ExactDuration().Value(),
             localLoopTime.Value(),

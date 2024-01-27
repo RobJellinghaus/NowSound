@@ -64,6 +64,7 @@ namespace NowSound
 
     NowSoundTrackInfo CreateNowSoundTrackInfo(
         bool isTrackLooping,
+        bool isPlaybackBackwards,
         int64_t durationInBeats,
         float exactDurationInSamples,
         float exactTrackTimeInSamples,
@@ -75,6 +76,7 @@ namespace NowSound
     {
         NowSoundTrackInfo info;
         info.IsTrackLooping = isTrackLooping ? 1 : 0;
+        info.IsPlaybackBackwards = isPlaybackBackwards ? 1 : 0;
         info.DurationInBeats = durationInBeats;
         info.ExactDurationInSamples = exactDurationInSamples;
         info.ExactTrackTimeInSamples = exactTrackTimeInSamples;

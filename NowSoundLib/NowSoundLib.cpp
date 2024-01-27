@@ -331,6 +331,8 @@ namespace NowSound
         return CreateNowSoundTrackInfo(
             // don't pass 0 for zeroth (bool) field
             true,
+            // default is forwards
+            false,
             2,
             (float)3,
             (float)4,

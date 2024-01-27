@@ -101,6 +101,7 @@ namespace NowSoundLib
     {
         // Only need one bit for this, but to avoid padding weirdness (observed in practice), we make this an int64.
         internal Int64 IsTrackLooping;
+        internal Int64 IsPlaybackBackwards;
         internal Int64 BeatDuration;
         internal float ExactDuration;
         internal float ExactTrackTime;
@@ -116,6 +117,8 @@ namespace NowSoundLib
     {
         // Is the track currently looping? If not, it's still recording.
         public readonly bool IsTrackLooping;
+        // Is the track playing backwards? (can only be the case when IsTrackLooping)
+        public readonly bool IsPlaybackBackwards;
         // The duration of the track in (discrete) beats.
         // TODO: allow continuous track lengths.
         public readonly Duration<Beat> BeatDuration;
@@ -137,6 +140,7 @@ namespace NowSoundLib
         internal TrackInfo(NowSoundTrackInfo pinvokeTrackInfo)
         {
             IsTrackLooping = pinvokeTrackInfo.IsTrackLooping > 0;
+            IsPlaybackBackwards = pinvokeTrackInfo.IsPlaybackBackwards > 0;
             BeatDuration = pinvokeTrackInfo.BeatDuration;
             ExactDuration = pinvokeTrackInfo.ExactDuration;
             ExactTrackTime = pinvokeTrackInfo.ExactTrackTime;
@@ -149,6 +153,7 @@ namespace NowSoundLib
 
         public TrackInfo(
             bool isTrackLooping,
+            bool isPlaybackBackwards,
             Duration<Beat> beatDuration,
             ContinuousDuration<AudioSample> exactDuration,
             ContinuousTime<AudioSample> exactTrackTime,
@@ -160,6 +165,7 @@ namespace NowSoundLib
             )
         {
             IsTrackLooping = isTrackLooping;
+            IsPlaybackBackwards = isPlaybackBackwards;
             BeatDuration = beatDuration;
             ExactDuration = exactDuration;
             ExactTrackTime = exactTrackTime;
