@@ -330,53 +330,106 @@ namespace NowSound
 
             case NowSoundTrackState::TrackLooping:
             {
+                // The fractional part of the track's continuous duration.
+                // Used when computing whether to pick up a rounded-up sample when wrapping around.
+                ContinuousDuration<AudioSample> streamDuration = _audioStream.get()->ExactDuration();
+                float streamFractionalDuration = streamDuration.Value() - std::floor(streamDuration.Value());
+
                 // Copy our audio stream data into audioBuffer, slice by slice.
                 while (bufferDuration > 0)
                 {
+                    float fractionalLocalLoopTime = _localLoopTime.Value() - std::floor(_localLoopTime.Value());
+
+                    // Are we playing forwards or backwards?
                     Slice<AudioSample, float> slice(
-                        _audioStream.get()->GetSliceIntersecting(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration, Direction::Forwards)));
+                        _audioStream.get()->GetSliceIntersecting(
+                            Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration, _direction)));
 
-                    // Is this the last slice in the stream?
-                    // If so, then its final offset will be equal to the stream's DiscreteDuration.
-                    Duration<AudioSample> sliceEnd = slice.Offset() + slice.SliceDuration();
-                    bool isLastSlice = sliceEnd == _audioStream.get()->DiscreteDuration();
-
-                    // If this is the last slice, then we are about to wrap around.
-                    // When doing this, we need to decide whether to pick up an extra rounded sample.
-                    // Since the DiscreteDuration is equal to the rounded-up ContinuousDuration,
-                    // we by default *will* get a rounded-up extra sample.
-                    // So now is when we decide to possibly *not* do that.
-                    if (isLastSlice)
+                    if (_direction == Direction::Forwards)
                     {
-                        // Advance the loop time by the stream's continuous duration.
-                        ContinuousTime<AudioSample> nextLocalLoopTime = _localLoopTime + _audioStream.get()->ExactDuration();
+                        // Is this the last slice in the stream?
+                        // If so, then its final offset will be equal to the stream's DiscreteDuration.
+                        Duration<AudioSample> sliceEnd = slice.Offset() + slice.SliceDuration();
+                        bool isLastSlice = sliceEnd == _audioStream.get()->DiscreteDuration();
 
-                        // If the fractional part of nextLocalLoopTime is more than the fractional part
-                        // of _localLoopTime, then we did not round up, and we should drop the extra
-                        // sample now.
-                        float fractionalLocalLoopTime = _localLoopTime.Value() - std::floor(_localLoopTime.Value());
-                        float fractionalNextLocalLoopTime = nextLocalLoopTime.Value() - std::floor(nextLocalLoopTime.Value());
-
-                        if (fractionalNextLocalLoopTime > fractionalLocalLoopTime)
+                        // If this is the last slice, then we are about to wrap around.
+                        // When doing this, we need to decide whether to pick up an extra rounded sample.
+                        // Since the DiscreteDuration is equal to the rounded-up ContinuousDuration,
+                        // we by default *will* get a rounded-up extra sample.
+                        // So now is when we decide to possibly *not* do that.
+                        if (isLastSlice)
                         {
-                            // drop the extra sample from the slice
-                            slice = slice.SubsliceOfDuration(slice.SliceDuration() - Duration<AudioSample>(1));
+                            // If the fractional part of _localLoopTime plus streamFractionalDuration is
+                            // less than 1, it means we are NOT rounding up, and we want to drop the
+                            // rounded-up sample from the last slice.
+                            float fractionalSum = fractionalLocalLoopTime + streamFractionalDuration;
+                            if (fractionalSum < 1)
+                            {
+                                // drop the extra sample from the slice
+                                slice = slice.SubsliceOfDuration(slice.SliceDuration() - Duration<AudioSample>(1));
+                            }
+
+                            // because we wrapped around and just accounted for any rounding up,
+                            // we keep the fractional part only but go back to the zeroth sample
+                            _localLoopTime = fractionalSum - std::floor(fractionalSum);
+                        }
+                        else
+                        {
+                            // we can just use the slice as is.
+                            // increase the local loop time by this whole slice
+                            _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
                         }
 
-                        // because we wrapped around, we keep the fractional part only but go back to
-                        // the start of the stream
-                        _localLoopTime = fractionalNextLocalLoopTime;
+                        // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
+                        slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
+                        slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
                     }
                     else
                     {
-                        // we can just use the slice as is.
-                        // increase the local loop time by this whole slice
-                        _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
-                    }
+                        // here we go backwards!
 
-                    // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
-                    slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
-                    slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
+                        // Is this the first slice in the stream?
+                        // If so, then its final offset will be equal to the stream's DiscreteDuration.
+                        bool isFirstSlice = slice.Offset() == 0;
+
+                        // If this is the first slice, then we are about to wrap around.
+                        // When doing this, we need to decide whether to pick up an extra rounded sample.
+                        // Since the DiscreteDuration is equal to the rounded-up ContinuousDuration,
+                        // we by default *will* get a rounded-up extra sample.
+                        // So now is when we decide to possibly *not* do that.
+                        if (isFirstSlice)
+                        {
+                            // Retreat (opposite of advance?!) the loop time by the stream's continuous duration.
+//                            ContinuousTime<AudioSample> nextLocalLoopTime = _localLoopTime
+
+                            // If the fractional part of nextLocalLoopTime is more than the fractional part
+                            // of _localLoopTime, then we did not round up, and we should drop the extra
+                            // sample now.
+                            //float fractionalLocalLoopTime = _localLoopTime.Value() - std::floor(_localLoopTime.Value());
+                            //float fractionalNextLocalLoopTime = nextLocalLoopTime.Value() - std::floor(nextLocalLoopTime.Value());
+
+                            //if (fractionalNextLocalLoopTime > fractionalLocalLoopTime)
+                            //{
+                            //    // drop the extra sample from the slice
+                            //    slice = slice.SubsliceOfDuration(slice.SliceDuration() - Duration<AudioSample>(1));
+                            //}
+
+                            // because we wrapped around, we keep the fractional part only but go back to
+                            // the start of the stream
+                            //_localLoopTime = fractionalNextLocalLoopTime;
+                        }
+                        else
+                        {
+                            // we can just use the slice as is.
+                            // increase the local loop time by this whole slice
+                            _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
+                        }
+
+                        // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
+                        slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
+                        slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
+
+                    }
 
                     bufferDuration = bufferDuration - slice.SliceDuration();
                     completedDuration = completedDuration + slice.SliceDuration();
