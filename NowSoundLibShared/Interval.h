@@ -62,6 +62,7 @@ namespace NowSound
 
         Time<TTime> IntervalTime() const { return _time; }
         Duration<TTime> IntervalDuration() const { return _duration; }
+        Direction IntervalDirection() const { return _direction; }
 
         bool IsEmpty() const { return _duration.Value() == 0; }
 
@@ -87,9 +88,12 @@ namespace NowSound
         // Intersection of two intervals (e.g. the interval at which they overlap).
         // This interval must be forwards.
         // If other is backwards, the resulting interval will be forwards.
-        Interval<TTime> Intersect(Interval<TTime>& other) const
+        Interval<TTime> Intersect(const Interval<TTime>& otherArg) const
         {
             Check(_direction == Direction::Forwards);
+
+            // local copy for reassignability
+            Interval<TTime> other(otherArg);
 
             // convert other into a forwards interval
             if (other._direction == Direction::Backwards)

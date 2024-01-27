@@ -263,6 +263,9 @@ namespace UnitTestsDesktop
             Check(Verify4SliceFloatStream(stream2, 0) == 11);
         }
 
+        // Test getting slices of stream data using forwards intervals (the norm).
+        // Note that in comments we write a forwards interval with initial time 5 and duration 7 as [5, 7)
+        // to denote that it is a closed-open interval.
         TEST_METHOD(TestStreamSlicing)
         {
             const int sliverCount = 4; // 4 floats = 16 bytes
@@ -286,13 +289,13 @@ namespace UnitTestsDesktop
             Slice<AudioSample, float> afterLast = stream.GetSliceIntersecting(Interval<AudioSample>(19, 5, Direction::Forwards));
             Check(afterLast.SliceDuration() == 3);
 
-            // now get slice across the buffer boundary (at time 11); verify it is split as expected
+            // now get slice at [7, 8); result is [7, 4) because stream splits at time 11
             Interval<AudioSample> splitInterval(7, 8, Direction::Forwards);
             Slice<AudioSample, float> beforeSplit = stream.GetSliceIntersecting(splitInterval);
             Check(beforeSplit.Offset() == 7);
             Check(beforeSplit.SliceDuration() == 4);
 
-            // Now get [11, 15)
+            // Now get [11, 4)
             Interval<AudioSample> afterBufferSplitInterval(11, 4, Direction::Forwards);
             Slice<AudioSample, float> afterSplit = stream.GetSliceIntersecting(afterBufferSplitInterval);
             Check(afterSplit.Offset() == 0);
@@ -301,11 +304,11 @@ namespace UnitTestsDesktop
             float firstAfter = afterSplit.Get(0, 0);
             Check(lastBefore + 1 == firstAfter);
 
-            float* testStrideCopy = new float[12] {
+            float* testStrideCopy = new float[12]{
                 0, 0, 1, 1, 0, 0,
                 0, 0, 2, 2, 0, 0,
             };
-            
+
             stream.AppendSliver(testStrideCopy, 2, 2, 6, 2);
 
             Slice<AudioSample, float> lastSliver = stream.GetSliceIntersecting(Interval<AudioSample>(22, 1, Direction::Forwards));
@@ -317,6 +320,75 @@ namespace UnitTestsDesktop
 
             Slice<AudioSample, float> firstSlice = stream.GetSliceIntersecting(Interval<AudioSample>(-2, 100, Direction::Forwards));
             Check(firstSlice.SliceDuration() == 11);
+        }
+
+        // Test getting slices of stream data using backwards intervals (rare but fun).
+        // Note that in comments we write a backwards interval with initial time 5 and duration 7 as [<5, 7)
+        // to both show that the interval is actually for times less than 5, and to visually "point backwards"
+        // (given English left-to-right directionality).
+        TEST_METHOD(TestBackwardsStreamSlicing)
+        {
+            const int sliverCount = 4; // 4 floats = 16 bytes
+            const int sliceCount = 11; // 11 slices per buffer, to test various cases
+            int bufferLength = sliceCount * sliverCount;
+            BufferAllocator<float> bufferAllocator(bufferLength, 1);
+
+            float* buffer = AllocateSmall4FloatArray(sliceCount * 2);
+            OwningBuf<float> owningBuf(0, bufferLength * 2, buffer);
+
+            BufferedSliceStream<AudioSample, float> stream(sliverCount, &bufferAllocator);
+            stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
+            Check(stream.DiscreteDuration().Value() == 22);
+
+            // test that interval before start time of stream doesn't overlap
+            Interval<AudioSample> backwards((-2), 4, Direction::Backwards);
+            Check(stream.DiscreteInterval().Intersect(backwards).IsEmpty());
+
+            // test getting slice from [<2, 5) (should be [0, 2) )
+            Slice<AudioSample, float> beforeFirst = stream.GetSliceIntersecting(Interval<AudioSample>(2, 5, Direction::Backwards));
+            Check(!beforeFirst.IsEmpty());
+            Check(beforeFirst.Offset().Value() == 0);
+            Check(beforeFirst.SliceDuration().Value() == 2);
+
+            // should return slice with duration 3, because [<24, 5) intersected with [0, 22) (should) = [19, 22)
+            Slice<AudioSample, float> afterLast = stream.GetSliceIntersecting(Interval<AudioSample>(24, 5, Direction::Backwards));
+            Check(afterLast.SliceDuration() == 3);
+
+            // now get slice across the buffer boundary (at time 11); verify it is split as expected
+            // this effectively intersects [11, 11) with [<15, 8)
+            Interval<AudioSample> splitInterval(15, 8, Direction::Backwards);
+            Slice<AudioSample, float> afterSplit = stream.GetSliceIntersecting(splitInterval);
+            Check(afterSplit.Offset() == 0);
+            Check(afterSplit.SliceDuration() == 4);
+
+            // Now get [<11, 4)
+            Interval<AudioSample> beforeBufferSplitInterval(11, 4, Direction::Backwards);
+            Slice<AudioSample, float> beforeSplit = stream.GetSliceIntersecting(beforeBufferSplitInterval);
+            Check(beforeSplit.Offset() == 7);
+            Check(afterSplit.SliceDuration() == beforeSplit.SliceDuration());
+            float lastBefore = beforeSplit.Get(3, 0);
+            float firstAfter = afterSplit.Get(0, 0);
+            Check(lastBefore + 1 == firstAfter);
+
+            /* TODO: what is all this anyway, add comments in original then fix this up 
+            * 
+            float* testStrideCopy = new float[12]{
+                0, 0, 1, 1, 0, 0,
+                0, 0, 2, 2, 0, 0,
+            };
+
+            stream.AppendSliver(testStrideCopy, 2, 2, 6, 2);
+
+            Slice<AudioSample, float> lastSliver = stream.GetSliceIntersecting(Interval<AudioSample>(22, 1, Direction::Forwards));
+            Check(lastSliver.SliceDuration() == 1);
+            Check(lastSliver.Get(0, 0) == 1);
+            Check(lastSliver.Get(0, 1) == 1);
+            Check(lastSliver.Get(0, 2) == 2);
+            Check(lastSliver.Get(0, 3) == 2);
+
+            Slice<AudioSample, float> firstSlice = stream.GetSliceIntersecting(Interval<AudioSample>(-2, 100, Direction::Forwards));
+            Check(firstSlice.SliceDuration() == 11);
+            */
         }
 
         TEST_METHOD(TestStreamShutting)

@@ -521,11 +521,12 @@ namespace NowSound
         }
 
         // Get the first timed slice that contains data from this interval.
+        // Interval may be backwards.
         const TimedSlice<TTime, TValue>& GetFirstSliceIntersecting(Interval<TTime> interval) const
         {
             // We must overlap somewhere; check for non-empty intersection.
             Interval<TTime> thisInterval = this->DiscreteInterval();
-            Check(!interval.Intersect(thisInterval).IsEmpty());
+            Check(!thisInterval.Intersect(interval).IsEmpty());
 
             // Get the biggest available slice at or after interval.InitialTime.
             // First, get the index of the slice with start time that is at or after the interval's start time.
@@ -540,8 +541,16 @@ namespace NowSound
             }
             else if (firstSliceEqualOrGreaterThanTarget->InitialTime() == interval.IntervalTime())
             {
-                // This is the exact right slice
-                return *firstSliceEqualOrGreaterThanTarget;
+                // If interval is forwards, this is the exact right slice.
+                // If interval is backwards, we need the prior slice.
+                if (interval.IntervalDirection() == Direction::Forwards)
+                {
+                    return *firstSliceEqualOrGreaterThanTarget;
+                }
+                else
+                {
+                    return *(firstSliceEqualOrGreaterThanTarget - 1);
+                }
             }
             else if (firstSliceEqualOrGreaterThanTarget != _data.begin())
             {
