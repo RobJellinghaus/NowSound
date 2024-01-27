@@ -399,36 +399,42 @@ namespace NowSound
                         // So now is when we decide to possibly *not* do that.
                         if (isFirstSlice)
                         {
-                            // Retreat (opposite of advance?!) the loop time by the stream's continuous duration.
-//                            ContinuousTime<AudioSample> nextLocalLoopTime = _localLoopTime
-
-                            // If the fractional part of nextLocalLoopTime is more than the fractional part
-                            // of _localLoopTime, then we did not round up, and we should drop the extra
-                            // sample now.
-                            //float fractionalLocalLoopTime = _localLoopTime.Value() - std::floor(_localLoopTime.Value());
-                            //float fractionalNextLocalLoopTime = nextLocalLoopTime.Value() - std::floor(nextLocalLoopTime.Value());
-
-                            //if (fractionalNextLocalLoopTime > fractionalLocalLoopTime)
-                            //{
-                            //    // drop the extra sample from the slice
-                            //    slice = slice.SubsliceOfDuration(slice.SliceDuration() - Duration<AudioSample>(1));
-                            //}
-
-                            // because we wrapped around, we keep the fractional part only but go back to
-                            // the start of the stream
-                            //_localLoopTime = fractionalNextLocalLoopTime;
+                            // If the fractional part of localLoopTime is more than streamFractionalDuration,
+                            // then we are not rounding up in this direction when going backwards.
+                            if (fractionalLocalLoopTime >= streamFractionalDuration)
+                            {
+                                // The new local loop time keeps the fractional result, but drops the
+                                // last sample.
+                                _localLoopTime =
+                                    _audioStream.get()->DiscreteDuration().Value() - 1 
+                                    + (fractionalLocalLoopTime - streamFractionalDuration);
+                            }
+                            else
+                            {
+                                // We are wrapping around here.
+                                // So subtract streamFractionalDuration from fractionalLocalLoopTime (which will be
+                                // less than zero but greater than -1), and then add 1 so the result will be
+                                // zero plus the fractional part.
+                                // On the next iteration, the last slice of the stream (with the rounded-up sample
+                                // at its end) will be used, as desired.
+                                _localLoopTime = fractionalLocalLoopTime - streamFractionalDuration + 1;
+                            }
                         }
                         else
                         {
                             // we can just use the slice as is.
-                            // increase the local loop time by this whole slice
-                            _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
+                            // decrease the local loop time by this whole slice
+                            _localLoopTime = ContinuousTime<AudioSample>(_localLoopTime.Value() - slice.SliceDuration().AsContinuous().Value());
                         }
 
-                        // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
-                        slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());
-                        slice.CopyTo(audioBuffer.getWritePointer(1) + completedDuration.Value());
-
+                        // copy the same audio BACKWARDS to both output channels;
+                        // it will get panned by SpatialAudioProcessor::processBlock
+                        for (int sourceIndex = 0; sourceIndex < slice.SliceDuration().Value(); sourceIndex++)
+                        {
+                            int destIndex = slice.SliceDuration().Value() - sourceIndex - 1 + completedDuration.Value();
+                            audioBuffer.getWritePointer(0)[destIndex] = slice.Get(sourceIndex, 0);
+                            audioBuffer.getWritePointer(1)[destIndex] = slice.Get(sourceIndex, 0);
+                        }
                     }
 
                     bufferDuration = bufferDuration - slice.SliceDuration();
