@@ -4,6 +4,7 @@
 #include "BufferAllocator.h"
 #include "Check.h"
 #include "Histogram.h"
+#include "Interval.h"
 #include "Slice.h"
 #include "SliceStream.h"
 #include "NowSoundTime.h"
@@ -134,7 +135,7 @@ namespace UnitTestsDesktop
 
             Check(stream.DiscreteDuration() == 0);
 
-            Interval<AudioSample> interval(0, 10);
+            Interval<AudioSample> interval(0, 10, Direction::Forwards);
             Slice<AudioSample, float> firstSlice(stream.GetSliceContaining(interval));
             Check(firstSlice.IsEmpty());
 
@@ -278,21 +279,21 @@ namespace UnitTestsDesktop
 
             // test getting slices from existing stream
             // should return slice with duration 2, because [-2, 2) intersected with [0, 22) = [0, 2)
-            Slice<AudioSample, float> beforeFirst = stream.GetSliceContaining(Interval<AudioSample>((-2), 4));
+            Slice<AudioSample, float> beforeFirst = stream.GetSliceContaining(Interval<AudioSample>((-2), 4, Direction::Forwards));
             Check(beforeFirst.SliceDuration() == 2);
 
             // should return slice with duration 3, because [19, 24) intersected with [0, 22) = [19, 22)
-            Slice<AudioSample, float> afterLast = stream.GetSliceContaining(Interval<AudioSample>(19, 5));
+            Slice<AudioSample, float> afterLast = stream.GetSliceContaining(Interval<AudioSample>(19, 5, Direction::Forwards));
             Check(afterLast.SliceDuration() == 3);
 
             // now get slice across the buffer boundary (at time 11); verify it is split as expected
-            Interval<AudioSample> splitInterval(7, 8);
+            Interval<AudioSample> splitInterval(7, 8, Direction::Forwards);
             Slice<AudioSample, float> beforeSplit = stream.GetSliceContaining(splitInterval);
             Check(beforeSplit.Offset() == 7);
             Check(beforeSplit.SliceDuration() == 4);
 
             // Now get [11, 15)
-            Interval<AudioSample> afterBufferSplitInterval(11, 4);
+            Interval<AudioSample> afterBufferSplitInterval(11, 4, Direction::Forwards);
             Slice<AudioSample, float> afterSplit = stream.GetSliceContaining(afterBufferSplitInterval);
             Check(afterSplit.Offset() == 0);
             Check(afterSplit.SliceDuration() == beforeSplit.SliceDuration());
@@ -307,14 +308,14 @@ namespace UnitTestsDesktop
             
             stream.AppendSliver(testStrideCopy, 2, 2, 6, 2);
 
-            Slice<AudioSample, float> lastSliver = stream.GetSliceContaining(Interval<AudioSample>(22, 1));
+            Slice<AudioSample, float> lastSliver = stream.GetSliceContaining(Interval<AudioSample>(22, 1, Direction::Forwards));
             Check(lastSliver.SliceDuration() == 1);
             Check(lastSliver.Get(0, 0) == 1);
             Check(lastSliver.Get(0, 1) == 1);
             Check(lastSliver.Get(0, 2) == 2);
             Check(lastSliver.Get(0, 3) == 2);
 
-            Slice<AudioSample, float> firstSlice = stream.GetSliceContaining(Interval<AudioSample>(-2, 100));
+            Slice<AudioSample, float> firstSlice = stream.GetSliceContaining(Interval<AudioSample>(-2, 100, Direction::Forwards));
             Check(firstSlice.SliceDuration() == 11);
         }
 
@@ -336,7 +337,7 @@ namespace UnitTestsDesktop
             stream.Shut(continuousDuration, /* fade: */false);
             Check(stream.IsShut());
 
-            Interval<AudioSample> interval(0, 10);
+            Interval<AudioSample> interval(0, 10, Direction::Forwards);
             Slice<AudioSample, float> slice = stream.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);
@@ -345,7 +346,7 @@ namespace UnitTestsDesktop
             BufferedSliceStream<AudioSample, float> stream2(sliverCount, &bufferAllocator, 0);
             stream2.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliverCount));
             stream2.Shut(continuousDuration, /* fade: */false);
-            interval = Interval<AudioSample>(0, 10);
+            interval = Interval<AudioSample>(0, 10, Direction::Forwards);
             slice = stream2.GetSliceContaining(interval);
             Check(slice.SliceDuration() == 3);
             Check(slice.Get(0, 0) == 0);

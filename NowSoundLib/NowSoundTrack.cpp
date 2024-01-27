@@ -65,7 +65,8 @@ namespace NowSound
             Duration<AudioSample> preRecordingSampleDuration = graph->Clock()->TimeToRoundedUpSamples(preRecordingDuration);
             Interval<AudioSample> lastIntervalOfSourceStream(
                 Time<AudioSample>(0) + sourceStream.DiscreteDuration() - preRecordingSampleDuration,
-                preRecordingSampleDuration);
+                preRecordingSampleDuration,
+                Direction::Forwards);
             sourceStream.AppendTo(lastIntervalOfSourceStream, _audioStream.get());
         }
 
@@ -321,7 +322,7 @@ namespace NowSound
                 while (bufferDuration > 0)
                 {
                     Slice<AudioSample, float> slice(
-                        _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration)));
+                        _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration, Direction::Forwards)));
 
                     // Is this the last slice in the stream?
                     // If so, then its final offset will be equal to the stream's DiscreteDuration.

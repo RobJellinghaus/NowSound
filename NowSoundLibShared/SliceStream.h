@@ -99,7 +99,7 @@ namespace NowSound
         // The discrete duration of this stream; always exactly equal to the number of samples appended.
         virtual Duration<TTime> DiscreteDuration() const { return _discreteDuration; }
 
-        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(0, this->DiscreteDuration()); }
+        Interval<TTime> DiscreteInterval() const { return Interval<TTime>(0, this->DiscreteDuration(), Direction::Forwards); }
 
         // Shut the stream; no further appends may be accepted.
         // 

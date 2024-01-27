@@ -217,7 +217,7 @@ namespace NowSound
             return *this;
         }
 
-        Interval<TTime> SliceInterval() const { return Interval<TTime>(_time, _value.SliceDuration()); }
+        Interval<TTime> SliceInterval() const { return Interval<TTime>(_time, _value.SliceDuration(), Direction::Forwards); }
 
         bool operator<(const TimedSlice<TTime, TValue>& other) const
         {
