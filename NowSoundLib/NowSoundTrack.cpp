@@ -322,7 +322,7 @@ namespace NowSound
                 while (bufferDuration > 0)
                 {
                     Slice<AudioSample, float> slice(
-                        _audioStream.get()->GetSliceContaining(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration, Direction::Forwards)));
+                        _audioStream.get()->GetSliceIntersecting(Interval<AudioSample>(_localLoopTime.RoundedDown(), bufferDuration, Direction::Forwards)));
 
                     // Is this the last slice in the stream?
                     // If so, then its final offset will be equal to the stream's DiscreteDuration.

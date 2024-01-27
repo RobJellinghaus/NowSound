@@ -117,11 +117,14 @@ namespace NowSound
             SliceStream<TTime, TValue>::Shut(finalDuration);
         }
 
-        // Get a reference to the next slice at the given time.
-        // If there is no slice at the exact time, return the most immediately preceding slice.
-        // If the next available slice is not as long as the source interval, return the largest available slice starting at the given time.
+        // Get a reference to the slice at the given time.
+        // If there is no slice at the exact time, return a suffix of the preceding slice containing the start time.
+        // If the next available slice is not as long as the source interval, return the largest available slice containing
+        // the interval start time.
         // If the interval IsEmpty, return an empty slice.
-        virtual Slice<TTime, TValue> GetSliceContaining(Interval<TTime> sourceInterval) const = 0;
+        // If sourceInterval is Backwards, the resulting Slice will be the slice overlapping with that interval
+        // in the backwards direction.
+        virtual Slice<TTime, TValue> GetSliceIntersecting(Interval<TTime> sourceInterval) const = 0;
 
         // Append contiguous data.
         // This must not be shut yet.
@@ -458,7 +461,7 @@ namespace NowSound
             Interval<TTime> sourceInterval = sourceIntervalArgument;
             while (!sourceInterval.IsEmpty())
             {
-                Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
+                Slice<TTime, TValue> source(GetSliceIntersecting(sourceInterval));
                 source.CopyTo(p);
                 sourceInterval = sourceInterval.Suffix(source.SliceDuration());
             }
@@ -469,7 +472,7 @@ namespace NowSound
         {
             while (!sourceInterval.IsEmpty())
             {
-                Slice<TTime, TValue> source(GetSliceContaining(sourceInterval));
+                Slice<TTime, TValue> source(GetSliceIntersecting(sourceInterval));
                 destinationStream->Append(source);
                 sourceInterval = sourceInterval.Suffix(source.SliceDuration());
             }
@@ -477,7 +480,7 @@ namespace NowSound
 
         // Get the slice that starts at the interval's start time, and that is either
         // the longest available slice, or a slice no longer than the interval.
-        virtual Slice<TTime, TValue> GetSliceContaining(Interval<TTime> interval) const
+        virtual Slice<TTime, TValue> GetSliceIntersecting(Interval<TTime> interval) const
         {
             if (interval.IsEmpty())
             {
