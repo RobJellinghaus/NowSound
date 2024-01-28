@@ -85,6 +85,9 @@ namespace NowSoundWinFormsApp
                 MagicConstants.FftBinSize,
                 MagicConstants.PreRecordingDuration);
 
+            // set to a tempo with a fractional number of beats, to debug backwards fractional beat handling
+            NowSoundGraphAPI.SetTempo(61, 4);
+
             // No longer necessary really since JUCE initialization is synchronous.
             // JUCETODO: clean this up eventually.
             bool reachedState = await AwaitAudioGraphState(NowSoundGraphState.GraphRunning, timeoutMsec: 10);

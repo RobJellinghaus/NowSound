@@ -406,25 +406,18 @@ namespace NowSound
                         // So now is when we decide to possibly *not* do that.
                         if (isFirstSlice)
                         {
+                            // The default local loop time is the whole stream, plus the fractional accumulation.
+                            _localLoopTime =
+                                _audioStream.get()->DiscreteDuration().Value() - 1
+                                + (fractionalLocalLoopTime - streamFractionalDuration);
+
                             // If the fractional part of localLoopTime is more than streamFractionalDuration,
-                            // then we are not rounding up in this direction when going backwards.
+                            // then we did not in fact round up this time, and we should drop one sample.
                             if (fractionalLocalLoopTime >= streamFractionalDuration)
                             {
                                 // The new local loop time keeps the fractional result, but drops the
                                 // last sample.
-                                _localLoopTime =
-                                    _audioStream.get()->DiscreteDuration().Value() - 1 
-                                    + (fractionalLocalLoopTime - streamFractionalDuration);
-                            }
-                            else
-                            {
-                                // We are wrapping around here.
-                                // So subtract streamFractionalDuration from fractionalLocalLoopTime (which will be
-                                // less than zero but greater than -1), and then add 1 so the result will be
-                                // zero plus the fractional part.
-                                // On the next iteration, the last slice of the stream (with the rounded-up sample
-                                // at its end) will be used, as desired.
-                                _localLoopTime = fractionalLocalLoopTime - streamFractionalDuration + 1;
+                                _localLoopTime = ContinuousTime<AudioSample>(_localLoopTime.Value() - 1);
                             }
                         }
                         else
