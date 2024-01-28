@@ -137,6 +137,10 @@ namespace NowSound
         // Can only be called once the track has finished recording and started looping.
         void SetPlaybackDirection(bool isPlaybackBackwards);
 
+        // Rewind the track to its start.
+        // Can only be called once the track has finished recording and started looping.
+        void Rewind();
+
         // The full time info for this track (to allow just one call per track for all this info).
         // Note that this is not const because it may recalculate histograms etc. when called.
         NowSoundTrackInfo Info();

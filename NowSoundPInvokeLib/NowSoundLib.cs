@@ -929,6 +929,18 @@ namespace NowSoundLib
         }
 
         [DllImport("NowSoundLib")]
+        static extern void NowSoundTrack_Rewind(TrackId trackId);
+
+        // Rewind this track to start.
+        // Contractually requires State == NowSoundTrack_State.Looping.
+        public static void Rewind(TrackId trackId)
+        {
+            Id.Check(trackId);
+
+            NowSoundTrack_Rewind(trackId);
+        }
+
+        [DllImport("NowSoundLib")]
         static extern bool NowSoundTrack_GetFrequencies(TrackId trackId, float[] floatBuffer, int floatBufferCapacity);
 
         // Get the current track frequency histogram; LPWSTR must actually reference a float buffer of the

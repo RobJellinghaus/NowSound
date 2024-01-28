@@ -203,6 +203,12 @@ namespace NowSound
         _direction = isPlaybackBackwards ? Direction::Backwards : Direction::Forwards;
     }
 
+    void NowSoundTrackAudioProcessor::Rewind()
+    {
+        // just poke it in there, it's thread-safe to do so
+        _localLoopTime = 0;
+    }
+
     const int maxCounter = 1000;
 
     void NowSoundTrackAudioProcessor::processBlock(AudioBuffer<float>& audioBuffer, MidiBuffer& midiBuffer)
