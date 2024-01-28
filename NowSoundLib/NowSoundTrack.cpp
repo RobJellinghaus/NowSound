@@ -88,6 +88,7 @@ namespace NowSound
         _beatDuration{ other->_beatDuration },
         _localLoopTime{ other->_localLoopTime },
         _justStoppedRecording{ false },
+        _direction{ other->_direction },
         _tempo{ new Tempo(other->_tempo->BeatsPerMinute(), other->_tempo->BeatsPerMeasure(), other->Graph()->Clock()->SampleRateHz()) }
     {
         // we're a copied loop; spam like crazy
