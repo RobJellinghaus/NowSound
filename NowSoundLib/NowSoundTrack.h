@@ -40,11 +40,17 @@ namespace NowSound
         // The current state of the track (recording / finishing / looping).
         NowSoundTrackState _state;
 
-        // The number of complete beats thaat measures the duration of this track.
+        // The number of complete beats that measures the duration of this track.
         // Increases steadily while Recording; sets a time limit to further recording during FinishRecording;
         // remains constant while Looping.
         // TODO: relax this to a ContinuousDuration to permit non-beat-quantized looping.
         Duration<Beat> _beatDuration;
+
+        // The prior value of _beatDuration, before it was last advanced.
+        // If the current loop finishes recording within half a beat of this duration,
+        // the loop will be shortened to _priorBeatDuration -- we will assume the user intended
+        // the shorter loop.
+        Duration<Beat> _priorBeatDuration;
 
         // The stream containing this Track's mono data.
         // This may be shared with copied Tracks.
@@ -91,6 +97,12 @@ namespace NowSound
 
         // JUCE processing method; this is called on the audio thread and may not make graph changes.
         virtual void processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) override;
+
+        void HandleTrackLooping(NowSound::Duration<NowSound::AudioSample>& bufferDuration, juce::AudioSampleBuffer& audioBuffer, NowSound::Duration<NowSound::AudioSample>& completedDuration, juce::MidiBuffer& midiBuffer);
+
+        void HandleTrackFinishRecording(NowSound::Duration<NowSound::AudioSample>& bufferDuration, juce::AudioSampleBuffer& audioBuffer);
+
+        void HandleTrackRecording(NowSound::Duration<NowSound::AudioSample>& bufferDuration, juce::AudioSampleBuffer& audioBuffer);
 
         // Did this track stop recording since the last time this method was called?
         // The message thread polls this value to determine when to remove tracks' input connections after recording.

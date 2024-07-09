@@ -172,9 +172,10 @@ namespace NowSound
                 // allocate a new buffer and transfer ownership of it to _buffers
                 _buffers.push_back(std::move(_allocator->Allocate()));
 
-                // get a reference to the current append buffer
-                OwningBuf<TValue>& appendBuffer = _buffers.at(_buffers.size() - 1);
+                // get a reference to that new buffer
+                OwningBuf<TValue>& appendBuffer{ _buffers.at(_buffers.size() - 1) };
 
+                // point _remainingFreeSlice at that new buffer
                 _remainingFreeSlice = Slice<TTime, TValue>(
                     Buf<TValue>(appendBuffer),
                     0,
@@ -191,10 +192,12 @@ namespace NowSound
 
             if (_data.size() == 0)
             {
+                // this is the first data of all (base case)
                 _data.push_back(TimedSlice<TTime, TValue>(0, source));
             }
             else
             {
+                // there is already some data. Coalesce this slice with the existing one if possible.
                 TimedSlice<TTime, TValue> last = _data[_data.size() - 1];
                 if (last.Value().Precedes(source))
                 {
@@ -203,6 +206,7 @@ namespace NowSound
                 }
                 else
                 {
+                    // add a new slice
                     _data.push_back(TimedSlice<TTime, TValue>(last.InitialTime() + last.Value().SliceDuration(), source));
                 }
             }
@@ -230,6 +234,7 @@ namespace NowSound
         BufferedSliceStream(
             int sliverCount,
             BufferAllocator<TValue>* allocator)
+
             : DenseSliceStream<TTime, TValue>(
                 sliverCount,
                 ContinuousDuration<TTime>{0},
@@ -450,6 +455,77 @@ namespace NowSound
                     for (int i = 1; i < _data.size(); i++) {
                         _data[i].ChangeInitialTimeBy(-toTrim.Value());
                     }
+                }
+            }
+        }
+
+        // Truncate this stream to this shorter duration, dropping any data beyond it.
+        virtual void Truncate(ContinuousDuration<AudioSample> shorterDuration)
+        {
+            Check(shorterDuration.Value() < this->ExactDuration().Value());
+
+            // This loop ends when ExactDuration exactly equals shorterDuration.
+            while (shorterDuration.Value() < this->ExactDuration().Value()) {
+                // we had better not run out of slivers
+                Check(this->_sliverCount > 0);
+                // or data
+                Check(_data.size() > 0);
+                // or buffers
+                Check(_buffers.size() > 0);
+
+                // Is the last sliver to be dropped in its entirety?
+                TimedSlice<TTime, TValue>& lastTimedSlice = _data.at(_data.size() - 1);
+                Slice<TTime, TValue> lastSlice = lastTimedSlice.Value();
+                Duration<TTime> lastSliceDuration{ lastSlice.SliceDuration() };
+                if (shorterDuration.Value() < this->ExactDuration().Value() - lastSliceDuration.Value())
+                {
+                    // yes, we want to drop that last slice altogether, and the buffer associated with it
+                    _buffers.pop_back();
+                    _data.pop_back();
+                    
+                    // the prior buffer
+                    OwningBuf<TValue>& priorBuffer{ _buffers.at(_buffers.size() - 1) };
+
+                    // point _remainingFreeSlice at prior buffer, as empty
+                    _remainingFreeSlice = Slice<TTime, TValue>(
+                        Buf<TValue>(priorBuffer),
+                        0,
+                        priorBuffer.Length() / this->SliverCount(),
+                        this->SliverCount());
+
+                    // update durations
+                    this->_continuousDuration = ContinuousDuration<TTime>{ this->ExactDuration().Value() - lastSliceDuration.Value() };
+                    this->_discreteDuration = this->_continuousDuration.RoundedUp();
+                }
+                else
+                {
+                    // ok, the last slice needs to be partially truncated. By how much?
+                    ContinuousDuration<TTime> excessDuration{ this->ExactDuration() - shorterDuration };
+
+                    // don't ask us to trim more sound than exists (should never fail, due to above if check)
+                    Check(lastSliceDuration.Value() > excessDuration.Value());
+
+                    ContinuousDuration<TTime> lastSliceNewExactDuration{ lastSliceDuration.Value() - excessDuration.Value() };
+                    Duration<TTime> lastSliceNewDiscreteDuration = lastSliceNewExactDuration.RoundedDown();
+                    TimedSlice<TTime, TValue> newLastSlice = TimedSlice<TTime, TValue>(
+                        lastTimedSlice.InitialTime(),
+                        Slice<TTime, TValue>(
+                            lastSlice.Buffer(),
+                            0,
+                            lastSliceNewDiscreteDuration.Value(),
+                            this->SliverCount()));
+                    _data.pop_back();
+                    _data.push_back(newLastSlice);
+
+                    // and update _remainingFreeSlice to the rest of _newLastSlice
+                    _remainingFreeSlice = Slice<TTime, TValue>(
+                        lastSlice.Buffer(),
+                        lastSliceNewDiscreteDuration.Value(),
+                        (long)((lastSlice.Buffer().Length() / this->SliverCount()) - lastSliceNewDiscreteDuration.Value()),
+                        this->SliverCount());
+
+                    this->_continuousDuration = shorterDuration;
+                    this->_discreteDuration = shorterDuration.RoundedUp();
                 }
             }
         }

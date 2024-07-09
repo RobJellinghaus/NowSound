@@ -219,6 +219,12 @@ namespace NowSound
         return Time<TTime>(first._duration + second.Value());
     }
 
+    template<typename TTime>
+    Time<TTime> operator -(Duration<TTime> first, Time<TTime> second)
+    {
+        return Time<TTime>(first._duration - second.Value());
+    }
+
 
     // A continous Time. The main use for this is to keep exact track of how many fractional
     // samples have been played, modulo the length of a loop. This enables handling rounding
@@ -291,7 +297,9 @@ namespace NowSound
         }
 
         // The integer part of this, as a (non-continuous) Duration.
-        Duration<TTime> RoundedDown() const { return new Duration<TTime>((int)std::floorf(Value())); }
+        Duration<TTime> RoundedDown() const { return Duration<TTime>(static_cast<int64_t>(std::floorf(Value()))); }
+        // The rounded-up value of this, as a (non-continuous) Duration.
+        Duration<TTime> RoundedUp() const { return Duration<TTime>(static_cast<int64_t>(std::ceilf(Value()))); }
     };
 
     template<typename TTime>
@@ -304,6 +312,18 @@ namespace NowSound
     ContinuousDuration<TTime> operator +(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
     {
         return ContinuousDuration<TTime>(first.Value() + second.Value());
+    }
+
+    template<typename TTime>
+    ContinuousTime<TTime> operator -(ContinuousTime<TTime> first, ContinuousDuration<TTime> second)
+    {
+        return ContinuousTime<TTime>(first.Value() - second.Value());
+    }
+
+    template<typename TTime>
+    ContinuousDuration<TTime> operator -(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
+    {
+        return ContinuousDuration<TTime>(first.Value() - second.Value());
     }
 
 }
