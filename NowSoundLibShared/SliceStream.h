@@ -26,7 +26,7 @@ namespace NowSound
     template<typename TTime, typename TValue>
     class SliceStream : public IStream<TTime>
     {
-    protected:
+    private:
         // The floating-point duration of this stream in terms of samples; only valid once shut.
         // 
         // This allows streams to have lengths measured in fractional samples, which prevents roundoff error from
@@ -40,6 +40,7 @@ namespace NowSound
         // Is this stream shut?
         bool _isShut;
 
+    protected:
         SliceStream(int sliceSize, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
             : _sliceSize{ sliceSize }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
         {
@@ -51,7 +52,11 @@ namespace NowSound
         // The floating-point-accurate duration of this stream; only valid once shut.
         // This may have a fractional part if the BPM of the stream can't be evenly divided into
         // the sample rate.
-        virtual ContinuousDuration<TTime> ExactDuration() const { return _continuousDuration; }
+        virtual ContinuousDuration<TTime> ExactDuration() const 
+        { 
+            Check(IsShut());
+            return _continuousDuration;
+        }
 
         // The number of T values in each individual slice.
         // SliceDuration.Value() is the number of slices;
@@ -80,11 +85,12 @@ namespace NowSound
     template<typename TTime, typename TValue>
     class DenseSliceStream : public SliceStream<TTime, TValue>
     {
-    protected:
+    private:
         // The discrete duration of this stream; always exactly equal to the sum of the durations of all contained slices,
         // and also exactly equal to the rounded-up value of ExactDuration().
         Duration<TTime> _discreteDuration;
 
+    protected:
         DenseSliceStream(
             int sliceSize,
             ContinuousDuration<TTime> exactDuration,
@@ -93,6 +99,12 @@ namespace NowSound
             : SliceStream<TTime, TValue>(sliceSize, exactDuration, isShut),
             _discreteDuration{ discreteDuration }
         { }
+
+        // Set the discrete duration.
+        virtual void SetDuration(Duration<TTime> newDuration)
+        {
+            _discreteDuration = newDuration;
+        }
 
     public:
         // The discrete duration of this stream; always exactly equal to the number of samples appended.
@@ -106,13 +118,13 @@ namespace NowSound
         // must be strictly equal to, or less than one sample smaller than, the discrete duration.</param>
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration)
         {
-            Check(!this->IsShut());
-            // Should always have as many samples as the rounded-up finalDuration.
+            // Should always have exactly as many samples as the rounded-up finalDuration.
             // The precise time matching behavior is that a loop will play either Math.Floor(finalDuration)
             // or Math.Ceiling(finalDuration) samples on each iteration, such that it remains perfectly in
             // time with finalDuration's fractional value.  So, a shut loop should have DiscreteDuration
             // equal to rounded-up ContinuousDuration.
-            Check((int)std::ceil(finalDuration.Value()) == DiscreteDuration().Value());
+            Check(finalDuration.RoundedUp() == DiscreteDuration());
+
             SliceStream<TTime, TValue>::Shut(finalDuration);
         }
 
@@ -210,7 +222,7 @@ namespace NowSound
                 }
             }
 
-            this->_discreteDuration = this->_discreteDuration + source.SliceDuration();
+            this->SetDuration(this->DiscreteDuration() + source.SliceDuration());
             _remainingFreeSlice = _remainingFreeSlice.SubsliceStartingAt(source.SliceDuration());
         }
 
@@ -431,7 +443,7 @@ namespace NowSound
                     Check(firstSlice.Value().Buffer().Data() == _buffers[0].Data());
                     _allocator->Free(std::move(_buffers.at(0)));
                     _buffers.erase(_buffers.begin());
-                    this->_discreteDuration = this->_discreteDuration - firstSliceDuration;
+                    this->SetDuration(DiscreteDuration() - firstSliceDuration);
                     // and adjust all remaining slices
                     for (int i = 0; i < _data.size(); i++) {
                         _data[i].ChangeInitialTimeBy(-firstSliceDuration.Value());
@@ -448,7 +460,7 @@ namespace NowSound
                     // initial time is 0 because this is the new first slice
                     TimedSlice<TTime, TValue> newFirstSlice(0, newSlice);
                     _data[0] = newFirstSlice;
-                    this->_discreteDuration = this->_discreteDuration - toTrim;
+                    this->SetDuration(this->DiscreteDuration() - toTrim);
 
                     // move all later slices back 
                     for (int i = 1; i < _data.size(); i++) {
@@ -490,9 +502,8 @@ namespace NowSound
                         priorBuffer.Length() / this->SliceSize(),
                         this->SliceSize());
 
-                    // update durations
-                    this->_continuousDuration = ContinuousDuration<TTime>{ this->ExactDuration().Value() - lastSliceDuration.Value() };
-                    this->_discreteDuration = this->_continuousDuration.RoundedUp();
+                    // update duration
+                    this->SetDuration(this->DiscreteDuration() - lastSliceDuration);
                 }
                 else
                 {
@@ -521,8 +532,7 @@ namespace NowSound
                         (long)((lastSlice.Buffer().Length() / this->SliceSize()) - lastSliceNewDiscreteDuration.Value()),
                         this->SliceSize());
 
-                    this->_continuousDuration = shorterDuration;
-                    this->_discreteDuration = shorterDuration.RoundedUp();
+                    this->SetDuration(shorterDuration.RoundedUp());
                 }
             }
         }

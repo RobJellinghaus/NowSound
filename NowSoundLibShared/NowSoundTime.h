@@ -300,6 +300,16 @@ namespace NowSound
         Duration<TTime> RoundedDown() const { return Duration<TTime>(static_cast<int64_t>(std::floorf(Value()))); }
         // The rounded-up value of this, as a (non-continuous) Duration.
         Duration<TTime> RoundedUp() const { return Duration<TTime>(static_cast<int64_t>(std::ceilf(Value()))); }
+
+        bool operator ==(const ContinuousDuration<TTime>& second) const
+        {
+            return _value == second.Value();
+        }
+
+        bool operator !=(const ContinuousDuration<TTime>& second) const
+        {
+            return _value != second.Value();
+        }
     };
 
     template<typename TTime>

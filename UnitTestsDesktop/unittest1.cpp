@@ -425,6 +425,35 @@ namespace UnitTestsDesktop
             Check(slice.Get(2, 0) == 2);
         }
 
+        TEST_METHOD(TestStreamTruncating)
+        {
+            const int sliceSize = 4; // 4 floats = 16 bytes
+            const int sliceCount = 11; // 11 slices per buffer, to test various cases
+            BufferAllocator<float> bufferAllocator(sliceSize * sliceCount, 1);
+
+            ContinuousDuration<AudioSample> continuousDuration{ 12.4f };
+            Duration<AudioSample> discreteDuration = continuousDuration.RoundedUp();
+            float* buffer = AllocateSmall4FloatArray(discreteDuration.Value());
+            OwningBuf<float> owningBuf(0, discreteDuration.Value() * sliceSize, buffer);
+            BufferedSliceStream<AudioSample, float> stream(sliceSize, &bufferAllocator, 0);
+            stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliceSize));
+
+            // Confirm we have two actual buffers in the stream.
+            Interval<AudioSample> startInterval(0, 1, Direction::Forwards);
+            Slice<AudioSample, float> startSlice = stream.GetSliceIntersecting(startInterval);
+            Interval<AudioSample> endInterval(discreteDuration.Value(), 0, Direction::Forwards);
+            Slice<AudioSample, float> endSlice = stream.GetSliceIntersecting(endInterval);
+            Check(startSlice.Buffer().Data() != endSlice.Buffer().Data());
+
+            // Truncate exactly one slice.
+            // Should result in a stream with continuousDuration of 11.4, and still the
+            // same two buffers.
+            ContinuousDuration<AudioSample> truncatedDuration{ continuousDuration.Value() - 1 };
+            stream.Truncate(truncatedDuration);
+
+            Check(stream.DiscreteDuration() == truncatedDuration.RoundedUp());
+        }
+
         /* TODO: perhaps revive this test? I think I already have coverage of Free(), so postponing porting this.
         [TestMethod]
         public void TestDispose()
