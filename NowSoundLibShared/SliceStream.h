@@ -443,7 +443,7 @@ namespace NowSound
                     Check(firstSlice.Value().Buffer().Data() == _buffers[0].Data());
                     _allocator->Free(std::move(_buffers.at(0)));
                     _buffers.erase(_buffers.begin());
-                    this->SetDuration(DiscreteDuration() - firstSliceDuration);
+                    this->SetDuration(this->DiscreteDuration() - firstSliceDuration);
                     // and adjust all remaining slices
                     for (int i = 0; i < _data.size(); i++) {
                         _data[i].ChangeInitialTimeBy(-firstSliceDuration.Value());
