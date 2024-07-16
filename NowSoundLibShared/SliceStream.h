@@ -20,10 +20,9 @@ namespace NowSound
     // Streams may be Open (in which case more data may be appended to them), or Shut (in which case they will
     // not change again).
     // 
-    // Streams have a SliverCount which denotes a larger granularity within the Stream's data.
-    // A SliverCount of N represents that each element in the Stream logically consists of N contiguous
-    // TValue entries in the stream's backing store; such a contiguous group is called a sliver.  
-    // A Stream with duration 1 has exactly one sliver of data. 
+    // Streams have a SliceSize which denotes a larger granularity within the Stream's data.
+    // A Slice of length 1 will contain SliceSize contiguous TValue entries in the stream's backing store.
+    // A Stream with duration 1 has exactly SliceSize TValues. 
     template<typename TTime, typename TValue>
     class SliceStream : public IStream<TTime>
     {
@@ -36,13 +35,13 @@ namespace NowSound
 
         // As with Slice<typeparam name="TValue"></typeparam>, this defines the number of T values in an
         // individual slice.
-        int _sliverCount;
+        int _sliceSize;
 
         // Is this stream shut?
         bool _isShut;
 
-        SliceStream(int sliverCount, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
-            : _sliverCount{ sliverCount }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
+        SliceStream(int sliceSize, ContinuousDuration<AudioSample> continuousDuration, bool isShut)
+            : _sliceSize{ sliceSize }, _continuousDuration{ continuousDuration }, _isShut{ isShut }
         {
         }
 
@@ -54,10 +53,10 @@ namespace NowSound
         // the sample rate.
         virtual ContinuousDuration<TTime> ExactDuration() const { return _continuousDuration; }
 
-        // The number of T values in each sliver of this slice.
-        // SliceDuration.Value() is the number of slivers in the slice;
-        // the slice's size in bytes is SliceDuration.Value() * SliverCount() * sizeof(TValue).
-        int SliverCount() const { return _sliverCount; }
+        // The number of T values in each individual slice.
+        // SliceDuration.Value() is the number of slices;
+        // the slice's size in bytes is SliceDuration.Value() * SliceSize() * sizeof(TValue).
+        int SliceSize() const { return _sliceSize; }
 
         // Shut the stream; no further appends may be accepted.
         // 
@@ -87,11 +86,11 @@ namespace NowSound
         Duration<TTime> _discreteDuration;
 
         DenseSliceStream(
-            int sliverCount,
+            int sliceSize,
             ContinuousDuration<TTime> exactDuration,
             bool isShut,
             Duration<TTime> discreteDuration)
-            : SliceStream<TTime, TValue>(sliverCount, exactDuration, isShut),
+            : SliceStream<TTime, TValue>(sliceSize, exactDuration, isShut),
             _discreteDuration{ discreteDuration }
         { }
 
@@ -179,8 +178,8 @@ namespace NowSound
                 _remainingFreeSlice = Slice<TTime, TValue>(
                     Buf<TValue>(appendBuffer),
                     0,
-                    appendBuffer.Length() / this->SliverCount(),
-                    this->SliverCount());
+                    appendBuffer.Length() / this->SliceSize(),
+                    this->SliceSize());
             }
         }
 
@@ -217,11 +216,11 @@ namespace NowSound
 
     public:
         BufferedSliceStream(
-            int sliverCount,
+            int sliceSize,
             BufferAllocator<TValue>* allocator,
             Duration<TTime> maxBufferedDuration)
             : DenseSliceStream<TTime, TValue>(
-                sliverCount,
+                sliceSize,
                 ContinuousDuration<TTime>{0},
                 false, // isShut
                 Duration<TTime>{}),
@@ -232,11 +231,11 @@ namespace NowSound
         { }
 
         BufferedSliceStream(
-            int sliverCount,
+            int sliceSize,
             BufferAllocator<TValue>* allocator)
 
             : DenseSliceStream<TTime, TValue>(
-                sliverCount,
+                sliceSize,
                 ContinuousDuration<TTime>{0},
                 false, // isShut
                 Duration<TTime>{}),
@@ -248,7 +247,7 @@ namespace NowSound
 
         BufferedSliceStream(BufferedSliceStream<TTime, TValue>&& other)
             : DenseSliceStream<TTime, TValue>(
-                other.SliverCount(),
+                other.SliceSize(),
                 other.ExactDuration(),
                 other.IsShut(),
                 other.DiscreteDuration(),
@@ -294,9 +293,9 @@ namespace NowSound
                 TimedSlice<TTime, TValue>& firstSlice{ _data.at(0) };
                 TValue* firstSliceData{ firstSlice.NonConstValue().OffsetPointer() };
                 TimedSlice<TTime, TValue>& lastSlice{ _data.at(_data.size() - 1) };
-                int sliverCount = firstSlice.Value().SliverCount();
+                int sliceSize = firstSlice.Value().SliceSize();
                 int64_t firstSliceDuration = firstSlice.Value().SliceDuration().Value();
-                TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliverCount) };
+                TValue* lastSliceDataEnd{ lastSlice.NonConstValue().OffsetPointer() + (lastSlice.Value().SliceDuration().Value() * sliceSize) };
                 int64_t lastSliceDuration = lastSlice.Value().SliceDuration().Value();
                 int64_t minSliceDuration = firstSliceDuration < lastSliceDuration ? firstSliceDuration : lastSliceDuration;
                 int64_t minDuration = minSliceDuration < microFadeDuration ? minSliceDuration : microFadeDuration;
@@ -304,10 +303,10 @@ namespace NowSound
                 for (int64_t i = 0; i < minDuration; i++)
                 {
                     float frac = (float)i / minDuration;
-                    for (int64_t j = 0; j < sliverCount; j++)
+                    for (int64_t j = 0; j < sliceSize; j++)
                     {
-                        firstSliceData[i * sliverCount + j] *= frac;
-                        lastSliceDataEnd[(-i - 1) * sliverCount + j] *= frac;
+                        firstSliceData[i * sliceSize + j] *= frac;
+                        lastSliceDataEnd[(-i - 1) * sliceSize + j] *= frac;
                     }
                 }
             }
@@ -378,12 +377,12 @@ namespace NowSound
             }
         }
 
-        // Copy strided data from a source array into a single destination sliver.
-        void AppendSliver(TValue* source, int startOffset, int width, int stride, int height)
+        // Copy strided data from a source array.
+        void AppendStridedData(TValue* source, int startOffset, int width, int stride, int height)
         {
             Check(source != nullptr);
             int neededLength = startOffset + stride * (height - 1) + width;
-            Check(this->SliverCount() == width * height);
+            Check(this->SliceSize() == width * height);
             Check(stride >= width);
 
             EnsureFreeSlice();
@@ -445,7 +444,7 @@ namespace NowSound
                         firstSlice.Value().Buffer(),
                         firstSlice.Value().Offset() + toTrim,
                         firstSlice.Value().SliceDuration() - toTrim,
-                        this->SliverCount());
+                        this->SliceSize());
                     // initial time is 0 because this is the new first slice
                     TimedSlice<TTime, TValue> newFirstSlice(0, newSlice);
                     _data[0] = newFirstSlice;
@@ -466,14 +465,12 @@ namespace NowSound
 
             // This loop ends when ExactDuration exactly equals shorterDuration.
             while (shorterDuration.Value() < this->ExactDuration().Value()) {
-                // we had better not run out of slivers
-                Check(this->_sliverCount > 0);
-                // or data
+                // we had better not run out of data
                 Check(_data.size() > 0);
                 // or buffers
                 Check(_buffers.size() > 0);
 
-                // Is the last sliver to be dropped in its entirety?
+                // Is the last slice to be dropped in its entirety?
                 TimedSlice<TTime, TValue>& lastTimedSlice = _data.at(_data.size() - 1);
                 Slice<TTime, TValue> lastSlice = lastTimedSlice.Value();
                 Duration<TTime> lastSliceDuration{ lastSlice.SliceDuration() };
@@ -490,8 +487,8 @@ namespace NowSound
                     _remainingFreeSlice = Slice<TTime, TValue>(
                         Buf<TValue>(priorBuffer),
                         0,
-                        priorBuffer.Length() / this->SliverCount(),
-                        this->SliverCount());
+                        priorBuffer.Length() / this->SliceSize(),
+                        this->SliceSize());
 
                     // update durations
                     this->_continuousDuration = ContinuousDuration<TTime>{ this->ExactDuration().Value() - lastSliceDuration.Value() };
@@ -513,7 +510,7 @@ namespace NowSound
                             lastSlice.Buffer(),
                             0,
                             lastSliceNewDiscreteDuration.Value(),
-                            this->SliverCount()));
+                            this->SliceSize()));
                     _data.pop_back();
                     _data.push_back(newLastSlice);
 
@@ -521,8 +518,8 @@ namespace NowSound
                     _remainingFreeSlice = Slice<TTime, TValue>(
                         lastSlice.Buffer(),
                         lastSliceNewDiscreteDuration.Value(),
-                        (long)((lastSlice.Buffer().Length() / this->SliverCount()) - lastSliceNewDiscreteDuration.Value()),
-                        this->SliverCount());
+                        (long)((lastSlice.Buffer().Length() / this->SliceSize()) - lastSliceNewDiscreteDuration.Value()),
+                        this->SliceSize());
 
                     this->_continuousDuration = shorterDuration;
                     this->_discreteDuration = shorterDuration.RoundedUp();
