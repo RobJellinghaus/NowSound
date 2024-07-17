@@ -314,12 +314,14 @@ namespace NowSound
         // before they are actually done.
         ContinuousDuration<AudioSample> oneHalfBeatBeyondPriorDuration = (_priorBeatDuration.Value() + 0.5f) * _tempo->BeatDuration().Value();
 
-        if (ExactDuration().Value() < oneHalfBeatBeyondPriorDuration.Value()) {
+        if (ExactDuration() < oneHalfBeatBeyondPriorDuration) {
             // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
             _beatDuration = _priorBeatDuration;
 
             // And we have to truncate the audio stream since we may have recorded much more.
-            _audioStream->Truncate(ContinuousDuration<AudioSample> { _priorBeatDuration.Value()* _tempo->BeatDuration().Value() });
+            _audioStream->Truncate(Duration<AudioSample>{
+                ContinuousDuration<AudioSample>{ _priorBeatDuration.Value() * _tempo->BeatDuration().Value() }.RoundedUp()
+            });
         }
 
         // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.

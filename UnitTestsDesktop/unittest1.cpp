@@ -448,10 +448,10 @@ namespace UnitTestsDesktop
             // Truncate exactly one slice.
             // Should result in a stream with continuousDuration of 11.4, and still the
             // same two buffers.
-            ContinuousDuration<AudioSample> truncatedDuration{ continuousDuration.Value() - 1 };
+            Duration<AudioSample> truncatedDuration{ discreteDuration - Duration<AudioSample>{ 1 } };
             stream.Truncate(truncatedDuration);
 
-            Check(stream.DiscreteDuration() == truncatedDuration.RoundedUp());
+            Check(stream.DiscreteDuration() == truncatedDuration);
         }
 
         /* TODO: perhaps revive this test? I think I already have coverage of Free(), so postponing porting this.

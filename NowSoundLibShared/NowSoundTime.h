@@ -331,9 +331,14 @@ namespace NowSound
     }
 
     template<typename TTime>
-    ContinuousDuration<TTime> operator -(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
+    bool operator <(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
     {
-        return ContinuousDuration<TTime>(first.Value() - second.Value());
+        return first.Value() < second.Value();
     }
 
+    template<typename TTime>
+    bool operator >(ContinuousDuration<TTime> first, ContinuousDuration<TTime> second)
+    {
+        return first.Value() > second.Value();
+    }
 }

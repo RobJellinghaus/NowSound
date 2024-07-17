@@ -471,12 +471,13 @@ namespace NowSound
         }
 
         // Truncate this stream to this shorter duration, dropping any data beyond it.
-        virtual void Truncate(ContinuousDuration<AudioSample> shorterDuration)
+        virtual void Truncate(Duration<AudioSample> shorterDuration)
         {
-            Check(shorterDuration.Value() < this->ExactDuration().Value());
+            // better be shorter or what are we even doing
+            Check(shorterDuration < this->DiscreteDuration());
 
             // This loop ends when ExactDuration exactly equals shorterDuration.
-            while (shorterDuration.Value() < this->ExactDuration().Value()) {
+            while (shorterDuration < this->DiscreteDuration()) {
                 // we had better not run out of data
                 Check(_data.size() > 0);
                 // or buffers
@@ -486,7 +487,7 @@ namespace NowSound
                 TimedSlice<TTime, TValue>& lastTimedSlice = _data.at(_data.size() - 1);
                 Slice<TTime, TValue> lastSlice = lastTimedSlice.Value();
                 Duration<TTime> lastSliceDuration{ lastSlice.SliceDuration() };
-                if (shorterDuration.Value() < this->ExactDuration().Value() - lastSliceDuration.Value())
+                if (shorterDuration < this->DiscreteDuration() - lastSliceDuration)
                 {
                     // yes, we want to drop that last slice altogether, and the buffer associated with it
                     _buffers.pop_back();
@@ -508,19 +509,18 @@ namespace NowSound
                 else
                 {
                     // ok, the last slice needs to be partially truncated. By how much?
-                    ContinuousDuration<TTime> excessDuration{ this->ExactDuration() - shorterDuration };
+                    Duration<TTime> excessDuration{ this->DiscreteDuration() - shorterDuration };
 
                     // don't ask us to trim more sound than exists (should never fail, due to above if check)
                     Check(lastSliceDuration.Value() > excessDuration.Value());
 
-                    ContinuousDuration<TTime> lastSliceNewExactDuration{ lastSliceDuration.Value() - excessDuration.Value() };
-                    Duration<TTime> lastSliceNewDiscreteDuration = lastSliceNewExactDuration.RoundedDown();
+                    Duration<TTime> lastSliceNewDuration{ lastSliceDuration - excessDuration };
                     TimedSlice<TTime, TValue> newLastSlice = TimedSlice<TTime, TValue>(
                         lastTimedSlice.InitialTime(),
                         Slice<TTime, TValue>(
                             lastSlice.Buffer(),
                             0,
-                            lastSliceNewDiscreteDuration.Value(),
+                            lastSliceNewDuration.Value(),
                             this->SliceSize()));
                     _data.pop_back();
                     _data.push_back(newLastSlice);
@@ -528,11 +528,11 @@ namespace NowSound
                     // and update _remainingFreeSlice to the rest of _newLastSlice
                     _remainingFreeSlice = Slice<TTime, TValue>(
                         lastSlice.Buffer(),
-                        lastSliceNewDiscreteDuration.Value(),
-                        (long)((lastSlice.Buffer().Length() / this->SliceSize()) - lastSliceNewDiscreteDuration.Value()),
+                        lastSliceNewDuration.Value(),
+                        (long)((lastSlice.Buffer().Length() / this->SliceSize()) - lastSliceNewDuration.Value()),
                         this->SliceSize());
 
-                    this->SetDuration(shorterDuration.RoundedUp());
+                    this->SetDuration(shorterDuration);
                 }
             }
         }
