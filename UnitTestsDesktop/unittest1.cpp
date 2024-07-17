@@ -439,9 +439,12 @@ namespace UnitTestsDesktop
             stream.Append(Slice<AudioSample, float>(Buf<float>(owningBuf), sliceSize));
 
             // Confirm we have two actual buffers in the stream.
+            Check(stream.BufferCount() == 2);
+            
+            // Confirm that the two buffers are split start to end.
             Interval<AudioSample> startInterval(0, 1, Direction::Forwards);
             Slice<AudioSample, float> startSlice = stream.GetSliceIntersecting(startInterval);
-            Interval<AudioSample> endInterval(discreteDuration.Value(), 0, Direction::Forwards);
+            Interval<AudioSample> endInterval(discreteDuration.Value() - 1, 1, Direction::Forwards);
             Slice<AudioSample, float> endSlice = stream.GetSliceIntersecting(endInterval);
             Check(startSlice.Buffer().Data() != endSlice.Buffer().Data());
 
@@ -452,6 +455,17 @@ namespace UnitTestsDesktop
             stream.Truncate(truncatedDuration);
 
             Check(stream.DiscreteDuration() == truncatedDuration);
+
+            Interval<AudioSample> endInterval2(truncatedDuration.Value() - 1, 1, Direction::Forwards);
+            Slice<AudioSample, float> endSlice2 = stream.GetSliceIntersecting(endInterval2);
+            Check(endSlice.Buffer().Data() == endSlice2.Buffer().Data());
+
+            // OK, now truncate such that we have to drop a buffer.
+            Duration<AudioSample> truncatedDuration2{ 5 };
+            stream.Truncate(truncatedDuration2);
+
+            Check(stream.DiscreteDuration() == truncatedDuration2);
+            Check(stream.BufferCount() == 1);
         }
 
         /* TODO: perhaps revive this test? I think I already have coverage of Free(), so postponing porting this.

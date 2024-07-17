@@ -286,6 +286,11 @@ namespace NowSound
             }
         }
 
+        // For testing
+        int BufferCount() const {
+            return _buffers.size();
+        }
+
         virtual void Shut(ContinuousDuration<AudioSample> finalDuration, bool fade)
         {
             this->DenseSliceStream<TTime, TValue>::Shut(finalDuration);
