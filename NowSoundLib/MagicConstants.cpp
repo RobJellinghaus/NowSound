@@ -33,4 +33,8 @@ const int MagicConstants::DebugLogCapacity{ 1000 };
 // (due to losing foreground execution status, for example)
 const int MagicConstants::AudioQuantumHistogramCapacity{ 200 };
 
+// Volume over the last half second works well enough in practice
 const ContinuousDuration<Second> MagicConstants::RecentVolumeDuration{ (float)0.5 };
+
+// Half a beat seems too short... will one beat be too long?
+const ContinuousDuration<Beat> MagicConstants::TruncationBeats{ (float)1 };

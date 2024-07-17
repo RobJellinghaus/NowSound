@@ -63,5 +63,11 @@ namespace NowSound
             float beatValue = TimeToBeats(time).Value();
             return ContinuousDuration<Beat>(beatValue - std::floor(beatValue));
         }
+
+        // Beats to samples
+        ContinuousDuration<AudioSample> BeatsToSamples(ContinuousDuration<Beat> beats) const
+        {
+            return ContinuousDuration<AudioSample>(beats.Value() * BeatDuration().Value());
+        }
     };
 }

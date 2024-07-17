@@ -177,7 +177,7 @@ namespace NowSound
             isLooping,
             _direction == Direction::Backwards,
             this->BeatDuration().Value(),
-            this->_audioStream.get()->ExactDuration().Value(),
+            this->ExactDuration().Value(),
             localLoopTime.Value(),
             _tempo->TimeToBeats(localLoopTime).Value(),
             Pan(),
@@ -312,16 +312,17 @@ namespace NowSound
         // If this is the case, then we retroactively shorten the loop by reverting to the previous
         // beat duration. This is by popular demand; almost all users find it confusing to stop recording
         // before they are actually done.
-        ContinuousDuration<AudioSample> oneHalfBeatBeyondPriorDuration = (_priorBeatDuration.Value() + 0.5f) * _tempo->BeatDuration().Value();
+        Duration<AudioSample> truncationDuration =
+            _tempo->BeatsToSamples(ContinuousDuration<Beat>((float)_priorBeatDuration.Value()) + MagicConstants::TruncationBeats)
+                .RoundedUp();
 
-        if (ExactDuration() < oneHalfBeatBeyondPriorDuration) {
+        if (_audioStream->DiscreteDuration() < truncationDuration) {
             // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
             _beatDuration = _priorBeatDuration;
 
             // And we have to truncate the audio stream since we may have recorded much more.
-            _audioStream->Truncate(Duration<AudioSample>{
-                ContinuousDuration<AudioSample>{ _priorBeatDuration.Value() * _tempo->BeatDuration().Value() }.RoundedUp()
-            });
+            _audioStream->Truncate(
+                ContinuousDuration<AudioSample>(_priorBeatDuration.Value() * _tempo->BeatDuration().Value()).RoundedUp());
         }
 
         // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.

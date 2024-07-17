@@ -43,5 +43,10 @@ namespace NowSound
 
         // Amount of time over which to measure volume.
         static const ContinuousDuration<Second> RecentVolumeDuration;
+
+        // Beat duration before which we will truncate to the last beat size.
+        // This lets the user let go of recording and get a loop that retroactively
+        // shrinks to the size that was just passed.
+        static const ContinuousDuration<Beat> TruncationBeats;
     };
 }
