@@ -313,16 +313,25 @@ namespace NowSound
         // beat duration. This is by popular demand; almost all users find it confusing to stop recording
         // before they are actually done.
         Duration<AudioSample> truncationDuration =
-            _tempo->BeatsToSamples(ContinuousDuration<Beat>((float)_priorBeatDuration.Value()) + MagicConstants::TruncationBeats)
+            _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous() + MagicConstants::TruncationBeats)
                 .RoundedUp();
 
         if (_audioStream->DiscreteDuration() < truncationDuration) {
             // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
             _beatDuration = _priorBeatDuration;
 
+            // What will our new discrete duration be?
+            Duration<AudioSample> truncatedDuration = _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous()).RoundedUp();
+
+            // By how many samples are we truncating?
+            Duration<AudioSample> truncatedSamples = _audioStream->DiscreteDuration() - truncatedDuration;
+
             // And we have to truncate the audio stream since we may have recorded much more.
-            _audioStream->Truncate(
-                ContinuousDuration<AudioSample>(_priorBeatDuration.Value() * _tempo->BeatDuration().Value()).RoundedUp());
+            _audioStream->Truncate(truncatedDuration);
+                
+            // AND we have to adjust the current playback time to compensate for truncatedSamples,
+            // since those are samples the user (in retrospect) meant to start looping already.
+            _localLoopTime = ContinuousTime<AudioSample>(truncatedSamples.Value());
         }
 
         // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.
