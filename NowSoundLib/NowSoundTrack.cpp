@@ -307,36 +307,40 @@ namespace NowSound
     void NowSoundTrackAudioProcessor::HandleTrackFinishRecording(NowSound::Duration<NowSound::AudioSample>& bufferDuration, juce::AudioSampleBuffer& audioBuffer)
     {
         // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
+        ContinuousDuration<AudioSample> lastPriorDuration = _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous());
+        if (_audioStream->DiscreteDuration() > lastPriorDuration.RoundedUp()) {
+            // Check whether we are within a certain beat duration (the "truncation beats" duration)
+            // from the prior track duration.
+            // If this is the case, then we retroactively shorten the loop by reverting to the previous
+            // track duration. This is by popular demand; almost all users find it confusing to let go
+            // of the record button before they are actually done, which almost always means they let go
+            // late in realtime.
+            ContinuousDuration<Beat> truncationBeats = _priorBeatDuration == 1
+                ? MagicConstants::SingleTruncationBeats
+                : MagicConstants::MultiTruncationBeats;
 
-        // First, check whether we are within a certain beat duration (the "truncation beats" duration)
-        // from the prior track duration.
-        // If this is the case, then we retroactively shorten the loop by reverting to the previous
-        // track duration. This is by popular demand; almost all users find it confusing to let go
-        // of the record button before they are actually done, which almost always means they let go
-        // late in realtime.
-        ContinuousDuration<Beat> truncationBeats = _priorBeatDuration == 1
-            ? MagicConstants::SingleTruncationBeats
-            : MagicConstants::MultiTruncationBeats;
+            // Add the beats together and THEN round up. The beat number will always be an integer,
+            // but the total beat sample count may not be, and should be rounded up only once.
+            Duration<AudioSample> truncationDuration =
+                _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous() + truncationBeats).RoundedUp();
 
-        Duration<AudioSample> truncationDuration =
-            _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous() + truncationBeats).RoundedUp();
+            if (_audioStream->DiscreteDuration() < truncationDuration) {
+                // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
+                _beatDuration = _priorBeatDuration;
 
-        if (_audioStream->DiscreteDuration() < truncationDuration) {
-            // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
-            _beatDuration = _priorBeatDuration;
+                // What will our new discrete duration be?
+                Duration<AudioSample> truncatedDuration = _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous()).RoundedUp();
 
-            // What will our new discrete duration be?
-            Duration<AudioSample> truncatedDuration = _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous()).RoundedUp();
+                // By how many samples are we truncating?
+                Duration<AudioSample> truncatedSamples = _audioStream->DiscreteDuration() - truncatedDuration;
 
-            // By how many samples are we truncating?
-            Duration<AudioSample> truncatedSamples = _audioStream->DiscreteDuration() - truncatedDuration;
+                // And we have to truncate the audio stream since we may have recorded much more.
+                _audioStream->Truncate(truncatedDuration);
 
-            // And we have to truncate the audio stream since we may have recorded much more.
-            _audioStream->Truncate(truncatedDuration);
-                
-            // AND we have to adjust the current playback time to compensate for truncatedSamples,
-            // since those are samples the user (in retrospect) meant to start looping already.
-            _localLoopTime = ContinuousTime<AudioSample>(truncatedSamples.Value());
+                // AND we have to adjust the current playback time to compensate for truncatedSamples,
+                // since those are samples the user (in retrospect) meant to start looping already.
+                _localLoopTime = ContinuousTime<AudioSample>(truncatedSamples.Value());
+            }
         }
 
         // We now need to be sample-accurate.  If we get too many samples, here is where we truncate.

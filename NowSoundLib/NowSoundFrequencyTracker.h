@@ -16,53 +16,21 @@
 
 namespace NowSound
 {
-    // Tracks the frequencies of a stream of input audio, by buffering the audio until a FFT
-    // window is accumulated, then firing a task to run an FFT on that data while buffering
-    // more.  Ultimately the tracker allows copying the current histogram of binned values.
-    // All buffer management and concurrency is internal to this class.
+    // Tracks the frequencies of a stream of input audio, and runs an FFT on that data.
+    // Ultimately the tracker allows copying the current histogram of binned values.
     class NowSoundFrequencyTracker
     {
     private:
-        // The number of buffers to create.
-        // The expectation is that we will never need more than two, due to transforming being
-        // able to keep ahead of recording.
-        const int BufferCount = 2;
-
-        // States of a buffer.
-        enum BufferState
-        {
-            // Vacant value
-            Uninitialized,
-            // Buffer is available for use
-            Available,
-            // Buffer is being recorded into
-            Recording,
-            // Buffer is having the FFT executed on it
-            Transforming
-        };
-
-        // The states of each buffer.
-        std::vector<BufferState> _bufferStates;
-
-        // The FFT buffers themselves.
-        std::vector<std::unique_ptr<RosettaFFT::Complex>> _fftBuffers;
+        // The FFT buffer.
+        std::unique_ptr<RosettaFFT::Complex> _fftBuffer;
 
         // The single lock-free output buffer.
         // This may get written and read concurrently, which is fine; slightly inconsistent data
         // is better than locking overhead.
         std::unique_ptr<float> _outputBuffer;
 
-        // The currently recording buffer index.
-        int _recordingBufferIndex;
-
         // The current size of the recording buffer.
         int _recordingBufferSize;
-
-        // The most recently updated output buffer.
-        int _latestOutputBufferIndex;
-
-        // Mutex for buffer changes.
-        std::mutex _bufferMutex;
 
         // The per-bin bounds; equal in length to the number of bins.
         const std::vector<RosettaFFT::FrequencyBinBounds>* _binBounds;
@@ -72,7 +40,7 @@ namespace NowSound
 
     private:
         // Run the FFT inside a task and update the requisite output buffer.
-        void TransformBufferAsync(int transformBufferIndex);
+        void TransformBuffer();
 
     public:
         NowSoundFrequencyTracker(
