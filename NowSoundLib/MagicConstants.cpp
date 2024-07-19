@@ -36,5 +36,8 @@ const int MagicConstants::AudioQuantumHistogramCapacity{ 200 };
 // Volume over the last half second works well enough in practice
 const ContinuousDuration<Second> MagicConstants::RecentVolumeDuration{ (float)0.5 };
 
-// Half a beat seems too short... will one beat be too long?
-const ContinuousDuration<Beat> MagicConstants::TruncationBeats{ (float)1 };
+// For now, one-half beat is OK for ending a single-beat loop late.
+const ContinuousDuration<Beat> MagicConstants::SingleTruncationBeats{ (float)0.5 };
+
+// One beat is about right for ending a multi-beat loop late.
+const ContinuousDuration<Beat> MagicConstants::MultiTruncationBeats{ (float)1 };

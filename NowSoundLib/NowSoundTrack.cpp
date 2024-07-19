@@ -308,13 +308,18 @@ namespace NowSound
     {
         // Finish up and close the audio stream with the last precise samples; again, don't call processBlock.
 
-        // First, check whether we are less than half a beat beyond the previous beat duration.
+        // First, check whether we are within a certain beat duration (the "truncation beats" duration)
+        // from the prior track duration.
         // If this is the case, then we retroactively shorten the loop by reverting to the previous
-        // beat duration. This is by popular demand; almost all users find it confusing to stop recording
-        // before they are actually done.
+        // track duration. This is by popular demand; almost all users find it confusing to let go
+        // of the record button before they are actually done, which almost always means they let go
+        // late in realtime.
+        ContinuousDuration<Beat> truncationBeats = _priorBeatDuration == 1
+            ? MagicConstants::SingleTruncationBeats
+            : MagicConstants::MultiTruncationBeats;
+
         Duration<AudioSample> truncationDuration =
-            _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous() + MagicConstants::TruncationBeats)
-                .RoundedUp();
+            _tempo->BeatsToSamples(_priorBeatDuration.AsContinuous() + truncationBeats).RoundedUp();
 
         if (_audioStream->DiscreteDuration() < truncationDuration) {
             // OK fine, we assume user intended to let go already, so we retroactively return to the prior duration.
