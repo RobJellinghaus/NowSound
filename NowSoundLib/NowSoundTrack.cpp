@@ -413,17 +413,17 @@ namespace NowSound
 
             if (_direction == Direction::Forwards)
             {
-                // Is this the last slice in the stream?
+                // Is this the last data in the stream?
                 // If so, then its final offset will be equal to the stream's DiscreteDuration.
-                Duration<AudioSample> sliceEnd = slice.Offset() + slice.SliceDuration();
-                bool isLastSlice = sliceEnd == _audioStream.get()->DiscreteDuration();
+                Time<AudioSample> sliceEndTime = _localLoopTime.RoundedDown() + slice.SliceDuration();
+                bool reachedStreamEnd = sliceEndTime.Value() == _audioStream.get()->DiscreteDuration().Value();
 
                 // If this is the last slice, then we are about to wrap around.
                 // When doing this, we need to decide whether to pick up an extra rounded sample.
                 // Since the DiscreteDuration is equal to the rounded-up ContinuousDuration,
                 // we by default *will* get a rounded-up extra sample.
                 // So now is when we decide to possibly *not* do that.
-                if (isLastSlice)
+                if (reachedStreamEnd)
                 {
                     // If the fractional part of _localLoopTime plus streamFractionalDuration is
                     // less than 1, it means we are NOT rounding up, and we want to drop the
@@ -445,6 +445,9 @@ namespace NowSound
                     // increase the local loop time by this whole slice
                     _localLoopTime = _localLoopTime + slice.SliceDuration().AsContinuous();
                 }
+
+                // B4PR: REMOVE: try to catch bug before next loop iteration
+                assert(_localLoopTime.Value() != _audioStream.get()->DiscreteDuration().Value());
 
                 // copy the same audio to both output channels; it will get panned by SpatialAudioProcessor::processBlock
                 slice.CopyTo(audioBuffer.getWritePointer(0) + completedDuration.Value());

@@ -531,6 +531,7 @@ namespace NowSound
                     _data.push_back(newLastSlice);
 
                     // and update _remainingFreeSlice to the rest of _newLastSlice
+                    // WARNING: CRASH OBSERVED HERE when truncating 8+ beats down to 8
                     _remainingFreeSlice = Slice<TTime, TValue>(
                         lastSlice.Buffer(),
                         lastSliceNewDuration.Value(),
