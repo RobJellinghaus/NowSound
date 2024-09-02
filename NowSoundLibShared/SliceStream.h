@@ -481,6 +481,9 @@ namespace NowSound
             // better be shorter or what are we even doing
             Check(shorterDuration < this->DiscreteDuration());
 
+            // nullify _remainingFreeSlice, we won't need it again
+            _remainingFreeSlice = Slice<TTime, TValue>();
+
             // This loop ends when ExactDuration exactly equals shorterDuration.
             while (shorterDuration < this->DiscreteDuration()) {
                 // we had better not run out of data
@@ -492,21 +495,14 @@ namespace NowSound
                 TimedSlice<TTime, TValue>& lastTimedSlice = _data.at(_data.size() - 1);
                 Slice<TTime, TValue> lastSlice = lastTimedSlice.Value();
                 Duration<TTime> lastSliceDuration{ lastSlice.SliceDuration() };
-                if (shorterDuration < this->DiscreteDuration() - lastSliceDuration)
+                if (shorterDuration <= this->DiscreteDuration() - lastSliceDuration)
                 {
                     // yes, we want to drop that last slice altogether, and the buffer associated with it
                     _buffers.pop_back();
                     _data.pop_back();
                     
-                    // the prior buffer
+                    // get the prior buffer
                     OwningBuf<TValue>& priorBuffer{ _buffers.at(_buffers.size() - 1) };
-
-                    // point _remainingFreeSlice at prior buffer, as empty
-                    _remainingFreeSlice = Slice<TTime, TValue>(
-                        Buf<TValue>(priorBuffer),
-                        0,
-                        priorBuffer.Length() / this->SliceSize(),
-                        this->SliceSize());
 
                     // update duration
                     this->SetDuration(this->DiscreteDuration() - lastSliceDuration);
@@ -515,6 +511,7 @@ namespace NowSound
                 {
                     // ok, the last slice needs to be partially truncated. By how much?
                     Duration<TTime> excessDuration{ this->DiscreteDuration() - shorterDuration };
+                    Check(excessDuration.Value() > 0);
 
                     // don't ask us to trim more sound than exists (should never fail, due to above if check)
                     Check(lastSliceDuration.Value() > excessDuration.Value());
@@ -529,14 +526,6 @@ namespace NowSound
                             this->SliceSize()));
                     _data.pop_back();
                     _data.push_back(newLastSlice);
-
-                    // and update _remainingFreeSlice to the rest of _newLastSlice
-                    // WARNING: CRASH OBSERVED HERE when truncating 8+ beats down to 8
-                    _remainingFreeSlice = Slice<TTime, TValue>(
-                        lastSlice.Buffer(),
-                        lastSliceNewDuration.Value(),
-                        (long)((lastSlice.Buffer().Length() / this->SliceSize()) - lastSliceNewDuration.Value()),
-                        this->SliceSize());
 
                     this->SetDuration(shorterDuration);
                 }
